@@ -119,11 +119,158 @@ The MVP focuses on **human management of multiple Claude Code instances**—maki
 - Writes state changes to SQLite database
 - Emits Tauri events to notify frontend of state changes
 
-### State Management
+### State Management & Search
 
 - SQLite database stores instance states and event history
 - Frontend subscribes to state changes via Tauri events
 - Session configuration persisted to JSON file
+
+### SQLite Schema & Full-Text Search
+
+The SQLite database serves dual purposes: real-time state tracking and historical search. We use SQLite's FTS5 (Full-Text Search 5) extension for efficient searching.
+
+#### Core Tables
+
+```sql
+-- Active instances (real-time state)
+CREATE TABLE instances (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  working_dir TEXT NOT NULL,
+  status TEXT CHECK(status IN ('working', 'awaiting', 'idle', 'error')),
+  pinned BOOLEAN DEFAULT FALSE,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  last_activity_at DATETIME
+);
+
+-- Session history (searchable archive)
+CREATE TABLE sessions (
+  id TEXT PRIMARY KEY,
+  instance_id TEXT,
+  name TEXT NOT NULL,
+  working_dir TEXT NOT NULL,
+  started_at DATETIME NOT NULL,
+  ended_at DATETIME,
+  message_count INTEGER DEFAULT 0,
+  token_count INTEGER DEFAULT 0,
+  summary TEXT,
+  FOREIGN KEY (instance_id) REFERENCES instances(id)
+);
+
+-- Session messages (for detailed search)
+CREATE TABLE messages (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  session_id TEXT NOT NULL,
+  role TEXT CHECK(role IN ('user', 'assistant', 'tool')),
+  content TEXT NOT NULL,
+  tool_name TEXT,
+  tokens INTEGER,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (session_id) REFERENCES sessions(id)
+);
+
+-- Status events (for state timeline)
+CREATE TABLE status_events (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  instance_id TEXT NOT NULL,
+  status TEXT NOT NULL,
+  timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (instance_id) REFERENCES instances(id)
+);
+```
+
+#### Full-Text Search (FTS5)
+
+```sql
+-- FTS5 virtual table for searching session content
+CREATE VIRTUAL TABLE sessions_fts USING fts5(
+  name,
+  summary,
+  content='sessions',
+  content_rowid='rowid'
+);
+
+-- FTS5 virtual table for searching messages
+CREATE VIRTUAL TABLE messages_fts USING fts5(
+  content,
+  tool_name,
+  content='messages',
+  content_rowid='id'
+);
+
+-- Triggers to keep FTS tables in sync
+CREATE TRIGGER sessions_ai AFTER INSERT ON sessions BEGIN
+  INSERT INTO sessions_fts(rowid, name, summary)
+  VALUES (new.rowid, new.name, new.summary);
+END;
+
+CREATE TRIGGER messages_ai AFTER INSERT ON messages BEGIN
+  INSERT INTO messages_fts(rowid, content, tool_name)
+  VALUES (new.id, new.content, new.tool_name);
+END;
+```
+
+#### Search Queries
+
+```sql
+-- Search sessions by name or summary
+SELECT s.* FROM sessions s
+JOIN sessions_fts ON sessions_fts.rowid = s.rowid
+WHERE sessions_fts MATCH 'authentication refactor'
+ORDER BY rank;
+
+-- Search messages across all sessions
+SELECT m.*, s.name as session_name FROM messages m
+JOIN messages_fts ON messages_fts.rowid = m.id
+JOIN sessions s ON m.session_id = s.id
+WHERE messages_fts MATCH 'TypeError undefined'
+ORDER BY m.created_at DESC;
+
+-- Search with filters
+SELECT s.* FROM sessions s
+JOIN sessions_fts ON sessions_fts.rowid = s.rowid
+WHERE sessions_fts MATCH 'bug fix'
+  AND s.started_at > datetime('now', '-7 days')
+ORDER BY s.started_at DESC;
+```
+
+#### Data Flow
+
+```
+Claude Code Instance
+       │
+       │ Hook callback (PreToolUse, Stop, etc.)
+       ▼
+┌──────────────────┐
+│  Hook API Server │
+│  (localhost:PORT)│
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────┐     ┌─────────────────┐
+│     SQLite       │────►│   FTS5 Index    │
+│  (state tables)  │     │ (search tables) │
+└────────┬─────────┘     └─────────────────┘
+         │
+         │ Tauri event
+         ▼
+┌──────────────────┐
+│   UI (Search)    │
+│  - History view  │
+│  - Global search │
+└──────────────────┘
+```
+
+#### Search Features
+
+| Feature | Implementation |
+|---------|----------------|
+| History search | Search sessions by name, summary, date range |
+| Message search | Search across all message content |
+| Tool search | Find sessions that used specific tools |
+| Date filtering | Filter by relative or absolute date ranges |
+| Status filtering | Filter by session end status (success, error) |
+| Working dir filtering | Filter by project/directory |
 
 ### UI Layer
 
@@ -214,6 +361,7 @@ The orchestrator provides a way to generate/install these hooks for each instanc
 | State/IPC | Tauri commands + events | Frontend ↔ backend communication |
 | Session persistence | JSON file | Session configuration storage |
 | Frontend | TBD | React, Svelte, or vanilla—to be determined during mockup phase |
+| Markdown editor | MDX Editor | WYSIWYG plan editing (see `markdown-editor-plan.md`) |
 
 -----
 

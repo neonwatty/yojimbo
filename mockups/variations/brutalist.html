@@ -1,0 +1,1490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Claude Code Orchestrator - Brutalist</title>
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['JetBrains Mono', 'monospace'],
+            mono: ['JetBrains Mono', 'monospace'],
+            display: ['Space Grotesk', 'sans-serif'],
+          },
+          colors: {
+            black: '#000000',
+            white: '#ffffff',
+            red: '#ff0000',
+          },
+          letterSpacing: {
+            tighter: '-0.02em',
+            widest: '0.2em',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      background: #ffffff;
+      font-family: 'JetBrains Mono', monospace;
+      color: #000000;
+      letter-spacing: -0.02em;
+    }
+
+    /* NO ANIMATIONS - instant transitions only */
+    .animate-in {
+      opacity: 1;
+    }
+
+    /* NO ROUNDED CORNERS */
+    .rounded-none { border-radius: 0 !important; }
+
+    /* HEAVY BORDERS */
+    .border-heavy { border-width: 4px; }
+    .border-medium { border-width: 2px; }
+
+    /* UPPERCASE LABELS */
+    .label-text {
+      text-transform: uppercase;
+      letter-spacing: 0.2em;
+      font-weight: 700;
+    }
+
+    /* GRID STRUCTURE */
+    .grid-visible {
+      outline: 2px solid #000000;
+    }
+
+    /* NO SHADOWS - flat design */
+    * {
+      box-shadow: none !important;
+    }
+
+    /* Terminal styling */
+    .terminal-text {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      line-height: 1.5;
+      letter-spacing: -0.02em;
+    }
+
+    /* Remove all hover effects - instant only */
+    button, .clickable {
+      transition: none;
+    }
+
+    /* Square status indicators */
+    .status-square {
+      width: 12px;
+      height: 12px;
+      display: inline-block;
+    }
+
+    /* Scrollbar styling - black on white */
+    ::-webkit-scrollbar {
+      width: 12px;
+      height: 12px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #ffffff;
+      border: 2px solid #000000;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #000000;
+      border: 2px solid #000000;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #ff0000;
+    }
+  </style>
+</head>
+<body class="bg-white text-black min-h-screen">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    // Mock data for instances
+    const mockInstances = [
+      {
+        id: '1',
+        name: 'AUTH-REFACTOR',
+        status: 'working',
+        pinned: true,
+        workingDir: '~/projects/webapp/src/auth',
+        lastOutput: [
+          '$ claude',
+          '> Refactoring authentication middleware...',
+          '> Reading src/middleware/auth.ts',
+          '> Analyzing token validation logic...',
+        ]
+      },
+      {
+        id: '2',
+        name: 'API-TESTS',
+        status: 'awaiting',
+        pinned: false,
+        workingDir: '~/projects/webapp/tests',
+        lastOutput: [
+          '$ claude',
+          '> I\'ve created 12 new test cases for the API endpoints.',
+          '> Would you like me to run them now?',
+          '█',
+        ]
+      },
+      {
+        id: '3',
+        name: 'DOCS-UPDATE',
+        status: 'idle',
+        pinned: false,
+        workingDir: '~/projects/webapp/docs',
+        lastOutput: [
+          '$ claude',
+          '> Documentation updated successfully.',
+          '> ',
+          '$ ',
+        ]
+      },
+      {
+        id: '4',
+        name: 'BUG-FIX-CART',
+        status: 'error',
+        pinned: true,
+        workingDir: '~/projects/webapp/src/cart',
+        lastOutput: [
+          '$ claude',
+          '> Attempting to fix cart calculation...',
+          '> Error: Cannot read property \'price\' of undefined',
+          '> Stack trace: ...',
+        ]
+      },
+      {
+        id: '5',
+        name: 'FEATURE-SEARCH',
+        status: 'working',
+        pinned: false,
+        workingDir: '~/projects/webapp/src/search',
+        lastOutput: [
+          '$ claude',
+          '> Implementing fuzzy search algorithm...',
+          '> Writing src/search/fuzzy.ts',
+          '> █',
+        ]
+      },
+    ];
+
+    // Mock data for session history
+    const mockSessions = [
+      {
+        id: 'session-1',
+        name: 'AUTH-REFACTOR',
+        workingDir: '~/projects/webapp',
+        timestamp: new Date(),
+        messageCount: 47,
+        tokenCount: 12400,
+        summary: 'Refactored authentication middleware to use JWT',
+        messages: [
+          { type: 'user', preview: 'Help me refactor the auth middleware', tokens: 45 },
+          { type: 'thinking', preview: 'The user wants to refactor authentication...', tokens: 150 },
+          { type: 'assistant', preview: "I'll analyze the current implementation...", tokens: 230 },
+          { type: 'tool', preview: 'Read src/middleware/auth.ts', toolName: 'Read' },
+          { type: 'tool', preview: 'Edit src/middleware/auth.ts', toolName: 'Edit' },
+          { type: 'assistant', preview: "I've identified 3 areas for improvement...", tokens: 890 },
+          { type: 'user', preview: 'Looks good, can you add tests?', tokens: 32 },
+          { type: 'thinking', preview: 'Need to create unit tests for the new JWT logic...', tokens: 120 },
+          { type: 'tool', preview: 'Write tests/auth.test.ts', toolName: 'Write' },
+          { type: 'assistant', preview: "I've created comprehensive tests...", tokens: 450 },
+        ]
+      },
+      {
+        id: 'session-2',
+        name: 'API-TESTS',
+        workingDir: '~/projects/webapp/tests',
+        timestamp: new Date(Date.now() - 3600000),
+        messageCount: 23,
+        tokenCount: 5200,
+        summary: 'Created test suite for API endpoints',
+        messages: [
+          { type: 'user', preview: 'Create tests for the user API endpoints', tokens: 28 },
+          { type: 'assistant', preview: "I'll create a comprehensive test suite...", tokens: 180 },
+          { type: 'tool', preview: 'Glob tests/**/*.test.ts', toolName: 'Glob' },
+          { type: 'tool', preview: 'Read src/api/users.ts', toolName: 'Read' },
+          { type: 'assistant', preview: 'I found the existing patterns...', tokens: 320 },
+        ]
+      },
+    ];
+
+
+    // Status indicator component - SQUARE, not circle
+    const StatusSquare = ({ status, size = 'md' }) => {
+      const sizeClasses = {
+        sm: 'w-2 h-2',
+        md: 'w-3 h-3',
+        lg: 'w-4 h-4',
+      };
+
+      const colorClasses = {
+        working: 'bg-black',
+        awaiting: 'bg-red',
+        idle: 'bg-white border-2 border-black',
+        error: 'bg-red',
+      };
+
+      return (
+        <span className={`inline-block status-square ${sizeClasses[size]} ${colorClasses[status]}`} />
+      );
+    };
+
+    // Status badge with text
+    const StatusBadge = ({ status }) => {
+      const labels = {
+        working: 'WORKING',
+        awaiting: 'AWAITING INPUT',
+        idle: 'IDLE',
+        error: 'ERROR',
+      };
+
+      const colorClasses = {
+        working: 'bg-black text-white border-black',
+        awaiting: 'bg-red text-white border-red',
+        idle: 'bg-white text-black border-black',
+        error: 'bg-red text-white border-red',
+      };
+
+      return (
+        <span className={`inline-flex items-center gap-1.5 px-2 py-1 text-xs font-bold border-2 label-text ${colorClasses[status]}`}>
+          <StatusSquare status={status} size="sm" />
+          {labels[status]}
+        </span>
+      );
+    };
+
+    // Pin icon (square checkbox style)
+    const PinIcon = ({ pinned, onClick, size = 'md' }) => {
+      const sizeClasses = {
+        sm: 'w-4 h-4',
+        md: 'w-5 h-5',
+        lg: 'w-6 h-6',
+      };
+
+      const handleClick = (e) => {
+        e.stopPropagation();
+        onClick();
+      };
+
+      return (
+        <button
+          onClick={handleClick}
+          className={`border-2 border-black p-1 ${sizeClasses[size]} flex items-center justify-center ${pinned ? 'bg-black' : 'bg-white'}`}
+          title={pinned ? 'Unpin instance' : 'Pin instance'}
+        >
+          {pinned && (
+            <div className="w-full h-full bg-white"></div>
+          )}
+        </button>
+      );
+    };
+
+    // Editable name component for inline renaming
+    const EditableName = ({
+      instance, isEditing, editingName,
+      onStartEdit, onNameChange, onConfirm, onCancel,
+      className = ''
+    }) => {
+      const inputRef = React.useRef(null);
+
+      useEffect(() => {
+        if (isEditing && inputRef.current) {
+          inputRef.current.focus();
+          inputRef.current.select();
+        }
+      }, [isEditing]);
+
+      const handleKeyDown = (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); onConfirm(); }
+        if (e.key === 'Escape') { e.preventDefault(); onCancel(); }
+      };
+
+      if (isEditing) {
+        return (
+          <input
+            ref={inputRef}
+            type="text"
+            value={editingName}
+            onChange={(e) => onNameChange(e.target.value.toUpperCase())}
+            onKeyDown={handleKeyDown}
+            onBlur={onConfirm}
+            onClick={(e) => e.stopPropagation()}
+            maxLength={32}
+            className={`bg-white border-2 border-red px-2 py-1 text-black font-bold outline-none ${className}`}
+            style={{ width: `${Math.max(editingName.length, 8)}ch` }}
+          />
+        );
+      }
+
+      return (
+        <span
+          className={`font-bold cursor-text ${className}`}
+          onDoubleClick={(e) => { e.stopPropagation(); onStartEdit(); }}
+          title="Double-click to rename"
+        >
+          {instance.name}
+        </span>
+      );
+    };
+
+    // Close button component - X
+    const CloseButton = ({ onClick, className = '' }) => (
+      <button
+        onClick={(e) => { e.stopPropagation(); onClick(); }}
+        className={`p-1 border-2 border-black bg-white hover:bg-red hover:text-white hover:border-red ${className}`}
+        aria-label="Close instance"
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+          <path d="M18 6L6 18M6 6l12 12" />
+        </svg>
+      </button>
+    );
+
+    // Confirmation dialog for closing instances
+    const ConfirmDialog = ({ isOpen, onConfirm, onCancel, instance }) => {
+      if (!isOpen || !instance) return null;
+
+      const getMessage = () => {
+        if (instance.status === 'working') {
+          return `"${instance.name}" IS CURRENTLY WORKING. ARE YOU SURE YOU WANT TO CLOSE IT?`;
+        }
+        if (instance.status === 'awaiting') {
+          return `"${instance.name}" IS AWAITING INPUT. ARE YOU SURE YOU WANT TO CLOSE IT?`;
+        }
+        if (instance.status === 'error') {
+          return `"${instance.name}" HAS AN ERROR. ARE YOU SURE YOU WANT TO CLOSE IT?`;
+        }
+        if (instance.pinned) {
+          return `"${instance.name}" IS PINNED. ARE YOU SURE YOU WANT TO CLOSE IT?`;
+        }
+        return `CLOSE "${instance.name}"?`;
+      };
+
+      return (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
+          <div className="bg-white border-heavy border-black p-8 max-w-md">
+            <h3 className="text-lg font-bold mb-4 label-text">CLOSE INSTANCE</h3>
+            <p className="text-sm mb-6">{getMessage()}</p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={onCancel}
+                className="px-4 py-2 border-2 border-black bg-white text-black font-bold label-text"
+              >
+                CANCEL
+              </button>
+              <button
+                onClick={onConfirm}
+                className="px-4 py-2 border-2 border-red bg-red text-white font-bold label-text"
+              >
+                CLOSE
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    // Empty state when no instances
+    const EmptyState = () => (
+      <div className="flex-1 flex items-center justify-center bg-white border-2 border-black">
+        <div className="text-center text-black">
+          <div className="w-16 h-16 mx-auto mb-4 border-4 border-black flex items-center justify-center">
+            <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+              <path d="M12 8v8M8 12h8" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-bold mb-2 label-text">NO INSTANCES</h3>
+          <p className="text-sm">CLICK THE + BUTTON TO CREATE A NEW INSTANCE</p>
+        </div>
+      </div>
+    );
+
+    // Expand button for focus mode
+    const ExpandButton = ({ onClick, expanded = false, className = '' }) => (
+      <button
+        onClick={(e) => { e.stopPropagation(); onClick(); }}
+        className={`p-1 border-2 border-black bg-white hover:bg-black hover:text-white ${className}`}
+        aria-label={expanded ? 'Collapse' : 'Expand'}
+        title={expanded ? 'COLLAPSE (ESCAPE)' : 'EXPAND (ENTER OR DOUBLE-CLICK)'}
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+          {expanded ? (
+            <>
+              <path d="M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7" />
+            </>
+          ) : (
+            <>
+              <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
+            </>
+          )}
+        </svg>
+      </button>
+    );
+
+    // Thumbnail instance for focus mode sidebar
+    const ThumbnailInstance = ({ instance, isActive, onClick }) => (
+      <div
+        onClick={onClick}
+        className={`flex items-center gap-2 px-3 py-2 cursor-pointer border-2 border-black ${isActive ? 'bg-black text-white' : 'bg-white text-black'}`}
+      >
+        <StatusSquare status={instance.status} size="sm" />
+        <span className="text-sm font-bold truncate flex-1">{instance.name}</span>
+      </div>
+    );
+
+    // Focus overlay backdrop
+    const FocusOverlay = ({ onClick, children }) => (
+      <div
+        className="fixed inset-0 bg-white z-40 flex"
+        onClick={onClick}
+      >
+        <div onClick={(e) => e.stopPropagation()} className="flex flex-1">
+          {children}
+        </div>
+      </div>
+    );
+
+    // Terminal preview component
+    const TerminalPreview = ({ output, compact = false }) => (
+      <div className={`bg-white border-2 border-black overflow-hidden ${compact ? 'h-20' : 'h-32'}`}>
+        <div className="p-3 terminal-text text-black overflow-hidden">
+          {output.slice(compact ? -2 : -4).map((line, i) => (
+            <div key={i} className="truncate">{line}</div>
+          ))}
+        </div>
+      </div>
+    );
+
+    // Tab bar layout
+    const TabBarLayout = ({ instances, activeId, onSelect, onTogglePin, onRequestClose, onDoubleClick, onExpand, editingInstanceId, editingName, onStartEditing, onEditingNameChange, onConfirmRename, onCancelEditing }) => (
+      <div className="flex items-center gap-1 px-2 py-2 bg-white border-b-4 border-black overflow-x-auto">
+        {instances.map((instance, i) => (
+          <div
+            key={instance.id}
+            onClick={() => onSelect(instance.id)}
+            onDoubleClick={() => onDoubleClick(instance.id)}
+            className={`group flex items-center gap-2 px-3 py-2 text-sm font-bold border-2 border-black whitespace-nowrap cursor-pointer ${activeId === instance.id ? 'bg-black text-white' : 'bg-white text-black'}`}
+          >
+            <StatusSquare status={instance.status} />
+            <EditableName
+              instance={instance}
+              isEditing={editingInstanceId === instance.id}
+              editingName={editingName}
+              onStartEdit={() => onStartEditing(instance.id, instance.name)}
+              onNameChange={onEditingNameChange}
+              onConfirm={() => onConfirmRename(instance.id)}
+              onCancel={onCancelEditing}
+            />
+            <PinIcon
+              pinned={instance.pinned}
+              onClick={() => onTogglePin(instance.id)}
+              size="sm"
+            />
+            <ExpandButton
+              onClick={() => onExpand(instance.id)}
+              className="opacity-0 group-hover:opacity-100"
+            />
+            <CloseButton
+              onClick={() => onRequestClose(instance)}
+              className="opacity-0 group-hover:opacity-100"
+            />
+          </div>
+        ))}
+        <button className="ml-2 p-2 text-black border-2 border-black bg-white hover:bg-black hover:text-white font-bold">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+            <path d="M12 5v14M5 12h14" />
+          </svg>
+        </button>
+      </div>
+    );
+
+    // Card/Grid layout
+    const CardLayout = ({ instances, activeId, onSelect, onTogglePin, onRequestClose, onDoubleClick, onExpand, editingInstanceId, editingName, onStartEditing, onEditingNameChange, onConfirmRename, onCancelEditing }) => (
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 p-4">
+        {instances.map((instance, i) => (
+          <div
+            key={instance.id}
+            onClick={() => onSelect(instance.id)}
+            onDoubleClick={() => onDoubleClick(instance.id)}
+            className={`group relative bg-white border-4 border-black p-4 cursor-pointer ${activeId === instance.id ? 'bg-black text-white' : ''}`}
+          >
+            <div className="absolute top-3 right-3 flex items-center gap-1 opacity-0 group-hover:opacity-100">
+              <ExpandButton onClick={() => onExpand(instance.id)} />
+              <CloseButton onClick={() => onRequestClose(instance)} />
+            </div>
+            <div className="flex items-center justify-between mb-3 pr-12">
+              <div className="flex items-center gap-2">
+                <StatusSquare status={instance.status} size="lg" />
+                <EditableName
+                  instance={instance}
+                  isEditing={editingInstanceId === instance.id}
+                  editingName={editingName}
+                  onStartEdit={() => onStartEditing(instance.id, instance.name)}
+                  onNameChange={onEditingNameChange}
+                  onConfirm={() => onConfirmRename(instance.id)}
+                  onCancel={onCancelEditing}
+                />
+              </div>
+              <PinIcon
+                pinned={instance.pinned}
+                onClick={() => onTogglePin(instance.id)}
+                size="md"
+              />
+            </div>
+            <StatusBadge status={instance.status} />
+            <div className="mt-3 text-xs font-mono truncate">
+              {instance.workingDir}
+            </div>
+            <div className="mt-3">
+              <TerminalPreview output={instance.lastOutput} compact />
+            </div>
+          </div>
+        ))}
+        {/* Add new instance card */}
+        <div className="bg-white border-4 border-black border-dashed p-4 flex items-center justify-center cursor-pointer min-h-[200px]">
+          <div className="text-center text-black">
+            <svg className="w-8 h-8 mx-auto mb-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+            <span className="text-sm font-bold label-text">NEW INSTANCE</span>
+          </div>
+        </div>
+      </div>
+    );
+
+    // List layout
+    const ListLayout = ({ instances, activeId, onSelect, onTogglePin, onRequestClose, onDoubleClick, onExpand, editingInstanceId, editingName, onStartEditing, onEditingNameChange, onConfirmRename, onCancelEditing }) => (
+      <div className="border-t-2 border-black">
+        {instances.map((instance, i) => (
+          <div
+            key={instance.id}
+            onClick={() => onSelect(instance.id)}
+            onDoubleClick={() => onDoubleClick(instance.id)}
+            className={`group flex items-center gap-4 px-4 py-3 cursor-pointer border-b-2 border-black ${activeId === instance.id ? 'bg-black text-white' : 'bg-white text-black'}`}
+          >
+            <PinIcon
+              pinned={instance.pinned}
+              onClick={() => onTogglePin(instance.id)}
+              size="md"
+            />
+            <StatusSquare status={instance.status} size="lg" />
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <EditableName
+                  instance={instance}
+                  isEditing={editingInstanceId === instance.id}
+                  editingName={editingName}
+                  onStartEdit={() => onStartEditing(instance.id, instance.name)}
+                  onNameChange={onEditingNameChange}
+                  onConfirm={() => onConfirmRename(instance.id)}
+                  onCancel={onCancelEditing}
+                />
+              </div>
+              <div className="text-xs font-mono truncate">
+                {instance.workingDir}
+              </div>
+            </div>
+            <StatusBadge status={instance.status} />
+            <div className="text-xs w-48 truncate terminal-text">
+              {instance.lastOutput[instance.lastOutput.length - 1]}
+            </div>
+            <ExpandButton
+              onClick={() => onExpand(instance.id)}
+              className="opacity-0 group-hover:opacity-100"
+            />
+            <CloseButton
+              onClick={() => onRequestClose(instance)}
+              className="opacity-0 group-hover:opacity-100"
+            />
+          </div>
+        ))}
+      </div>
+    );
+
+
+    // Layout switcher
+    const LayoutSwitcher = ({ layout, onChange }) => {
+      const layouts = [
+        { id: 'tabs', icon: '⊞', label: 'TABS' },
+        { id: 'cards', icon: '⊟', label: 'CARDS' },
+        { id: 'list', icon: '☰', label: 'LIST' },
+      ];
+
+      return (
+        <div className="flex items-center gap-1 border-2 border-black p-1">
+          {layouts.map(l => (
+            <button
+              key={l.id}
+              onClick={() => onChange(l.id)}
+              className={`px-3 py-1.5 text-sm font-bold label-text ${layout === l.id ? 'bg-black text-white' : 'bg-white text-black'}`}
+              title={l.label}
+            >
+              {l.icon}
+            </button>
+          ))}
+        </div>
+      );
+    };
+
+    // Getting Started Banner (dismissible onboarding)
+    const GettingStartedBanner = ({ visible, onDismiss }) => {
+      if (!visible) return null;
+
+      const steps = [
+        { num: 1, title: 'CREATE AN INSTANCE', desc: 'Click + to start a new terminal' },
+        { num: 2, title: 'NAVIGATE TO PROJECT', desc: 'cd into your project directory' },
+        { num: 3, title: 'START CLAUDE CODE', desc: "Run 'claude' to begin coding" },
+        { num: 4, title: 'MANAGE FROM HERE', desc: 'Pin, rename, and switch instances' },
+      ];
+
+      return (
+        <div className="bg-white border-4 border-black p-6 mb-6">
+          <div className="flex justify-between items-start mb-4">
+            <h2 className="text-lg font-bold label-text">GETTING STARTED WITH CC ORCHESTRATOR</h2>
+            <button
+              onClick={onDismiss}
+              className="text-black hover:text-red p-1 border-2 border-black"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                <path d="M18 6L6 18M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {steps.map(step => (
+              <div key={step.num} className="flex flex-col border-2 border-black p-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-red font-bold text-xl">{step.num}.</span>
+                  <span className="font-bold text-xs label-text">{step.title}</span>
+                </div>
+                <p className="text-xs">{step.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    };
+
+    // Stat Cards (instance counts by status)
+    const StatCards = ({ instances }) => {
+      const stats = [
+        { label: 'TOTAL', value: instances.length, colorClass: 'border-black' },
+        { label: 'WORKING', value: instances.filter(i => i.status === 'working').length, colorClass: 'border-black' },
+        { label: 'AWAITING', value: instances.filter(i => i.status === 'awaiting').length, colorClass: 'border-red' },
+        { label: 'ERRORS', value: instances.filter(i => i.status === 'error').length, colorClass: 'border-red' },
+      ];
+
+      return (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          {stats.map((stat, i) => (
+            <div
+              key={stat.label}
+              className={`bg-white border-4 ${stat.colorClass} p-4`}
+            >
+              <div className={`text-5xl font-black tracking-tighter`}>{stat.value}</div>
+              <div className="text-sm font-bold label-text mt-1">{stat.label}</div>
+            </div>
+          ))}
+        </div>
+      );
+    };
+
+    // Quick Actions (buttons)
+    const QuickActions = ({ onNewInstance, onViewAll }) => (
+      <div className="flex gap-3 mb-6">
+        <button
+          onClick={onNewInstance}
+          className="flex items-center gap-2 px-4 py-2 bg-red text-white font-bold border-2 border-red label-text"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+            <path d="M12 5v14M5 12h14" />
+          </svg>
+          NEW INSTANCE
+        </button>
+        <button
+          onClick={onViewAll}
+          className="flex items-center gap-2 px-4 py-2 bg-white text-black font-bold border-2 border-black label-text"
+        >
+          VIEW ALL
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+            <path d="M5 12h14M12 5l7 7-7 7" />
+          </svg>
+        </button>
+      </div>
+    );
+
+    // Instance Row (shared by PinnedInstances and RecentInstances)
+    const InstanceRow = ({ instance, onClick, showPin = false }) => (
+      <div
+        onClick={onClick}
+        className="flex items-center gap-3 px-4 py-3 cursor-pointer border-b-2 border-black hover:bg-black hover:text-white"
+      >
+        <StatusSquare status={instance.status} />
+        {showPin && <span className="font-bold">■</span>}
+        <span className="font-bold flex-1">{instance.name}</span>
+        <StatusBadge status={instance.status} />
+        <span className="text-xs font-mono hidden sm:block">{instance.workingDir}</span>
+      </div>
+    );
+
+    // Pinned Instances section
+    const PinnedInstances = ({ instances, onSelectInstance }) => {
+      const pinned = instances.filter(i => i.pinned);
+      if (pinned.length === 0) return null;
+
+      return (
+        <div className="mb-6">
+          <h3 className="flex items-center gap-2 text-xs font-bold label-text mb-3">
+            <span className="text-red">■</span> PINNED INSTANCES
+          </h3>
+          <div className="bg-white border-4 border-black overflow-hidden">
+            {pinned.map(instance => (
+              <InstanceRow
+                key={instance.id}
+                instance={instance}
+                onClick={() => onSelectInstance(instance.id)}
+                showPin
+              />
+            ))}
+          </div>
+        </div>
+      );
+    };
+
+    // Recent Instances section
+    const RecentInstances = ({ instances, onSelectInstance }) => {
+      const recent = instances.filter(i => !i.pinned).slice(0, 5);
+      if (recent.length === 0) return null;
+
+      return (
+        <div className="mb-6">
+          <h3 className="text-xs font-bold label-text mb-3">RECENT INSTANCES</h3>
+          <div className="bg-white border-4 border-black overflow-hidden">
+            {recent.map(instance => (
+              <InstanceRow
+                key={instance.id}
+                instance={instance}
+                onClick={() => onSelectInstance(instance.id)}
+              />
+            ))}
+          </div>
+        </div>
+      );
+    };
+
+    // Home Page container
+    const HomePage = ({ instances, showWelcome, onDismissWelcome, onNewInstance, onViewAll, onSelectInstance }) => (
+      <div className="flex-1 overflow-auto bg-white p-6 border-2 border-black">
+        <div className="max-w-4xl mx-auto">
+          <GettingStartedBanner visible={showWelcome} onDismiss={onDismissWelcome} />
+          <StatCards instances={instances} />
+          <QuickActions onNewInstance={onNewInstance} onViewAll={onViewAll} />
+          <PinnedInstances instances={instances} onSelectInstance={onSelectInstance} />
+          <RecentInstances instances={instances} onSelectInstance={onSelectInstance} />
+        </div>
+      </div>
+    );
+
+    // Message item for transcript display
+    const MessageItem = ({ message }) => {
+      const typeStyles = {
+        user: { icon: '■', color: 'text-black', label: 'USER' },
+        assistant: { icon: '□', color: 'text-black', label: 'CLAUDE' },
+        tool: { icon: '▪', color: 'text-black', label: 'TOOL' },
+        thinking: { icon: '▫', color: 'text-black', label: 'THINKING' },
+      };
+
+      const style = typeStyles[message.type] || typeStyles.assistant;
+
+      return (
+        <div className="flex gap-3 py-2 border-b border-black">
+          <span className={`text-sm ${style.color}`}>{style.icon}</span>
+          <div className="flex-1 min-w-0">
+            <span className={`text-xs ${style.color} font-bold label-text`}>
+              {message.toolName || style.label}
+            </span>
+            <p className="text-sm truncate">{message.preview}</p>
+          </div>
+          {message.tokens && (
+            <span className="text-xs whitespace-nowrap font-bold">{message.tokens} TOK</span>
+          )}
+        </div>
+      );
+    };
+
+    // Transcript view - list of messages
+    const TranscriptView = ({ messages }) => (
+      <div className="space-y-1 max-h-64 overflow-auto">
+        {messages.map((message, i) => (
+          <MessageItem key={i} message={message} />
+        ))}
+      </div>
+    );
+
+    // Chevron icon for expand/collapse
+    const ChevronIcon = ({ expanded }) => (
+      <svg
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="3"
+        className={`transform ${expanded ? 'rotate-180' : ''}`}
+      >
+        <path d="M6 9l6 6 6-6" />
+      </svg>
+    );
+
+    // Session card with expandable transcript
+    const SessionCard = ({ session, isExpanded, onToggle }) => {
+      const formatTime = (date) => {
+        return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+      };
+
+      const formatTokens = (count) => {
+        if (count >= 1000) {
+          return `${(count / 1000).toFixed(1)}K`;
+        }
+        return count;
+      };
+
+      return (
+        <div className="bg-white border-4 border-black overflow-hidden">
+          {/* Header - always visible */}
+          <div
+            className="flex items-center justify-between p-4 cursor-pointer hover:bg-black hover:text-white"
+            onClick={onToggle}
+          >
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="font-bold">{session.name}</span>
+                <span className="text-xs">{formatTime(session.timestamp)}</span>
+              </div>
+              <div className="text-xs font-mono">
+                {session.workingDir}
+              </div>
+              <div className="flex items-center gap-3 mt-1 text-xs">
+                <span className="font-bold">{session.messageCount} MESSAGES</span>
+                <span>•</span>
+                <span className="font-bold">{formatTokens(session.tokenCount)} TOKENS</span>
+                <span>•</span>
+                <span className="truncate italic">"{session.summary}"</span>
+              </div>
+            </div>
+            <ChevronIcon expanded={isExpanded} />
+          </div>
+
+          {/* Transcript - expandable */}
+          {isExpanded && (
+            <div className="border-t-2 border-black p-4">
+              <TranscriptView messages={session.messages} />
+            </div>
+          )}
+        </div>
+      );
+    };
+
+    // Date group header for session grouping
+    const DateGroup = ({ label, children }) => (
+      <div className="mb-6">
+        <h3 className="text-xs font-bold label-text mb-3 flex items-center gap-2 border-b-2 border-black pb-2">
+          {label}
+        </h3>
+        <div className="space-y-3">
+          {children}
+        </div>
+      </div>
+    );
+
+    // Search icon
+    const SearchIcon = ({ className = '' }) => (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className={className}>
+        <circle cx="11" cy="11" r="8" />
+        <path d="M21 21l-4.35-4.35" />
+      </svg>
+    );
+
+    // History View container
+    const HistoryView = ({ sessions, expandedSessions, onToggleSession, searchQuery, onSearchChange }) => {
+      // Group sessions by date
+      const groupByDate = (sessions) => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        const lastWeek = new Date(today);
+        lastWeek.setDate(lastWeek.getDate() - 7);
+
+        const groups = {
+          today: [],
+          yesterday: [],
+          thisWeek: [],
+          older: [],
+        };
+
+        sessions.forEach(session => {
+          const sessionDate = new Date(session.timestamp);
+          sessionDate.setHours(0, 0, 0, 0);
+
+          if (sessionDate.getTime() === today.getTime()) {
+            groups.today.push(session);
+          } else if (sessionDate.getTime() === yesterday.getTime()) {
+            groups.yesterday.push(session);
+          } else if (sessionDate >= lastWeek) {
+            groups.thisWeek.push(session);
+          } else {
+            groups.older.push(session);
+          }
+        });
+
+        return groups;
+      };
+
+      // Filter sessions by search query
+      const filteredSessions = searchQuery
+        ? sessions.filter(s =>
+            s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            s.summary.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            s.workingDir.toLowerCase().includes(searchQuery.toLowerCase())
+          )
+        : sessions;
+
+      const groupedSessions = groupByDate(filteredSessions);
+
+      return (
+        <div className="flex-1 overflow-auto bg-white p-6 border-2 border-black">
+          <div className="max-w-4xl mx-auto">
+            {/* Header with search */}
+            <div className="flex items-center justify-between mb-6 pb-4 border-b-4 border-black">
+              <h2 className="text-xl font-bold label-text">SESSION HISTORY</h2>
+              <div className="relative">
+                <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="SEARCH SESSIONS..."
+                  value={searchQuery}
+                  onChange={(e) => onSearchChange(e.target.value)}
+                  className="w-64 bg-white border-2 border-black px-4 py-2 pl-10 text-sm outline-none focus:border-red placeholder-black/50"
+                />
+              </div>
+            </div>
+
+            {/* Session groups */}
+            {groupedSessions.today.length > 0 && (
+              <DateGroup label="TODAY">
+                {groupedSessions.today.map(session => (
+                  <SessionCard
+                    key={session.id}
+                    session={session}
+                    isExpanded={expandedSessions.has(session.id)}
+                    onToggle={() => onToggleSession(session.id)}
+                  />
+                ))}
+              </DateGroup>
+            )}
+
+            {groupedSessions.yesterday.length > 0 && (
+              <DateGroup label="YESTERDAY">
+                {groupedSessions.yesterday.map(session => (
+                  <SessionCard
+                    key={session.id}
+                    session={session}
+                    isExpanded={expandedSessions.has(session.id)}
+                    onToggle={() => onToggleSession(session.id)}
+                  />
+                ))}
+              </DateGroup>
+            )}
+
+            {filteredSessions.length === 0 && (
+              <div className="text-center py-12">
+                <div className="w-12 h-12 mx-auto mb-3 border-4 border-black flex items-center justify-center">
+                  <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                    <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <p className="text-sm font-bold label-text">
+                  {searchQuery ? `NO SESSIONS FOUND FOR "${searchQuery}"` : 'NO SESSION HISTORY YET'}
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    };
+
+    // Main terminal view
+    const TerminalView = ({ instance, editingInstanceId, editingName, onStartEditing, onEditingNameChange, onConfirmRename, onCancelEditing }) => (
+      <div className="flex-1 bg-white flex flex-col border-t-4 border-black">
+        <div className="flex items-center justify-between px-4 py-2 bg-white border-b-4 border-black">
+          <div className="flex items-center gap-3">
+            <StatusSquare status={instance.status} size="lg" />
+            <EditableName
+              instance={instance}
+              isEditing={editingInstanceId === instance.id}
+              editingName={editingName}
+              onStartEdit={() => onStartEditing(instance.id, instance.name)}
+              onNameChange={onEditingNameChange}
+              onConfirm={() => onConfirmRename(instance.id)}
+              onCancel={onCancelEditing}
+            />
+            <StatusBadge status={instance.status} />
+          </div>
+          <div className="flex items-center gap-2 text-xs font-mono">
+            {instance.workingDir}
+          </div>
+        </div>
+        <div className="flex-1 p-4 terminal-text text-black overflow-auto">
+          {instance.lastOutput.map((line, i) => (
+            <div key={i} className="py-0.5">{line}</div>
+          ))}
+          <div className="mt-4">
+            ═════════════════════════════════════════════<br/>
+            [TERMINAL OUTPUT WOULD APPEAR HERE]<br/>
+            THIS IS A MOCKUP PREVIEW OF THE TERMINAL<br/>
+            ═════════════════════════════════════════════
+          </div>
+        </div>
+      </div>
+    );
+
+    // Focused terminal view for focus mode (with collapse button)
+    const FocusedTerminalView = ({ instance, onCollapse, editingInstanceId, editingName, onStartEditing, onEditingNameChange, onConfirmRename, onCancelEditing }) => (
+      <div className="flex-1 bg-white flex flex-col border-heavy border-black overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-3 bg-white border-b-4 border-black">
+          <div className="flex items-center gap-3">
+            <StatusSquare status={instance.status} size="lg" />
+            <EditableName
+              instance={instance}
+              isEditing={editingInstanceId === instance.id}
+              editingName={editingName}
+              onStartEdit={() => onStartEditing(instance.id, instance.name)}
+              onNameChange={onEditingNameChange}
+              onConfirm={() => onConfirmRename(instance.id)}
+              onCancel={onCancelEditing}
+              className="text-lg"
+            />
+            <StatusBadge status={instance.status} />
+          </div>
+          <div className="flex items-center gap-4">
+            <span className="text-xs font-mono">
+              {instance.workingDir}
+            </span>
+            <ExpandButton onClick={onCollapse} expanded={true} />
+          </div>
+        </div>
+        <div className="flex-1 p-4 terminal-text text-black overflow-auto">
+          {instance.lastOutput.map((line, i) => (
+            <div key={i} className="py-0.5">{line}</div>
+          ))}
+          <div className="mt-4">
+            ═════════════════════════════════════════════<br/>
+            [TERMINAL OUTPUT WOULD APPEAR HERE]<br/>
+            THIS IS A MOCKUP PREVIEW OF THE TERMINAL<br/>
+            PRESS ESCAPE OR CLICK OUTSIDE TO EXIT FOCUS MODE<br/>
+            ═════════════════════════════════════════════
+          </div>
+        </div>
+      </div>
+    );
+
+    // Main App
+    const App = () => {
+      const [layout, setLayout] = useState('tabs');
+      const [activeInstance, setActiveInstance] = useState('1');
+      const [instances, setInstances] = useState(mockInstances);
+      const [editingInstanceId, setEditingInstanceId] = useState(null);
+      const [editingName, setEditingName] = useState('');
+      const [focusedInstance, setFocusedInstance] = useState(null);
+
+      // View state: 'instances' (default), 'home', or 'history'
+      const [currentView, setCurrentView] = useState('instances');
+
+      // History view state
+      const [sessions] = useState(mockSessions);
+      const [expandedSessions, setExpandedSessions] = useState(new Set());
+      const [sessionSearch, setSessionSearch] = useState('');
+
+      const toggleSessionExpanded = (sessionId) => {
+        setExpandedSessions(prev => {
+          const next = new Set(prev);
+          if (next.has(sessionId)) {
+            next.delete(sessionId);
+          } else {
+            next.add(sessionId);
+          }
+          return next;
+        });
+      };
+
+      // Welcome banner visibility (localStorage backed)
+      const [showWelcome, setShowWelcome] = useState(() => {
+        if (typeof window !== 'undefined') {
+          return localStorage.getItem('cc-welcome-dismissed') !== 'true';
+        }
+        return true;
+      });
+
+      const dismissWelcome = () => {
+        setShowWelcome(false);
+        localStorage.setItem('cc-welcome-dismissed', 'true');
+      };
+
+      // Keyboard handlers for focus mode
+      useEffect(() => {
+        const handleKeyDown = (e) => {
+          if (editingInstanceId) return;
+
+          if (e.key === 'Escape' && focusedInstance) {
+            setFocusedInstance(null);
+          }
+          if (e.key === 'Enter' && activeInstance && !focusedInstance) {
+            setFocusedInstance(activeInstance);
+          }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+      }, [focusedInstance, activeInstance, editingInstanceId]);
+
+      // Handle double-click to focus
+      const handleDoubleClickInstance = (instanceId) => {
+        if (focusedInstance === instanceId) {
+          setFocusedInstance(null);
+        } else {
+          setFocusedInstance(instanceId);
+        }
+      };
+
+      // Exit focus mode
+      const exitFocusMode = () => {
+        setFocusedInstance(null);
+      };
+
+      // Switch focus to another instance
+      const switchFocus = (instanceId) => {
+        setActiveInstance(instanceId);
+        setFocusedInstance(instanceId);
+      };
+
+      // Validate instance name
+      const validateName = (name) => {
+        if (!name || name.length === 0) return false;
+        if (name.length > 32) return false;
+        return /^[A-Z0-9_-]+$/.test(name);
+      };
+
+      // Start editing an instance name
+      const startEditing = (instanceId, currentName) => {
+        setEditingInstanceId(instanceId);
+        setEditingName(currentName);
+      };
+
+      // Cancel editing
+      const cancelEditing = () => {
+        setEditingInstanceId(null);
+        setEditingName('');
+      };
+
+      // Confirm rename
+      const confirmRename = (instanceId) => {
+        const trimmedName = editingName.trim().toUpperCase();
+        if (validateName(trimmedName)) {
+          setInstances(prev => prev.map(inst =>
+            inst.id === instanceId ? { ...inst, name: trimmedName } : inst
+          ));
+        }
+        cancelEditing();
+      };
+
+      // Toggle pin state for an instance
+      const togglePin = (instanceId) => {
+        setInstances(prev => prev.map(instance =>
+          instance.id === instanceId
+            ? { ...instance, pinned: !instance.pinned }
+            : instance
+        ));
+      };
+
+      // Close instance state
+      const [closeConfirmation, setCloseConfirmation] = useState(null);
+
+      // Request to close an instance (may show confirmation)
+      const requestClose = (instance) => {
+        const needsConfirmation =
+          instance.status === 'working' ||
+          instance.status === 'awaiting' ||
+          instance.status === 'error' ||
+          instance.pinned;
+
+        if (needsConfirmation) {
+          setCloseConfirmation(instance);
+        } else {
+          handleCloseInstance(instance.id);
+        }
+      };
+
+      // Handle closing an instance
+      const handleCloseInstance = (instanceId) => {
+        const instanceIndex = instances.findIndex(i => i.id === instanceId);
+        const wasActive = activeInstance === instanceId;
+
+        const remaining = instances.filter(i => i.id !== instanceId);
+        setInstances(remaining);
+
+        if (wasActive && remaining.length > 0) {
+          const newActiveIndex = Math.max(0, instanceIndex - 1);
+          setActiveInstance(remaining[Math.min(newActiveIndex, remaining.length - 1)].id);
+        } else if (remaining.length === 0) {
+          setActiveInstance(null);
+        }
+      };
+
+      // Confirm close from dialog
+      const confirmClose = () => {
+        if (closeConfirmation) {
+          handleCloseInstance(closeConfirmation.id);
+          setCloseConfirmation(null);
+        }
+      };
+
+      // Cancel close dialog
+      const cancelClose = () => {
+        setCloseConfirmation(null);
+      };
+
+      // Sort instances with pinned first
+      const sortedInstances = [...instances].sort((a, b) => {
+        if (a.pinned && !b.pinned) return -1;
+        if (!a.pinned && b.pinned) return 1;
+        return 0;
+      });
+
+      const activeInst = instances.find(i => i.id === activeInstance) || instances[0];
+
+      return (
+        <div className="h-screen flex flex-col bg-white">
+          {/* Header */}
+          <header className="flex items-center justify-between px-4 py-3 bg-white border-b-heavy border-black">
+            <div className="flex items-center gap-4">
+              <h1
+                className="text-xl font-black tracking-tighter cursor-pointer font-display"
+                onClick={() => setCurrentView('home')}
+                title="GO TO HOME"
+              >
+                <span className="text-red">CC</span> ORCHESTRATOR
+              </h1>
+              <div className="text-xs font-bold label-text">
+                BRUTALIST
+              </div>
+              <div className="text-xs font-mono">
+                {instances.length} INSTANCES
+                {instances.filter(i => i.pinned).length > 0 && (
+                  <span className="ml-2 text-red font-bold">
+                    ({instances.filter(i => i.pinned).length} PINNED)
+                  </span>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              {/* History button */}
+              <button
+                onClick={() => setCurrentView(currentView === 'history' ? 'instances' : 'history')}
+                className={`flex items-center gap-2 px-3 py-1.5 text-sm font-bold border-2 label-text ${currentView === 'history' ? 'bg-red text-white border-red' : 'bg-white text-black border-black'}`}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                  <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span className="hidden sm:inline">HISTORY</span>
+              </button>
+              {currentView === 'instances' && (
+                <LayoutSwitcher layout={layout} onChange={setLayout} />
+              )}
+            </div>
+          </header>
+
+          {/* Main content */}
+          <div className="flex-1 flex overflow-hidden">
+            <div className="flex-1 flex flex-col overflow-hidden">
+              {currentView === 'history' ? (
+                <HistoryView
+                  sessions={sessions}
+                  expandedSessions={expandedSessions}
+                  onToggleSession={toggleSessionExpanded}
+                  searchQuery={sessionSearch}
+                  onSearchChange={setSessionSearch}
+                />
+              ) : currentView === 'home' ? (
+                <HomePage
+                  instances={instances}
+                  showWelcome={showWelcome}
+                  onDismissWelcome={dismissWelcome}
+                  onNewInstance={() => {
+                    setCurrentView('instances');
+                  }}
+                  onViewAll={() => setCurrentView('instances')}
+                  onSelectInstance={(id) => {
+                    setActiveInstance(id);
+                    setCurrentView('instances');
+                  }}
+                />
+              ) : instances.length === 0 ? (
+                <EmptyState />
+              ) : (
+                <>
+                  {layout === 'tabs' && (
+                    <>
+                      <TabBarLayout
+                        instances={sortedInstances}
+                        activeId={activeInstance}
+                        onSelect={setActiveInstance}
+                        onTogglePin={togglePin}
+                        onRequestClose={requestClose}
+                        onDoubleClick={handleDoubleClickInstance}
+                        onExpand={(id) => setFocusedInstance(id)}
+                        editingInstanceId={editingInstanceId}
+                        editingName={editingName}
+                        onStartEditing={startEditing}
+                        onEditingNameChange={setEditingName}
+                        onConfirmRename={confirmRename}
+                        onCancelEditing={cancelEditing}
+                      />
+                      {activeInst && (
+                        <TerminalView
+                          instance={activeInst}
+                          editingInstanceId={editingInstanceId}
+                          editingName={editingName}
+                          onStartEditing={startEditing}
+                          onEditingNameChange={setEditingName}
+                          onConfirmRename={confirmRename}
+                          onCancelEditing={cancelEditing}
+                        />
+                      )}
+                    </>
+                  )}
+                  {layout === 'cards' && (
+                    <div className="flex-1 overflow-auto bg-white">
+                      <CardLayout
+                        instances={sortedInstances}
+                        activeId={activeInstance}
+                        onSelect={setActiveInstance}
+                        onTogglePin={togglePin}
+                        onRequestClose={requestClose}
+                        onDoubleClick={handleDoubleClickInstance}
+                        onExpand={(id) => setFocusedInstance(id)}
+                        editingInstanceId={editingInstanceId}
+                        editingName={editingName}
+                        onStartEditing={startEditing}
+                        onEditingNameChange={setEditingName}
+                        onConfirmRename={confirmRename}
+                        onCancelEditing={cancelEditing}
+                      />
+                    </div>
+                  )}
+                  {layout === 'list' && (
+                    <div className="flex-1 overflow-auto bg-white">
+                      <ListLayout
+                        instances={sortedInstances}
+                        activeId={activeInstance}
+                        onSelect={setActiveInstance}
+                        onTogglePin={togglePin}
+                        onRequestClose={requestClose}
+                        onDoubleClick={handleDoubleClickInstance}
+                        onExpand={(id) => setFocusedInstance(id)}
+                        editingInstanceId={editingInstanceId}
+                        editingName={editingName}
+                        onStartEditing={startEditing}
+                        onEditingNameChange={setEditingName}
+                        onConfirmRename={confirmRename}
+                        onCancelEditing={cancelEditing}
+                      />
+                      {activeInst && (
+                        <div className="border-t-4 border-black">
+                          <TerminalView
+                            instance={activeInst}
+                            editingInstanceId={editingInstanceId}
+                            editingName={editingName}
+                            onStartEditing={startEditing}
+                            onEditingNameChange={setEditingName}
+                            onConfirmRename={confirmRename}
+                            onCancelEditing={cancelEditing}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Focus Mode Overlay */}
+          {focusedInstance && instances.find(i => i.id === focusedInstance) && (
+            <FocusOverlay onClick={exitFocusMode}>
+              {/* Focused Terminal (main area) */}
+              <div className="flex-1 p-6 flex">
+                <FocusedTerminalView
+                  instance={instances.find(i => i.id === focusedInstance)}
+                  onCollapse={exitFocusMode}
+                  editingInstanceId={editingInstanceId}
+                  editingName={editingName}
+                  onStartEditing={startEditing}
+                  onEditingNameChange={setEditingName}
+                  onConfirmRename={confirmRename}
+                  onCancelEditing={cancelEditing}
+                />
+              </div>
+
+              {/* Thumbnail Sidebar */}
+              {instances.length > 1 && (
+                <div className="w-64 bg-white border-l-4 border-black p-4 flex flex-col gap-2 overflow-auto">
+                  <div className="text-xs font-bold label-text mb-2">OTHER INSTANCES</div>
+                  {sortedInstances
+                    .filter(i => i.id !== focusedInstance)
+                    .map(instance => (
+                      <ThumbnailInstance
+                        key={instance.id}
+                        instance={instance}
+                        isActive={instance.id === activeInstance}
+                        onClick={() => switchFocus(instance.id)}
+                      />
+                    ))}
+                </div>
+              )}
+            </FocusOverlay>
+          )}
+
+          {/* Confirmation Dialog */}
+          <ConfirmDialog
+            isOpen={closeConfirmation !== null}
+            instance={closeConfirmation}
+            onConfirm={confirmClose}
+            onCancel={cancelClose}
+          />
+        </div>
+      );
+    };
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>

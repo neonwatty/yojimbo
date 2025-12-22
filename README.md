@@ -4,7 +4,7 @@ A purpose-built macOS desktop application for managing multiple parallel Claude 
 
 ## Quick Start
 
-**View the interactive mockup**: Open [`mockup.html`](mockup.html) in a browser to explore the UI prototype.
+**View the interactive mockup**: Open [`mockups/index.html`](mockups/index.html) in a browser to explore the UI prototype.
 
 ## MVP Features
 

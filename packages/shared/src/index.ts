@@ -12,6 +12,39 @@ export interface Instance {
   updatedAt: string;
 }
 
+// Session type
+export interface Session {
+  id: string;
+  instanceId?: string;
+  name: string;
+  workingDir: string;
+  startedAt: string;
+  endedAt?: string;
+  messageCount: number;
+  tokenCount: number;
+  summary?: string;
+}
+
+// Message type
+export interface Message {
+  id: number;
+  sessionId: string;
+  role: 'user' | 'assistant' | 'tool';
+  content: string;
+  toolName?: string;
+  tokens?: number;
+  createdAt: string;
+}
+
+// Status event type
+export interface StatusEvent {
+  id: number;
+  instanceId: string;
+  status: InstanceStatus;
+  message?: string;
+  timestamp: string;
+}
+
 // User preferences
 export interface UserPreferences {
   theme: 'light' | 'dark' | 'system';

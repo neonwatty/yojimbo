@@ -7,6 +7,7 @@ import {
 } from '../hooks/use-instances';
 import { useAppStore } from '../stores/app-store';
 import { InstanceTerminal, type InstanceTerminalHandle } from '../components/InstanceTerminal';
+import { VanillaTerminal } from '../components/VanillaTerminal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { ContextMenu, useContextMenu } from '../components/ContextMenu';
 import { PlansPanel } from '../components/PlansPanel';
@@ -71,6 +72,11 @@ const Icons = {
       <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
     </svg>
   ),
+  terminal: (
+    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+    </svg>
+  ),
 };
 
 export function InstancesPage() {
@@ -90,6 +96,10 @@ export function InstancesPage() {
     exitFocusMode,
     plansPanelOpen,
     togglePlansPanel,
+    terminalPanelOpen,
+    terminalPanelHeight,
+    toggleTerminalPanel,
+    setTerminalPanelHeight,
   } = useAppStore();
 
   const [showNewDialog, setShowNewDialog] = useState(false);
@@ -172,6 +182,13 @@ export function InstancesPage() {
         return;
       }
 
+      // ⌘` - Toggle terminal panel (only in focus mode)
+      if (isMeta && e.key === '`' && focusMode) {
+        e.preventDefault();
+        toggleTerminalPanel();
+        return;
+      }
+
       // Escape - Exit focus mode
       if (e.key === 'Escape' && focusMode) {
         e.preventDefault();
@@ -223,7 +240,7 @@ export function InstancesPage() {
         return;
       }
     },
-    [activeInstance, activeInstanceId, instances, setActiveInstance, focusMode, enterFocusMode, exitFocusMode, togglePlansPanel]
+    [activeInstance, activeInstanceId, instances, setActiveInstance, focusMode, enterFocusMode, exitFocusMode, togglePlansPanel, toggleTerminalPanel]
   );
 
   useEffect(() => {
@@ -319,6 +336,10 @@ export function InstancesPage() {
             onContextMenu={handleContextMenu}
             plansPanelOpen={plansPanelOpen}
             onTogglePlansPanel={togglePlansPanel}
+            terminalPanelOpen={terminalPanelOpen}
+            terminalPanelHeight={terminalPanelHeight}
+            onToggleTerminalPanel={toggleTerminalPanel}
+            onSetTerminalPanelHeight={setTerminalPanelHeight}
           />
         ) : layout === 'list' ? (
           // List layout
@@ -620,6 +641,10 @@ function FocusModeView({
   onContextMenu,
   plansPanelOpen,
   onTogglePlansPanel,
+  terminalPanelOpen,
+  terminalPanelHeight,
+  onToggleTerminalPanel,
+  onSetTerminalPanelHeight,
 }: {
   instances: Instance[];
   focusedInstanceId: string;
@@ -628,10 +653,15 @@ function FocusModeView({
   onContextMenu: (e: React.MouseEvent, instance: Instance) => void;
   plansPanelOpen: boolean;
   onTogglePlansPanel: () => void;
+  terminalPanelOpen: boolean;
+  terminalPanelHeight: number;
+  onToggleTerminalPanel: () => void;
+  onSetTerminalPanelHeight: (height: number) => void;
 }) {
   const focusedInstance = instances.find((i) => i.id === focusedInstanceId);
   const otherInstances = instances.filter((i) => i.id !== focusedInstanceId);
   const terminalRef = useRef<InstanceTerminalHandle>(null);
+  const resizeRef = useRef<{ startY: number; startHeight: number } | null>(null);
 
   // Handle injecting plan content to terminal
   const handleInjectToTerminal = useCallback((content: string) => {
@@ -639,6 +669,31 @@ function FocusModeView({
       terminalRef.current.sendToTerminal(content);
     }
   }, []);
+
+  // Handle vertical resize of terminal panel
+  const handleResizeMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    resizeRef.current = {
+      startY: e.clientY,
+      startHeight: terminalPanelHeight,
+    };
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!resizeRef.current) return;
+      const delta = resizeRef.current.startY - e.clientY;
+      const newHeight = resizeRef.current.startHeight + delta;
+      onSetTerminalPanelHeight(newHeight);
+    };
+
+    const handleMouseUp = () => {
+      resizeRef.current = null;
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  }, [terminalPanelHeight, onSetTerminalPanelHeight]);
 
   if (!focusedInstance) return null;
 
@@ -667,6 +722,17 @@ function FocusModeView({
           </div>
           <div className="flex items-center gap-2">
             <button
+              onClick={onToggleTerminalPanel}
+              className={`p-1.5 rounded transition-colors ${
+                terminalPanelOpen
+                  ? 'bg-accent text-black'
+                  : 'text-theme-muted hover:text-theme-primary hover:bg-surface-700'
+              }`}
+              title="Toggle terminal panel (⌘`)"
+            >
+              {Icons.terminal}
+            </button>
+            <button
               onClick={onTogglePlansPanel}
               className={`p-1.5 rounded transition-colors ${
                 plansPanelOpen
@@ -687,9 +753,33 @@ function FocusModeView({
           </div>
         </div>
 
-        {/* Terminal */}
-        <div className="flex-1 min-h-0">
-          <InstanceTerminal ref={terminalRef} instanceId={focusedInstanceId} className="h-full" />
+        {/* Terminal content area */}
+        <div className="flex-1 min-h-0 flex flex-col">
+          {/* Main Claude Code terminal */}
+          <div className="flex-1 min-h-0">
+            <InstanceTerminal ref={terminalRef} instanceId={focusedInstanceId} className="h-full" />
+          </div>
+
+          {/* Vanilla terminal panel (bottom) */}
+          {terminalPanelOpen && (
+            <>
+              {/* Resize handle */}
+              <div
+                className="h-1 bg-surface-600 hover:bg-accent cursor-ns-resize flex-shrink-0 transition-colors"
+                onMouseDown={handleResizeMouseDown}
+              />
+              {/* Vanilla terminal */}
+              <div
+                className="bg-surface-900 flex-shrink-0"
+                style={{ height: terminalPanelHeight }}
+              >
+                <VanillaTerminal
+                  workingDir={focusedInstance.workingDir}
+                  className="h-full"
+                />
+              </div>
+            </>
+          )}
         </div>
       </div>
 

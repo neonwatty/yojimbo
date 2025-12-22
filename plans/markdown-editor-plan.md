@@ -100,9 +100,8 @@ The editor appears as a right-side panel, per-instance:
 1. **Per-instance plans**: Each terminal instance can have a linked plan
 2. **Plans directory only**: Browser shows only the app's plans folder, not full filesystem
 3. **Collapsible browser**: Plans list collapses to icon-only sidebar
-4. **Full-screen editor**: Expand button opens editor in full-screen overlay
-5. **Plan linking**: Link/unlink plans to instances via toolbar button
-6. **Inject action**: Button to paste plan content into the terminal
+4. **Plan linking**: Link/unlink plans to instances via toolbar button
+5. **Inject action**: Button to paste plan content into the terminal
 
 ### Panel Behavior
 
@@ -112,7 +111,6 @@ The editor appears as a right-side panel, per-instance:
 - **Panel position:** Right side (vertical split)
 - **Horizontal resize:** Drag handle between terminal and right panel
 - **Vertical resize:** Drag handle between plans browser and editor (within panel)
-- **Full-screen:** `Cmd+Shift+E` or expand button for editor only
 - **Plans browser:** Always visible when panel is open (not independently collapsible)
 
 ### Plan-Instance Association (Auto-Discovery)

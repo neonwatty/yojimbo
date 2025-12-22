@@ -193,10 +193,10 @@ The MVP focuses on **human management of multiple Claude Code instances**—maki
 
 #### 7. Session History View
 
-- Browse past sessions grouped by date (Today, Yesterday, Older)
-- Search sessions by name
-- Expandable session cards showing messages and tool usage
-- Token and message counts per session
+- Basic list of past sessions
+- Click to view session details
+
+> **Post-MVP**: Date grouping, FTS5 search, expandable cards, token/message counts
 
 #### 8. Plans/Markdown Editor Panel
 
@@ -208,7 +208,6 @@ The MVP focuses on **human management of multiple Claude Code instances**—maki
 - Toolbar: Bold, Italic, Underline, Headings, Lists
 - Inject plan content into terminal
 - Dirty state indicator for unsaved changes
-- Full-screen editor with ⌘⇧E
 
 #### 9. Vanilla Terminal Panel
 
@@ -701,7 +700,6 @@ The orchestrator provides a way to generate/install these hooks for each instanc
 - [ ] Dirty state indicator (● dot in mockup file list)
 - [ ] Inject plan into terminal (Inject button in mockup toolbar)
 - [ ] File watcher for external changes
-- [ ] Full-screen editor mode (⌘⇧E)
 
 ### Milestone 8.5: Vanilla Terminal Panel
 
@@ -715,17 +713,20 @@ The orchestrator provides a way to generate/install these hooks for each instanc
 - [ ] Working directory display (matches expanded instance)
 - [ ] Update ShortcutsModal with terminal shortcut
 
-### Milestone 9: Session History
+### Milestone 9: Session History (Basic)
 
-> **Design ref**: See mockup History view (click "History" in header). Note session cards, date grouping, and search UI.
+> **Design ref**: See mockup History view (click "History" in header).
 
-- [ ] Sessions list grouped by date (Today, Yesterday, Older - see mockup)
-- [ ] Search sessions by name (see mockup search input styling)
-- [ ] FTS5 full-text search across messages
-- [ ] Expandable session cards (see mockup session card component)
-- [ ] Message and token counts (displayed in session cards)
-- [ ] Filter by working directory
-- [ ] Filter by status
+- [ ] Basic sessions list view
+- [ ] Click session to view details
+- [ ] Simple session name display
+
+**Post-MVP enhancements** (deferred):
+- Sessions grouped by date (Today, Yesterday, Older)
+- Search sessions by name
+- FTS5 full-text search across messages
+- Expandable session cards with message/token counts
+- Filter by working directory and status
 
 ### Milestone 10: Testing & CI
 

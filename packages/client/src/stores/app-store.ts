@@ -10,6 +10,12 @@ interface AppState {
   layout: 'tabs' | 'cards' | 'list';
   setLayout: (layout: 'tabs' | 'cards' | 'list') => void;
 
+  // Focus mode
+  focusMode: boolean;
+  focusedInstanceId: string | null;
+  enterFocusMode: (instanceId: string) => void;
+  exitFocusMode: () => void;
+
   // Sidebar
   sidebarOpen: boolean;
   toggleSidebar: () => void;
@@ -42,6 +48,13 @@ export const useAppStore = create<AppState>((set) => ({
   // Layout
   layout: 'tabs',
   setLayout: (layout) => set({ layout }),
+
+  // Focus mode
+  focusMode: false,
+  focusedInstanceId: null,
+  enterFocusMode: (instanceId) =>
+    set({ focusMode: true, focusedInstanceId: instanceId, activeInstanceId: instanceId }),
+  exitFocusMode: () => set({ focusMode: false, focusedInstanceId: null }),
 
   // Sidebar
   sidebarOpen: true,
@@ -84,3 +97,5 @@ export const selectActiveInstance = (state: AppState) => state.activeInstanceId;
 export const selectLayout = (state: AppState) => state.layout;
 export const selectTheme = (state: AppState) => state.theme;
 export const selectSidebarOpen = (state: AppState) => state.sidebarOpen;
+export const selectFocusMode = (state: AppState) => state.focusMode;
+export const selectFocusedInstance = (state: AppState) => state.focusedInstanceId;

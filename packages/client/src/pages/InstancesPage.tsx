@@ -70,6 +70,21 @@ const Icons = {
       />
     </svg>
   ),
+  list: (
+    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+    </svg>
+  ),
+  expand: (
+    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+    </svg>
+  ),
+  collapse: (
+    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5l5.25 5.25" />
+    </svg>
+  ),
 };
 
 export function InstancesPage() {
@@ -78,7 +93,16 @@ export function InstancesPage() {
   const deleteInstance = useDeleteInstance();
   const updateInstance = useUpdateInstance();
 
-  const { activeInstanceId, setActiveInstance, layout, setLayout } = useAppStore();
+  const {
+    activeInstanceId,
+    setActiveInstance,
+    layout,
+    setLayout,
+    focusMode,
+    focusedInstanceId,
+    enterFocusMode,
+    exitFocusMode,
+  } = useAppStore();
 
   const [showNewDialog, setShowNewDialog] = useState(false);
   const [newName, setNewName] = useState('');
@@ -165,6 +189,20 @@ export function InstancesPage() {
     (e: KeyboardEvent) => {
       const isMeta = e.metaKey || e.ctrlKey;
 
+      // Escape - Exit focus mode
+      if (e.key === 'Escape' && focusMode) {
+        e.preventDefault();
+        exitFocusMode();
+        return;
+      }
+
+      // Enter - Enter focus mode on active instance
+      if (e.key === 'Enter' && !focusMode && activeInstance && !renamingId) {
+        e.preventDefault();
+        enterFocusMode(activeInstance.id);
+        return;
+      }
+
       // ⌘W - Close active instance
       if (isMeta && e.key === 'w' && activeInstance) {
         e.preventDefault();
@@ -209,7 +247,7 @@ export function InstancesPage() {
         return;
       }
     },
-    [activeInstance, activeInstanceId, instances, setActiveInstance]
+    [activeInstance, activeInstanceId, instances, setActiveInstance, focusMode, enterFocusMode, exitFocusMode, renamingId]
   );
 
   useEffect(() => {
@@ -284,17 +322,24 @@ export function InstancesPage() {
         <div className="flex items-center gap-1 px-2">
           <button
             onClick={() => setLayout('tabs')}
-            className={`p-1.5 rounded ${layout === 'tabs' ? 'bg-surface-600 text-theme-primary' : 'text-theme-muted hover:text-theme-primary'}`}
+            className={`p-1.5 rounded ${layout === 'tabs' && !focusMode ? 'bg-surface-600 text-theme-primary' : 'text-theme-muted hover:text-theme-primary'}`}
             title="Tabs view"
           >
             {Icons.tabs}
           </button>
           <button
             onClick={() => setLayout('cards')}
-            className={`p-1.5 rounded ${layout === 'cards' ? 'bg-surface-600 text-theme-primary' : 'text-theme-muted hover:text-theme-primary'}`}
+            className={`p-1.5 rounded ${layout === 'cards' && !focusMode ? 'bg-surface-600 text-theme-primary' : 'text-theme-muted hover:text-theme-primary'}`}
             title="Cards view"
           >
             {Icons.cards}
+          </button>
+          <button
+            onClick={() => setLayout('list')}
+            className={`p-1.5 rounded ${layout === 'list' && !focusMode ? 'bg-surface-600 text-theme-primary' : 'text-theme-muted hover:text-theme-primary'}`}
+            title="List view"
+          >
+            {Icons.list}
           </button>
         </div>
       </div>
@@ -313,6 +358,15 @@ export function InstancesPage() {
               Create your first instance
             </button>
           </div>
+        ) : focusMode && focusedInstanceId ? (
+          // Focus mode: expanded instance with thumbnail sidebar
+          <FocusModeView
+            instances={instances}
+            focusedInstanceId={focusedInstanceId}
+            onSelectInstance={(id) => enterFocusMode(id)}
+            onExitFocus={exitFocusMode}
+            onContextMenu={handleContextMenu}
+          />
         ) : layout === 'tabs' ? (
           activeInstance ? (
             <InstanceTerminal instanceId={activeInstance.id} className="h-full" />
@@ -321,7 +375,27 @@ export function InstancesPage() {
               Select an instance
             </div>
           )
+        ) : layout === 'list' ? (
+          // List layout
+          <div className="p-4">
+            <div className="bg-surface-800 rounded-xl border border-surface-600 overflow-hidden">
+              <div className="divide-y divide-surface-600">
+                {instances.map((instance) => (
+                  <InstanceListRow
+                    key={instance.id}
+                    instance={instance}
+                    isActive={activeInstanceId === instance.id}
+                    onClick={() => setActiveInstance(instance.id)}
+                    onDoubleClick={() => enterFocusMode(instance.id)}
+                    onContextMenu={(e) => handleContextMenu(e, instance)}
+                    onTogglePin={() => handleTogglePin(instance)}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
         ) : (
+          // Card layout
           <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {instances.map((instance) => (
               <InstanceCard
@@ -329,6 +403,7 @@ export function InstancesPage() {
                 instance={instance}
                 isActive={activeInstanceId === instance.id}
                 onClick={() => setActiveInstance(instance.id)}
+                onDoubleClick={() => enterFocusMode(instance.id)}
                 onContextMenu={(e) => handleContextMenu(e, instance)}
                 onTogglePin={() => handleTogglePin(instance)}
               />
@@ -502,12 +577,14 @@ function InstanceCard({
   instance,
   isActive,
   onClick,
+  onDoubleClick,
   onContextMenu,
   onTogglePin,
 }: {
   instance: Instance;
   isActive: boolean;
   onClick: () => void;
+  onDoubleClick: () => void;
   onContextMenu: (e: React.MouseEvent) => void;
   onTogglePin: () => void;
 }) {
@@ -521,11 +598,12 @@ function InstanceCard({
   return (
     <div
       className={`
-        bg-surface-800 rounded-xl border-2 p-4 cursor-pointer relative
+        group bg-surface-800 rounded-xl border-2 p-4 cursor-pointer relative
         transition-all hover:-translate-y-0.5 hover:shadow-lg
         ${isActive ? 'border-accent' : statusColors[instance.status] || statusColors.idle}
       `}
       onClick={onClick}
+      onDoubleClick={onDoubleClick}
       onContextMenu={onContextMenu}
     >
       {/* Pin button */}
@@ -561,6 +639,229 @@ function InstanceCard({
       </div>
       <div className="text-sm text-theme-muted truncate">{instance.workingDir}</div>
       <div className="text-xs text-theme-muted mt-2 capitalize">{instance.status}</div>
+    </div>
+  );
+}
+
+// List row component
+function InstanceListRow({
+  instance,
+  isActive,
+  onClick,
+  onDoubleClick,
+  onContextMenu,
+  onTogglePin,
+}: {
+  instance: Instance;
+  isActive: boolean;
+  onClick: () => void;
+  onDoubleClick: () => void;
+  onContextMenu: (e: React.MouseEvent) => void;
+  onTogglePin: () => void;
+}) {
+  const statusConfig = {
+    working: { bg: 'bg-state-working/10', text: 'text-state-working', border: 'border-state-working/30', label: 'Working' },
+    awaiting: { bg: 'bg-state-awaiting/10', text: 'text-state-awaiting', border: 'border-state-awaiting/30', label: 'Awaiting' },
+    idle: { bg: 'bg-state-idle/10', text: 'text-state-idle', border: 'border-state-idle/30', label: 'Idle' },
+    error: { bg: 'bg-state-error/10', text: 'text-state-error', border: 'border-state-error/30', label: 'Error' },
+  };
+
+  const config = statusConfig[instance.status] || statusConfig.idle;
+
+  return (
+    <div
+      className={`
+        group flex items-center gap-4 px-4 py-3 cursor-pointer transition-colors
+        ${isActive ? 'bg-surface-700' : 'hover:bg-surface-700'}
+      `}
+      onClick={onClick}
+      onDoubleClick={onDoubleClick}
+      onContextMenu={onContextMenu}
+    >
+      {/* Status dot */}
+      <span
+        className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${instance.status === 'working' ? 'animate-pulse' : ''}`}
+        style={{
+          backgroundColor:
+            instance.status === 'working'
+              ? 'var(--state-working)'
+              : instance.status === 'awaiting'
+                ? 'var(--state-awaiting)'
+                : instance.status === 'error'
+                  ? 'var(--state-error)'
+                  : 'var(--state-idle)',
+        }}
+      />
+
+      {/* Pin indicator */}
+      {instance.pinned && (
+        <span className="text-accent flex-shrink-0">
+          {Icons.pinFilled}
+        </span>
+      )}
+
+      {/* Name */}
+      <div className="flex-1 min-w-0">
+        <span className="font-medium text-theme-primary truncate block">{instance.name}</span>
+        <span className="text-sm text-theme-muted truncate block">{instance.workingDir}</span>
+      </div>
+
+      {/* Status badge */}
+      <span
+        className={`
+          inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium
+          border ${config.bg} ${config.text} ${config.border}
+        `}
+      >
+        {config.label}
+      </span>
+
+      {/* Actions */}
+      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onTogglePin();
+          }}
+          className={`p-1.5 rounded hover:bg-surface-600 transition-colors ${
+            instance.pinned ? 'text-accent' : 'text-theme-muted hover:text-theme-primary'
+          }`}
+          title={instance.pinned ? 'Unpin' : 'Pin'}
+        >
+          {instance.pinned ? Icons.pinFilled : Icons.pin}
+        </button>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onDoubleClick();
+          }}
+          className="p-1.5 rounded text-theme-muted hover:text-theme-primary hover:bg-surface-600 transition-colors"
+          title="Focus mode"
+        >
+          {Icons.expand}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// Focus mode view component
+function FocusModeView({
+  instances,
+  focusedInstanceId,
+  onSelectInstance,
+  onExitFocus,
+  onContextMenu,
+}: {
+  instances: Instance[];
+  focusedInstanceId: string;
+  onSelectInstance: (id: string) => void;
+  onExitFocus: () => void;
+  onContextMenu: (e: React.MouseEvent, instance: Instance) => void;
+}) {
+  const focusedInstance = instances.find((i) => i.id === focusedInstanceId);
+  const otherInstances = instances.filter((i) => i.id !== focusedInstanceId);
+
+  if (!focusedInstance) return null;
+
+  return (
+    <div className="h-full flex">
+      {/* Main focused terminal */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Focus header */}
+        <div className="h-10 bg-surface-800 border-b border-surface-600 flex items-center justify-between px-4">
+          <div className="flex items-center gap-3">
+            <span
+              className={`w-2.5 h-2.5 rounded-full ${focusedInstance.status === 'working' ? 'animate-pulse' : ''}`}
+              style={{
+                backgroundColor:
+                  focusedInstance.status === 'working'
+                    ? 'var(--state-working)'
+                    : focusedInstance.status === 'awaiting'
+                      ? 'var(--state-awaiting)'
+                      : focusedInstance.status === 'error'
+                        ? 'var(--state-error)'
+                        : 'var(--state-idle)',
+              }}
+            />
+            <span className="font-medium text-theme-primary">{focusedInstance.name}</span>
+            <span className="text-sm text-theme-muted">{focusedInstance.workingDir}</span>
+          </div>
+          <button
+            onClick={onExitFocus}
+            className="p-1.5 rounded text-theme-muted hover:text-theme-primary hover:bg-surface-700 transition-colors"
+            title="Exit focus mode (Esc)"
+          >
+            {Icons.collapse}
+          </button>
+        </div>
+
+        {/* Terminal */}
+        <div className="flex-1 min-h-0">
+          <InstanceTerminal instanceId={focusedInstanceId} className="h-full" />
+        </div>
+      </div>
+
+      {/* Thumbnail sidebar */}
+      {otherInstances.length > 0 && (
+        <div className="w-48 bg-surface-800 border-l border-surface-600 overflow-y-auto">
+          <div className="p-2 text-xs font-medium text-theme-muted uppercase tracking-wider">
+            Other Instances
+          </div>
+          <div className="space-y-1 px-2 pb-2">
+            {otherInstances.map((instance) => (
+              <ThumbnailInstance
+                key={instance.id}
+                instance={instance}
+                onClick={() => onSelectInstance(instance.id)}
+                onContextMenu={(e) => onContextMenu(e, instance)}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Thumbnail instance for focus mode sidebar
+function ThumbnailInstance({
+  instance,
+  onClick,
+  onContextMenu,
+}: {
+  instance: Instance;
+  onClick: () => void;
+  onContextMenu: (e: React.MouseEvent) => void;
+}) {
+  return (
+    <div
+      className="group p-2 rounded-lg bg-surface-700 hover:bg-surface-600 cursor-pointer transition-colors"
+      onClick={onClick}
+      onContextMenu={onContextMenu}
+    >
+      <div className="flex items-center gap-2 mb-1">
+        <span
+          className={`w-2 h-2 rounded-full flex-shrink-0 ${instance.status === 'working' ? 'animate-pulse' : ''}`}
+          style={{
+            backgroundColor:
+              instance.status === 'working'
+                ? 'var(--state-working)'
+                : instance.status === 'awaiting'
+                  ? 'var(--state-awaiting)'
+                  : instance.status === 'error'
+                    ? 'var(--state-error)'
+                    : 'var(--state-idle)',
+          }}
+        />
+        {instance.pinned && (
+          <span className="text-accent text-xs">{Icons.pinFilled}</span>
+        )}
+        <span className="text-xs font-medium text-theme-primary truncate flex-1">
+          {instance.name}
+        </span>
+      </div>
+      <div className="text-[10px] text-theme-muted truncate">{instance.workingDir}</div>
     </div>
   );
 }

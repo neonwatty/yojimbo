@@ -13,18 +13,18 @@ export default {
           600: 'var(--surface-600)',
           500: 'var(--surface-500)',
         },
-        // Status colors
+        // Status colors (use CSS vars)
         state: {
-          working: '#06b6d4', // Cyan
-          awaiting: '#f59e0b', // Amber
-          idle: '#6b7280', // Gray
-          error: '#f43f5e', // Rose
+          working: 'var(--state-working)',
+          awaiting: 'var(--state-awaiting)',
+          idle: 'var(--state-idle)',
+          error: 'var(--state-error)',
         },
-        // Accent
+        // Accent (use CSS vars)
         accent: {
-          DEFAULT: '#f59e0b',
-          bright: '#fbbf24',
-          dim: '#d97706',
+          DEFAULT: 'var(--accent)',
+          bright: 'var(--accent-bright)',
+          dim: 'var(--accent-dim)',
         },
       },
       fontFamily: {

@@ -1,14 +1,41 @@
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Layout } from './components/Layout';
+import { HomePage } from './pages/HomePage';
+import { InstancesPage } from './pages/InstancesPage';
+import { HistoryPage } from './pages/HistoryPage';
+import { useKeyboardShortcuts } from './hooks/use-keyboard-shortcuts';
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60, // 1 minute
+      retry: 1,
+    },
+  },
+});
+
+function AppRoutes() {
+  // Set up global keyboard shortcuts
+  useKeyboardShortcuts();
+
+  return (
+    <Layout>
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/instances" element={<InstancesPage />} />
+        <Route path="/history" element={<HistoryPage />} />
+      </Routes>
+    </Layout>
+  );
+}
+
 export function App() {
   return (
-    <div className="min-h-screen bg-surface-900 text-theme-primary">
-      <header className="h-14 bg-surface-800 border-b border-surface-600 flex items-center px-4">
-        <h1 className="text-lg font-semibold">CC Orchestrator</h1>
-      </header>
-      <main className="p-4">
-        <p className="text-theme-secondary">
-          Welcome to Claude Code Orchestrator. Development server is running.
-        </p>
-      </main>
-    </div>
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <AppRoutes />
+      </BrowserRouter>
+    </QueryClientProvider>
   );
 }

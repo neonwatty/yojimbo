@@ -13,6 +13,17 @@
   --text-secondary: #475569;
   --text-muted: #64748b;
   --border-color: #cbd5e1;
+
+  /* Status colors */
+  --state-working: #06b6d4;
+  --state-awaiting: #f59e0b;
+  --state-idle: #6b7280;
+  --state-error: #f43f5e;
+
+  /* Accent */
+  --accent: #f59e0b;
+  --accent-bright: #fbbf24;
+  --accent-dim: #d97706;
 }
 
 /* Dark mode */
@@ -26,6 +37,17 @@
   --text-secondary: #d1d5db;
   --text-muted: #6b7280;
   --border-color: #232328;
+
+  /* Status colors stay the same */
+  --state-working: #06b6d4;
+  --state-awaiting: #f59e0b;
+  --state-idle: #6b7280;
+  --state-error: #f43f5e;
+
+  /* Accent stays the same */
+  --accent: #f59e0b;
+  --accent-bright: #fbbf24;
+  --accent-dim: #d97706;
 }
 
 body {

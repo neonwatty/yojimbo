@@ -7,6 +7,7 @@ import { setupWebSocket } from './services/websocket.js';
 import { instanceRoutes } from './routes/instances.js';
 import { sessionRoutes } from './routes/sessions.js';
 import { statusEventRoutes } from './routes/status-events.js';
+import { hookRoutes } from './routes/hooks.js';
 
 const fastify = Fastify({
   logger: true,
@@ -31,6 +32,7 @@ setupWebSocket(fastify);
 await fastify.register(instanceRoutes);
 await fastify.register(sessionRoutes);
 await fastify.register(statusEventRoutes);
+await fastify.register(hookRoutes);
 
 // Health check endpoint
 fastify.get('/api/health', async () => {

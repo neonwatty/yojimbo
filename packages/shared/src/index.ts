@@ -52,6 +52,26 @@ export interface UserPreferences {
   terminalFontFamily: string;
 }
 
+// Plan file type
+export interface PlanFile {
+  id: string;
+  name: string;
+  path: string;
+  modifiedAt: string;
+}
+
+// Plan with content
+export interface Plan extends PlanFile {
+  content: string;
+}
+
+// Plans list response
+export interface PlansListResponse {
+  workingDir: string;
+  plansDir: string;
+  files: PlanFile[];
+}
+
 // API response types
 export interface HealthResponse {
   status: 'ok';

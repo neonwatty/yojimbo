@@ -35,6 +35,13 @@ interface AppState {
   showShortcuts: boolean;
   setShowShortcuts: (show: boolean) => void;
 
+  // Plans panel
+  plansPanelOpen: boolean;
+  togglePlansPanel: () => void;
+  setPlansPanelOpen: (open: boolean) => void;
+  selectedPlanId: string | null;
+  setSelectedPlanId: (id: string | null) => void;
+
   // Instance status updates (from WebSocket)
   instanceStatuses: Map<string, InstanceStatus>;
   updateInstanceStatus: (id: string, status: InstanceStatus) => void;
@@ -82,6 +89,13 @@ export const useAppStore = create<AppState>((set) => ({
   showShortcuts: false,
   setShowShortcuts: (show) => set({ showShortcuts: show }),
 
+  // Plans panel
+  plansPanelOpen: false,
+  togglePlansPanel: () => set((state) => ({ plansPanelOpen: !state.plansPanelOpen })),
+  setPlansPanelOpen: (open) => set({ plansPanelOpen: open }),
+  selectedPlanId: null,
+  setSelectedPlanId: (id) => set({ selectedPlanId: id }),
+
   // Instance status updates
   instanceStatuses: new Map(),
   updateInstanceStatus: (id, status) =>
@@ -99,3 +113,5 @@ export const selectTheme = (state: AppState) => state.theme;
 export const selectSidebarOpen = (state: AppState) => state.sidebarOpen;
 export const selectFocusMode = (state: AppState) => state.focusMode;
 export const selectFocusedInstance = (state: AppState) => state.focusedInstanceId;
+export const selectPlansPanelOpen = (state: AppState) => state.plansPanelOpen;
+export const selectSelectedPlanId = (state: AppState) => state.selectedPlanId;

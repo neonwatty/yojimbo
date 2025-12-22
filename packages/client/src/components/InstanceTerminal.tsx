@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useImperativeHandle, forwardRef } from 'react';
 import { Terminal as XTerm } from 'xterm';
 import { FitAddon } from 'xterm-addon-fit';
 import { useWebSocket, type WSMessage } from '../hooks/use-websocket';
@@ -10,7 +10,12 @@ interface InstanceTerminalProps {
   className?: string;
 }
 
-export function InstanceTerminal({ instanceId, className = '' }: InstanceTerminalProps) {
+export interface InstanceTerminalHandle {
+  sendToTerminal: (text: string) => void;
+}
+
+export const InstanceTerminal = forwardRef<InstanceTerminalHandle, InstanceTerminalProps>(
+  function InstanceTerminal({ instanceId, className = '' }, ref) {
   const containerRef = useRef<HTMLDivElement>(null);
   const terminalRef = useRef<XTerm | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
@@ -103,6 +108,13 @@ export function InstanceTerminal({ instanceId, className = '' }: InstanceTermina
     }
   }, [isConnected, instanceId, subscribe, unsubscribe]);
 
+  // Expose sendToTerminal method via ref
+  useImperativeHandle(ref, () => ({
+    sendToTerminal: (text: string) => {
+      sendTerminalInput(instanceId, text);
+    },
+  }), [instanceId, sendTerminalInput]);
+
   // Handle resize
   useEffect(() => {
     const handleResize = () => {
@@ -135,4 +147,4 @@ export function InstanceTerminal({ instanceId, className = '' }: InstanceTermina
       )}
     </div>
   );
-}
+});

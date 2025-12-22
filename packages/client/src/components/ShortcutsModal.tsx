@@ -26,6 +26,7 @@ const shortcutGroups: ShortcutGroup[] = [
       { keys: ['F2'], description: 'Rename instance' },
       { keys: ['Enter'], description: 'Enter focus mode' },
       { keys: ['Esc'], description: 'Exit focus mode' },
+      { keys: ['⌘', 'E'], description: 'Toggle plans panel (focus mode)' },
     ],
   },
   {

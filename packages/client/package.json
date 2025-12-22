@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@cc-orchestrator/shared": "workspace:*",
+    "@mdxeditor/editor": "^3.52.1",
     "@tanstack/react-query": "^5.62.8",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

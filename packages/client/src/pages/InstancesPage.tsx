@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   useInstances,
   useCreateInstance,
@@ -6,10 +6,11 @@ import {
   useUpdateInstance,
 } from '../hooks/use-instances';
 import { useAppStore } from '../stores/app-store';
-import { InstanceTerminal } from '../components/InstanceTerminal';
+import { InstanceTerminal, type InstanceTerminalHandle } from '../components/InstanceTerminal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { EditableName } from '../components/EditableName';
 import { ContextMenu, useContextMenu } from '../components/ContextMenu';
+import { PlansPanel } from '../components/PlansPanel';
 import type { Instance } from '@cc-orchestrator/shared';
 
 // Icons
@@ -85,6 +86,11 @@ const Icons = {
       <path strokeLinecap="round" strokeLinejoin="round" d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5l5.25 5.25" />
     </svg>
   ),
+  document: (
+    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+    </svg>
+  ),
 };
 
 export function InstancesPage() {
@@ -102,6 +108,8 @@ export function InstancesPage() {
     focusedInstanceId,
     enterFocusMode,
     exitFocusMode,
+    plansPanelOpen,
+    togglePlansPanel,
   } = useAppStore();
 
   const [showNewDialog, setShowNewDialog] = useState(false);
@@ -189,6 +197,13 @@ export function InstancesPage() {
     (e: KeyboardEvent) => {
       const isMeta = e.metaKey || e.ctrlKey;
 
+      // ⌘E - Toggle plans panel (only in focus mode)
+      if (isMeta && e.key === 'e' && focusMode) {
+        e.preventDefault();
+        togglePlansPanel();
+        return;
+      }
+
       // Escape - Exit focus mode
       if (e.key === 'Escape' && focusMode) {
         e.preventDefault();
@@ -247,7 +262,7 @@ export function InstancesPage() {
         return;
       }
     },
-    [activeInstance, activeInstanceId, instances, setActiveInstance, focusMode, enterFocusMode, exitFocusMode, renamingId]
+    [activeInstance, activeInstanceId, instances, setActiveInstance, focusMode, enterFocusMode, exitFocusMode, renamingId, togglePlansPanel]
   );
 
   useEffect(() => {
@@ -366,6 +381,8 @@ export function InstancesPage() {
             onSelectInstance={(id) => enterFocusMode(id)}
             onExitFocus={exitFocusMode}
             onContextMenu={handleContextMenu}
+            plansPanelOpen={plansPanelOpen}
+            onTogglePlansPanel={togglePlansPanel}
           />
         ) : layout === 'tabs' ? (
           activeInstance ? (
@@ -752,15 +769,27 @@ function FocusModeView({
   onSelectInstance,
   onExitFocus,
   onContextMenu,
+  plansPanelOpen,
+  onTogglePlansPanel,
 }: {
   instances: Instance[];
   focusedInstanceId: string;
   onSelectInstance: (id: string) => void;
   onExitFocus: () => void;
   onContextMenu: (e: React.MouseEvent, instance: Instance) => void;
+  plansPanelOpen: boolean;
+  onTogglePlansPanel: () => void;
 }) {
   const focusedInstance = instances.find((i) => i.id === focusedInstanceId);
   const otherInstances = instances.filter((i) => i.id !== focusedInstanceId);
+  const terminalRef = useRef<InstanceTerminalHandle>(null);
+
+  // Handle injecting plan content to terminal
+  const handleInjectToTerminal = useCallback((content: string) => {
+    if (terminalRef.current) {
+      terminalRef.current.sendToTerminal(content);
+    }
+  }, []);
 
   if (!focusedInstance) return null;
 
@@ -787,23 +816,36 @@ function FocusModeView({
             <span className="font-medium text-theme-primary">{focusedInstance.name}</span>
             <span className="text-sm text-theme-muted">{focusedInstance.workingDir}</span>
           </div>
-          <button
-            onClick={onExitFocus}
-            className="p-1.5 rounded text-theme-muted hover:text-theme-primary hover:bg-surface-700 transition-colors"
-            title="Exit focus mode (Esc)"
-          >
-            {Icons.collapse}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onTogglePlansPanel}
+              className={`p-1.5 rounded transition-colors ${
+                plansPanelOpen
+                  ? 'bg-accent text-black'
+                  : 'text-theme-muted hover:text-theme-primary hover:bg-surface-700'
+              }`}
+              title="Toggle plans panel (⌘E)"
+            >
+              {Icons.document}
+            </button>
+            <button
+              onClick={onExitFocus}
+              className="p-1.5 rounded text-theme-muted hover:text-theme-primary hover:bg-surface-700 transition-colors"
+              title="Exit focus mode (Esc)"
+            >
+              {Icons.collapse}
+            </button>
+          </div>
         </div>
 
         {/* Terminal */}
         <div className="flex-1 min-h-0">
-          <InstanceTerminal instanceId={focusedInstanceId} className="h-full" />
+          <InstanceTerminal ref={terminalRef} instanceId={focusedInstanceId} className="h-full" />
         </div>
       </div>
 
       {/* Thumbnail sidebar */}
-      {otherInstances.length > 0 && (
+      {otherInstances.length > 0 && !plansPanelOpen && (
         <div className="w-48 bg-surface-800 border-l border-surface-600 overflow-y-auto">
           <div className="p-2 text-xs font-medium text-theme-muted uppercase tracking-wider">
             Other Instances
@@ -818,6 +860,16 @@ function FocusModeView({
               />
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Plans panel */}
+      {plansPanelOpen && (
+        <div className="w-[450px] border-l border-surface-600 flex-shrink-0">
+          <PlansPanel
+            workingDir={focusedInstance.workingDir}
+            onInjectToTerminal={handleInjectToTerminal}
+          />
         </div>
       )}
     </div>

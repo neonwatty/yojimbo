@@ -330,9 +330,11 @@ Peer dependencies (likely already present):
 
 ---
 
-## Open Questions
+## Decisions
 
-- [ ] Should plans support frontmatter (YAML header) for metadata?
-- [ ] Template variable substitution (e.g., `{{PROJECT_NAME}}`)?
-- [ ] Max file size limit for plans?
-- [ ] Keyboard shortcut conflicts with terminal?
+| Question | Decision |
+|----------|----------|
+| Frontmatter support | Deferred to post-MVP. MDX Editor can display YAML blocks as code. |
+| Template variables | Deferred to post-MVP. Simple text plans for MVP. |
+| Max file size | 1MB soft limit with warning. Plans are typically small. |
+| Keyboard conflicts | Editor shortcuts only active when editor is focused. Terminal takes precedence otherwise. |

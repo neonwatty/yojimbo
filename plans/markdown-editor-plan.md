@@ -195,51 +195,124 @@ const plugins = [
 ];
 ```
 
-### Backend (Tauri/Rust)
+### Backend (Node.js/Fastify)
 
-```rust
-// File system commands for plan management
+```typescript
+// packages/server/src/routes/plans.ts
+import { FastifyPluginAsync } from 'fastify';
+import { z } from 'zod';
+import fs from 'fs/promises';
+import path from 'path';
 
-#[tauri::command]
-async fn list_plans(app: tauri::AppHandle) -> Result<Vec<PlanFile>, String> {
-    let plans_dir = app.path_resolver()
-        .app_data_dir()
-        .unwrap()
-        .join("plans");
-    // Recursively list .md files
-}
+const plansRoutes: FastifyPluginAsync = async (fastify) => {
+  // List plans for a working directory
+  fastify.get('/api/plans', async (request, reply) => {
+    const { workingDir } = request.query as { workingDir: string };
+    const plansDir = path.join(workingDir, 'plans');
 
-#[tauri::command]
-async fn read_plan(path: String) -> Result<String, String> {
-    // Validate path is within plans directory
-    fs::read_to_string(&path).map_err(|e| e.to_string())
-}
+    try {
+      const files = await listMarkdownFiles(plansDir);
+      return { plans: files };
+    } catch (error) {
+      return { plans: [], error: 'Plans directory not found' };
+    }
+  });
 
-#[tauri::command]
-async fn write_plan(path: String, content: String) -> Result<(), String> {
-    // Validate path, write content
-    fs::write(&path, content).map_err(|e| e.to_string())
-}
+  // Read a plan file
+  fastify.get('/api/plans/:planId', async (request, reply) => {
+    const { planId } = request.params as { planId: string };
+    const { workingDir } = request.query as { workingDir: string };
 
-#[tauri::command]
-async fn create_plan(name: String, template: Option<String>) -> Result<String, String> {
-    // Create new plan file, optionally from template
-}
+    const planPath = path.join(workingDir, 'plans', planId);
+    const content = await fs.readFile(planPath, 'utf-8');
+    return { content };
+  });
 
-#[tauri::command]
-async fn delete_plan(path: String) -> Result<(), String> {
-    // Validate and delete
-}
+  // Write/update a plan file
+  fastify.put('/api/plans/:planId', async (request, reply) => {
+    const { planId } = request.params as { planId: string };
+    const { workingDir, content } = request.body as { workingDir: string; content: string };
+
+    const planPath = path.join(workingDir, 'plans', planId);
+    await fs.writeFile(planPath, content, 'utf-8');
+    return { success: true };
+  });
+
+  // Create a new plan
+  fastify.post('/api/plans', async (request, reply) => {
+    const { workingDir, name, template } = request.body as {
+      workingDir: string;
+      name: string;
+      template?: string;
+    };
+
+    const plansDir = path.join(workingDir, 'plans');
+    await fs.mkdir(plansDir, { recursive: true });
+
+    const content = template || getDefaultTemplate(name);
+    const planPath = path.join(plansDir, name);
+    await fs.writeFile(planPath, content, 'utf-8');
+    return { success: true, path: planPath };
+  });
+
+  // Delete a plan
+  fastify.delete('/api/plans/:planId', async (request, reply) => {
+    const { planId } = request.params as { planId: string };
+    const { workingDir } = request.query as { workingDir: string };
+
+    const planPath = path.join(workingDir, 'plans', planId);
+    await fs.unlink(planPath);
+    return { success: true };
+  });
+};
 ```
 
 ### File Watching
 
-Use Tauri's `notify` integration or the `tauri-plugin-fs-watch` to detect external changes:
+Use `chokidar` to detect external changes and broadcast via WebSocket:
 
-```rust
-// Watch plans directory for changes
-// Emit event to frontend when files change
-app.emit_all("plans-changed", payload)?;
+```typescript
+// packages/server/src/services/planWatcher.ts
+import chokidar from 'chokidar';
+import { WebSocketServer } from 'ws';
+
+export class PlanWatcher {
+  private watchers: Map<string, chokidar.FSWatcher> = new Map();
+
+  watchDirectory(workingDir: string, wss: WebSocketServer): void {
+    const plansDir = path.join(workingDir, 'plans');
+
+    if (this.watchers.has(plansDir)) return;
+
+    const watcher = chokidar.watch(plansDir, {
+      ignoreInitial: true,
+      persistent: true,
+    });
+
+    watcher.on('all', (event, filePath) => {
+      // Broadcast change to all connected clients
+      wss.clients.forEach((client) => {
+        client.send(JSON.stringify({
+          type: 'plans-changed',
+          event,
+          path: filePath,
+          workingDir,
+        }));
+      });
+    });
+
+    this.watchers.set(plansDir, watcher);
+  }
+
+  unwatchDirectory(workingDir: string): void {
+    const plansDir = path.join(workingDir, 'plans');
+    const watcher = this.watchers.get(plansDir);
+    if (watcher) {
+      watcher.close();
+      this.watchers.delete(plansDir);
+    }
+  }
+}
 ```
 
 ---

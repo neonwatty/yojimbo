@@ -41,7 +41,7 @@ The MVP focuses on **human management of multiple Claude Code instances**—maki
 - Each Claude Code instance runs in its own pseudo-terminal (pty), fully interactive
 - Instance creation via a simple "+" button that opens a new terminal; user CDs into their desired directory and starts Claude Code
 - Sessions can be restored on app launch (note: restores terminal state, not Claude conversation context)
-- Instances can be named for easy identification
+- Instances can be named for easy identification (double-click or F2 to rename inline)
 - All pty instances continue running when app is minimized
 
 #### 2. Visual Status & Notifications
@@ -52,21 +52,61 @@ The MVP focuses on **human management of multiple Claude Code instances**—maki
 
 #### 3. Flexible Layout Options
 
-- **Tab bar**: Traditional tabs with status colors/badges
+- **Tab bar**: Traditional tabs with status colors/badges, overflow menu for excess tabs
 - **Card/grid view**: Visual preview of each instance's recent output
 - **List view**: Compact status badges with one-line summaries
-- **Focus mode**: Expand one instance while others remain as thumbnails
+- **Focus mode**: Expand one instance while others remain as thumbnails sidebar
+- **Drag-and-drop reordering**: Reorder instances in all layouts via drag
 
 #### 4. Instance Pinning
 
 - Mark important instances to keep them visible/accessible regardless of activity
-- Pinned instances appear prominently in all layout views
+- Pinned instances appear prominently in all layout views (sorted to top)
+- Click star icon to toggle pin state
 
-#### 5. Session Persistence
+#### 5. Instance Management
+
+- **Renaming**: Double-click or F2 to rename inline, Enter to confirm, Esc to cancel
+- **Closing**: Close button with confirmation dialog for active/pinned instances
+- **Context menu**: Right-click for Rename, Duplicate, Pin/Unpin, Focus Mode, Close Others, Close to Right, Close
+- **Confirmation dialogs**: Status-aware messages for working/awaiting/error instances
+
+#### 6. Session Persistence
 
 - Save current session state (open instances, names, working directories)
 - Restore sessions on app launch
 - Manual save/load of session configurations
+
+#### 7. Session History View
+
+- Browse past sessions grouped by date (Today, Yesterday, Older)
+- Search sessions by name
+- Expandable session cards showing messages and tool usage
+- Token and message counts per session
+
+#### 8. Plans/Markdown Editor Panel
+
+- Right-side panel with plans browser and WYSIWYG editor
+- Auto-discovery of plans from `{workingDir}/plans/` directory
+- File tree navigation with folder support
+- Toolbar: Bold, Italic, Underline, Headings, Lists
+- Inject plan content into terminal
+- Dirty state indicator for unsaved changes
+- Toggle panel with ⌘E, full-screen with ⌘⇧E
+
+#### 9. Theme & Accessibility
+
+- Light/dark mode toggle (light mode default)
+- Keyboard shortcuts modal (⌘?) showing all shortcuts
+- Full keyboard navigation: ⌘1-9 (tabs), ⌘[/] (prev/next), F2 (rename), ⌘W (close)
+
+#### 10. Home Dashboard
+
+- Getting Started banner for new users
+- Stat cards showing instance counts by status
+- Pinned instances section
+- Recent instances section
+- Quick actions
 
 -----
 
@@ -386,6 +426,8 @@ The orchestrator provides a way to generate/install these hooks for each instanc
 
 ## Future Improvements (Post-MVP)
 
+> **Note**: Instance renaming, pinning, focus mode, close dialogs, session history, and plans editor have moved to MVP scope and are now implemented.
+
 ### Manager/Worker Coordination
 
 A bidirectional communication pattern for orchestrating parallel work:
@@ -438,7 +480,15 @@ Based on common Claude Code pain points:
 
 ## Open Questions
 
-- What frontend framework for the UI? (React, Svelte, SolidJS, vanilla)
-- Keyboard shortcut scheme for navigation?
 - What's the right threshold for idle detection timeout?
 - What port should the hook API server use? (fixed vs dynamic)
+
+## Decisions Made (Updated)
+
+| Question | Decision |
+|----------|----------|
+| Frontend framework | React (via CDN in mockup, Tauri webview in production) |
+| Keyboard shortcuts | ⌘1-9 tabs, ⌘[/] prev/next, ⌘W close, ⌘E plans, ⌘? help, F2 rename, Enter/Esc focus |
+| Default theme | Light mode (dark mode available via toggle) |
+| Plan association | Auto-discovered from `{workingDir}/plans/` directory |
+| Editor library | MDX Editor for WYSIWYG markdown |

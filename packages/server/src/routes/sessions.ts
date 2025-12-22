@@ -1,5 +1,11 @@
 import { FastifyPluginAsync } from 'fastify';
 import { getDb } from '../db/index.js';
+import {
+  exportSession,
+  getSessionStats,
+  clearSession,
+  saveSessionState,
+} from '../services/session-persistence.js';
 import type { Session } from '@cc-orchestrator/shared';
 
 interface CreateSessionBody {
@@ -188,5 +194,29 @@ export const sessionRoutes: FastifyPluginAsync = async (fastify) => {
       .all(id);
 
     return messages;
+  });
+
+  // === Session Persistence Endpoints ===
+
+  // Get session statistics
+  fastify.get('/api/session/stats', async () => {
+    return getSessionStats();
+  });
+
+  // Export current session state
+  fastify.get('/api/session/export', async () => {
+    return exportSession();
+  });
+
+  // Save current session state (manual save)
+  fastify.post('/api/session/save', async () => {
+    saveSessionState();
+    return { success: true, savedAt: new Date().toISOString() };
+  });
+
+  // Clear all instances (fresh start)
+  fastify.delete('/api/session/clear', async () => {
+    clearSession();
+    return { success: true, clearedAt: new Date().toISOString() };
   });
 };

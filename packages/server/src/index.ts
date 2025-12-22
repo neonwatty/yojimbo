@@ -4,6 +4,7 @@ import websocket from '@fastify/websocket';
 import { initDb, closeDb } from './db/index.js';
 import { getTerminalManager } from './services/terminal-manager.js';
 import { setupWebSocket } from './services/websocket.js';
+import { restoreSession, saveSessionState } from './services/session-persistence.js';
 import { instanceRoutes } from './routes/instances.js';
 import { sessionRoutes } from './routes/sessions.js';
 import { statusEventRoutes } from './routes/status-events.js';
@@ -16,6 +17,11 @@ const fastify = Fastify({
 // Initialize database
 console.log('Initializing database...');
 initDb();
+
+// Restore previous session
+console.log('Restoring previous session...');
+const { restored, failed } = restoreSession();
+console.log(`Session restore complete: ${restored} restored, ${failed} failed`);
 
 // Register CORS
 await fastify.register(cors, {
@@ -42,6 +48,10 @@ fastify.get('/api/health', async () => {
 // Graceful shutdown handler
 const shutdown = async (signal: string) => {
   console.log(`\nReceived ${signal}, shutting down gracefully...`);
+
+  // Save session state before killing terminals
+  console.log('Saving session state...');
+  saveSessionState();
 
   // Kill all terminals
   const terminalManager = getTerminalManager();

@@ -4,6 +4,8 @@
 
 A built-in WYSIWYG markdown editor for creating and editing plans and documentation within the orchestrator. Uses MDX Editor for a Notion-like editing experience.
 
+> **See it in action**: The editor panel is fully implemented in [`mockups/v2-with-editor.html`](../mockups/v2-with-editor.html). Toggle with the "Plans" button or ⌘E.
+
 ## Decision: MDX Editor
 
 After evaluating Monaco Editor, CodeMirror 6, and MDX Editor:

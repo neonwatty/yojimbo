@@ -4,6 +4,8 @@
 
 A purpose-built desktop application for managing multiple parallel Claude Code instances with an intuitive UX, designed for developers who run many instances simultaneously and need better visibility and control.
 
+> **Interactive Mockup**: See [`mockups/v2-with-editor.html`](../mockups/v2-with-editor.html) for the complete UI prototype demonstrating all MVP features, layouts, and interactions. Open in a browser to explore.
+
 ## Problem Statement
 
 Running multiple Claude Code instances simultaneously is powerful but cumbersome with current tooling:

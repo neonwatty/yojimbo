@@ -7,8 +7,8 @@ interface AppState {
   setActiveInstance: (id: string | null) => void;
 
   // Layout
-  layout: 'tabs' | 'cards' | 'list';
-  setLayout: (layout: 'tabs' | 'cards' | 'list') => void;
+  layout: 'cards' | 'list';
+  setLayout: (layout: 'cards' | 'list') => void;
 
   // Focus mode
   focusMode: boolean;
@@ -53,7 +53,7 @@ export const useAppStore = create<AppState>((set) => ({
   setActiveInstance: (id) => set({ activeInstanceId: id }),
 
   // Layout
-  layout: 'tabs',
+  layout: 'cards',
   setLayout: (layout) => set({ layout }),
 
   // Focus mode

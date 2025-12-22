@@ -8,7 +8,6 @@ import {
 import { useAppStore } from '../stores/app-store';
 import { InstanceTerminal, type InstanceTerminalHandle } from '../components/InstanceTerminal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
-import { EditableName } from '../components/EditableName';
 import { ContextMenu, useContextMenu } from '../components/ContextMenu';
 import { PlansPanel } from '../components/PlansPanel';
 import type { Instance } from '@cc-orchestrator/shared';
@@ -18,11 +17,6 @@ const Icons = {
   plus: (
     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-    </svg>
-  ),
-  close: (
-    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
     </svg>
   ),
   pin: (
@@ -39,15 +33,6 @@ const Icons = {
       <path d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
     </svg>
   ),
-  edit: (
-    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-      />
-    </svg>
-  ),
   trash: (
     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
       <path
@@ -55,11 +40,6 @@ const Icons = {
         strokeLinejoin="round"
         d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
       />
-    </svg>
-  ),
-  tabs: (
-    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
     </svg>
   ),
   cards: (
@@ -119,9 +99,6 @@ export function InstancesPage() {
   // Delete confirmation
   const [deleteTarget, setDeleteTarget] = useState<Instance | null>(null);
 
-  // Rename state
-  const [renamingId, setRenamingId] = useState<string | null>(null);
-
   // Context menu
   const { contextMenu, openContextMenu, closeContextMenu } = useContextMenu();
   const [contextMenuTarget, setContextMenuTarget] = useState<Instance | null>(null);
@@ -167,15 +144,6 @@ export function InstancesPage() {
     }
   };
 
-  const handleRename = async (id: string, newName: string) => {
-    try {
-      await updateInstance.mutateAsync({ id, data: { name: newName } });
-      setRenamingId(null);
-    } catch (err) {
-      console.error('Failed to rename instance:', err);
-    }
-  };
-
   const handleTogglePin = async (instance: Instance) => {
     try {
       await updateInstance.mutateAsync({
@@ -212,7 +180,7 @@ export function InstancesPage() {
       }
 
       // Enter - Enter focus mode on active instance
-      if (e.key === 'Enter' && !focusMode && activeInstance && !renamingId) {
+      if (e.key === 'Enter' && !focusMode && activeInstance) {
         e.preventDefault();
         enterFocusMode(activeInstance.id);
         return;
@@ -222,13 +190,6 @@ export function InstancesPage() {
       if (isMeta && e.key === 'w' && activeInstance) {
         e.preventDefault();
         setDeleteTarget(activeInstance);
-        return;
-      }
-
-      // F2 - Rename active instance
-      if (e.key === 'F2' && activeInstance) {
-        e.preventDefault();
-        setRenamingId(activeInstance.id);
         return;
       }
 
@@ -262,7 +223,7 @@ export function InstancesPage() {
         return;
       }
     },
-    [activeInstance, activeInstanceId, instances, setActiveInstance, focusMode, enterFocusMode, exitFocusMode, renamingId, togglePlansPanel]
+    [activeInstance, activeInstanceId, instances, setActiveInstance, focusMode, enterFocusMode, exitFocusMode, togglePlansPanel]
   );
 
   useEffect(() => {
@@ -281,12 +242,6 @@ export function InstancesPage() {
   const contextMenuItems = contextMenuTarget
     ? [
         {
-          label: 'Rename',
-          icon: Icons.edit,
-          onClick: () => setRenamingId(contextMenuTarget.id),
-          shortcut: 'F2',
-        },
-        {
           label: contextMenuTarget.pinned ? 'Unpin' : 'Pin',
           icon: contextMenuTarget.pinned ? Icons.pinFilled : Icons.pin,
           onClick: () => handleTogglePin(contextMenuTarget),
@@ -303,45 +258,26 @@ export function InstancesPage() {
 
   return (
     <div className="h-full flex flex-col">
-      {/* Tab bar */}
-      <div className="h-12 bg-surface-800 border-b border-surface-600 flex items-center px-2 gap-1 overflow-x-auto">
-        {instances.map((instance, index) => (
-          <Tab
-            key={instance.id}
-            instance={instance}
-            index={index}
-            isActive={activeInstanceId === instance.id}
-            isRenaming={renamingId === instance.id}
-            onClick={() => setActiveInstance(instance.id)}
-            onClose={() => setDeleteTarget(instance)}
-            onContextMenu={(e) => handleContextMenu(e, instance)}
-            onRename={(name) => handleRename(instance.id, name)}
-            onRenameEnd={() => setRenamingId(null)}
-            onTogglePin={() => handleTogglePin(instance)}
-          />
-        ))}
-
-        {/* New instance button */}
-        <button
-          onClick={() => setShowNewDialog(true)}
-          className="flex-shrink-0 p-2 rounded-lg text-theme-muted hover:text-theme-primary hover:bg-surface-700 transition-colors"
-          title="New instance (⌘N)"
-        >
-          {Icons.plus}
-        </button>
-
-        {/* Spacer */}
-        <div className="flex-1" />
-
-        {/* Layout switcher */}
-        <div className="flex items-center gap-1 px-2">
+      {/* Header bar */}
+      <div className="h-12 bg-surface-800 border-b border-surface-600 flex items-center justify-between px-4">
+        {/* Left side: instance count */}
+        <div className="flex items-center gap-3">
+          <span className="text-theme-secondary text-sm">
+            {instances.length} {instances.length === 1 ? 'instance' : 'instances'}
+          </span>
+          {/* New instance button */}
           <button
-            onClick={() => setLayout('tabs')}
-            className={`p-1.5 rounded ${layout === 'tabs' && !focusMode ? 'bg-surface-600 text-theme-primary' : 'text-theme-muted hover:text-theme-primary'}`}
-            title="Tabs view"
+            onClick={() => setShowNewDialog(true)}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-theme-muted hover:text-theme-primary hover:bg-surface-700 transition-colors text-sm"
+            title="New instance (⌘N)"
           >
-            {Icons.tabs}
+            {Icons.plus}
+            <span>New</span>
           </button>
+        </div>
+
+        {/* Right side: Layout switcher */}
+        <div className="flex items-center gap-1">
           <button
             onClick={() => setLayout('cards')}
             className={`p-1.5 rounded ${layout === 'cards' && !focusMode ? 'bg-surface-600 text-theme-primary' : 'text-theme-muted hover:text-theme-primary'}`}
@@ -384,14 +320,6 @@ export function InstancesPage() {
             plansPanelOpen={plansPanelOpen}
             onTogglePlansPanel={togglePlansPanel}
           />
-        ) : layout === 'tabs' ? (
-          activeInstance ? (
-            <InstanceTerminal instanceId={activeInstance.id} className="h-full" />
-          ) : (
-            <div className="flex items-center justify-center h-full text-theme-muted">
-              Select an instance
-            </div>
-          )
         ) : layout === 'list' ? (
           // List layout
           <div className="p-4">
@@ -507,85 +435,6 @@ export function InstancesPage() {
         items={contextMenuItems}
         onClose={closeContextMenu}
       />
-    </div>
-  );
-}
-
-function Tab({
-  instance,
-  index,
-  isActive,
-  isRenaming,
-  onClick,
-  onClose,
-  onContextMenu,
-  onRename,
-  onRenameEnd,
-  onTogglePin,
-}: {
-  instance: Instance;
-  index: number;
-  isActive: boolean;
-  isRenaming: boolean;
-  onClick: () => void;
-  onClose: () => void;
-  onContextMenu: (e: React.MouseEvent) => void;
-  onRename: (name: string) => void;
-  onRenameEnd: () => void;
-  onTogglePin: () => void;
-}) {
-  const statusColors = {
-    working: 'bg-state-working',
-    awaiting: 'bg-state-awaiting',
-    idle: 'bg-state-idle',
-    error: 'bg-state-error',
-  };
-
-  return (
-    <div
-      className={`
-        group flex items-center gap-2 px-3 py-1.5 rounded-lg cursor-pointer
-        ${isActive ? 'bg-surface-700 text-theme-primary' : 'text-theme-muted hover:text-theme-primary hover:bg-surface-700'}
-      `}
-      onClick={onClick}
-      onContextMenu={onContextMenu}
-      title={`${instance.name} (⌘${index + 1})`}
-    >
-      {/* Status dot */}
-      <span
-        className={`w-2 h-2 rounded-full flex-shrink-0 ${statusColors[instance.status] || statusColors.idle} ${instance.status === 'working' ? 'animate-pulse' : ''}`}
-      />
-
-      {/* Pin indicator */}
-      {instance.pinned && (
-        <span className="text-accent flex-shrink-0" onClick={(e) => { e.stopPropagation(); onTogglePin(); }}>
-          {Icons.pinFilled}
-        </span>
-      )}
-
-      {/* Name */}
-      {isRenaming ? (
-        <EditableName
-          value={instance.name}
-          onSave={onRename}
-          isEditing={true}
-          onEditEnd={onRenameEnd}
-          className="max-w-[120px]"
-        />
-      ) : (
-        <span className="truncate max-w-[120px]">{instance.name}</span>
-      )}
-
-      {/* Close button */}
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          onClose();
-        }}
-        className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-surface-600 transition-opacity flex-shrink-0"
-      >
-        {Icons.close}
-      </button>
     </div>
   );
 }

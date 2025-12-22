@@ -1,0 +1,82 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Light mode (default) */
+:root {
+  --surface-900: #f8fafc;
+  --surface-800: #f1f5f9;
+  --surface-700: #e2e8f0;
+  --surface-600: #cbd5e1;
+  --surface-500: #94a3b8;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+  --border-color: #cbd5e1;
+}
+
+/* Dark mode */
+.dark {
+  --surface-900: #0a0a0b;
+  --surface-800: #121214;
+  --surface-700: #1a1a1e;
+  --surface-600: #232328;
+  --surface-500: #2d2d33;
+  --text-primary: #ffffff;
+  --text-secondary: #d1d5db;
+  --text-muted: #6b7280;
+  --border-color: #232328;
+}
+
+body {
+  font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  background-color: var(--surface-900);
+  color: var(--text-primary);
+  margin: 0;
+  min-height: 100vh;
+}
+
+/* Theme text utilities */
+@layer utilities {
+  .text-theme-primary {
+    color: var(--text-primary);
+  }
+  .text-theme-secondary {
+    color: var(--text-secondary);
+  }
+  .text-theme-muted {
+    color: var(--text-muted);
+  }
+}
+
+/* Terminal styling */
+.terminal-text {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* Card elevated styling */
+.card-elevated {
+  background-color: var(--surface-800);
+  border: 1px solid var(--surface-600);
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--surface-800);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--surface-600);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--surface-500);
+}

@@ -1,0 +1,18 @@
+{
+  "workspaces": {
+    "packages/client": {
+      "entry": ["src/main.tsx"],
+      "project": ["src/**/*.{ts,tsx}"]
+    },
+    "packages/server": {
+      "entry": ["src/index.ts"],
+      "project": ["src/**/*.ts"]
+    },
+    "packages/shared": {
+      "entry": ["src/index.ts"],
+      "project": ["src/**/*.ts"]
+    }
+  },
+  "ignore": ["**/dist/**", "**/*.d.ts"],
+  "ignoreDependencies": ["@types/*"]
+}

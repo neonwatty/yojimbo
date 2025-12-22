@@ -25,6 +25,7 @@ const shortcutGroups: ShortcutGroup[] = [
       { keys: ['⌘', 'W'], description: 'Close instance' },
       { keys: ['Enter'], description: 'Enter focus mode' },
       { keys: ['Esc'], description: 'Exit focus mode' },
+      { keys: ['⌘', '`'], description: 'Toggle terminal panel (focus mode)' },
       { keys: ['⌘', 'E'], description: 'Toggle plans panel (focus mode)' },
     ],
   },

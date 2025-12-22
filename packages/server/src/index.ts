@@ -10,6 +10,7 @@ import { sessionRoutes } from './routes/sessions.js';
 import { statusEventRoutes } from './routes/status-events.js';
 import { hookRoutes } from './routes/hooks.js';
 import { planRoutes } from './routes/plans.js';
+import { vanillaTerminalRoutes } from './routes/vanilla-terminal.js';
 
 const fastify = Fastify({
   logger: true,
@@ -41,6 +42,7 @@ await fastify.register(sessionRoutes);
 await fastify.register(statusEventRoutes);
 await fastify.register(hookRoutes);
 await fastify.register(planRoutes);
+await fastify.register(vanillaTerminalRoutes);
 
 // Health check endpoint
 fastify.get('/api/health', async () => {

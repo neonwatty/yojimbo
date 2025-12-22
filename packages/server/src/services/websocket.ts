@@ -1,6 +1,11 @@
 import { FastifyInstance } from 'fastify';
 import { WebSocket } from 'ws';
 import { getTerminalManager } from './terminal-manager.js';
+import {
+  getVanillaTerminal,
+  writeToVanillaTerminal,
+  onVanillaTerminalData,
+} from '../routes/vanilla-terminal.js';
 
 interface WSMessage {
   type: string;
@@ -18,8 +23,20 @@ interface TerminalResizePayload {
   rows: number;
 }
 
+interface VanillaTerminalPayload {
+  workingDir: string;
+  data?: string;
+  cols?: number;
+  rows?: number;
+}
+
 // Track client subscriptions to terminals
 const clientTerminals = new WeakMap<WebSocket, Set<string>>();
+
+// Track vanilla terminal subscriptions (workingDir -> Set<WebSocket>)
+const vanillaTerminalClients = new Map<string, Set<WebSocket>>();
+// Track cleanup functions for vanilla terminal data listeners
+const vanillaTerminalCleanup = new Map<string, () => void>();
 
 export function setupWebSocket(fastify: FastifyInstance): void {
   const terminalManager = getTerminalManager();
@@ -48,7 +65,7 @@ export function setupWebSocket(fastify: FastifyInstance): void {
       try {
         const message = JSON.parse(rawMessage.toString()) as WSMessage;
         handleMessage(ws, message);
-      } catch (error) {
+      } catch {
         ws.send(
           JSON.stringify({
             type: 'error',
@@ -119,6 +136,77 @@ function handleMessage(ws: WebSocket, message: WSMessage): void {
       break;
     }
 
+    // Vanilla terminal handlers
+    case 'vanilla-terminal-subscribe': {
+      const payload = message.payload as VanillaTerminalPayload;
+      const { workingDir } = payload;
+
+      // Add client to subscribers
+      if (!vanillaTerminalClients.has(workingDir)) {
+        vanillaTerminalClients.set(workingDir, new Set());
+      }
+      vanillaTerminalClients.get(workingDir)!.add(ws);
+
+      // Set up data listener if not already done
+      if (!vanillaTerminalCleanup.has(workingDir)) {
+        const cleanup = onVanillaTerminalData(workingDir, (data) => {
+          broadcastToVanillaTerminal(workingDir, {
+            type: 'vanilla-terminal-output',
+            payload: { workingDir, data },
+          });
+        });
+        if (cleanup) {
+          vanillaTerminalCleanup.set(workingDir, cleanup);
+        }
+      }
+      break;
+    }
+
+    case 'vanilla-terminal-unsubscribe': {
+      const payload = message.payload as VanillaTerminalPayload;
+      const { workingDir } = payload;
+
+      const clients = vanillaTerminalClients.get(workingDir);
+      if (clients) {
+        clients.delete(ws);
+        if (clients.size === 0) {
+          vanillaTerminalClients.delete(workingDir);
+          // Clean up data listener
+          const cleanup = vanillaTerminalCleanup.get(workingDir);
+          if (cleanup) {
+            cleanup();
+            vanillaTerminalCleanup.delete(workingDir);
+          }
+        }
+      }
+      break;
+    }
+
+    case 'vanilla-terminal-input': {
+      const payload = message.payload as VanillaTerminalPayload;
+      if (payload.data) {
+        const success = writeToVanillaTerminal(payload.workingDir, payload.data);
+        if (!success) {
+          ws.send(
+            JSON.stringify({
+              type: 'error',
+              payload: { message: 'Vanilla terminal not found' },
+            })
+          );
+        }
+      }
+      break;
+    }
+
+    case 'vanilla-terminal-resize': {
+      const payload = message.payload as VanillaTerminalPayload;
+      const terminal = getVanillaTerminal(payload.workingDir);
+      if (terminal && payload.cols && payload.rows) {
+        terminal.resize(payload.cols, payload.rows);
+      }
+      break;
+    }
+
     default:
       ws.send(
         JSON.stringify({
@@ -146,6 +234,19 @@ function broadcastToTerminal(
       if (subscriptions?.has(terminalId)) {
         ws.send(messageStr);
       }
+    }
+  });
+}
+
+function broadcastToVanillaTerminal(workingDir: string, message: WSMessage): void {
+  const clients = vanillaTerminalClients.get(workingDir);
+  if (!clients) return;
+
+  const messageStr = JSON.stringify(message);
+
+  clients.forEach((ws) => {
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(messageStr);
     }
   });
 }

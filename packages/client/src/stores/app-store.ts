@@ -42,6 +42,13 @@ interface AppState {
   selectedPlanId: string | null;
   setSelectedPlanId: (id: string | null) => void;
 
+  // Vanilla terminal panel (bottom panel in focus mode)
+  terminalPanelOpen: boolean;
+  terminalPanelHeight: number;
+  toggleTerminalPanel: () => void;
+  setTerminalPanelOpen: (open: boolean) => void;
+  setTerminalPanelHeight: (height: number) => void;
+
   // Instance status updates (from WebSocket)
   instanceStatuses: Map<string, InstanceStatus>;
   updateInstanceStatus: (id: string, status: InstanceStatus) => void;
@@ -96,6 +103,13 @@ export const useAppStore = create<AppState>((set) => ({
   selectedPlanId: null,
   setSelectedPlanId: (id) => set({ selectedPlanId: id }),
 
+  // Vanilla terminal panel
+  terminalPanelOpen: false,
+  terminalPanelHeight: 200,
+  toggleTerminalPanel: () => set((state) => ({ terminalPanelOpen: !state.terminalPanelOpen })),
+  setTerminalPanelOpen: (open) => set({ terminalPanelOpen: open }),
+  setTerminalPanelHeight: (height) => set({ terminalPanelHeight: Math.max(100, Math.min(500, height)) }),
+
   // Instance status updates
   instanceStatuses: new Map(),
   updateInstanceStatus: (id, status) =>
@@ -115,3 +129,5 @@ export const selectFocusMode = (state: AppState) => state.focusMode;
 export const selectFocusedInstance = (state: AppState) => state.focusedInstanceId;
 export const selectPlansPanelOpen = (state: AppState) => state.plansPanelOpen;
 export const selectSelectedPlanId = (state: AppState) => state.selectedPlanId;
+export const selectTerminalPanelOpen = (state: AppState) => state.terminalPanelOpen;
+export const selectTerminalPanelHeight = (state: AppState) => state.terminalPanelHeight;

@@ -9,6 +9,7 @@ export type WSMessageType =
   | 'terminal-output'
   | 'terminal-exit'
   | 'instance-status'
+  | 'vanilla-terminal-output'
   | 'error';
 
 export interface WSMessage<T = unknown> {
@@ -30,6 +31,11 @@ interface UseWebSocketReturn {
   unsubscribe: (terminalId: string) => void;
   sendTerminalInput: (terminalId: string, data: string) => void;
   sendTerminalResize: (terminalId: string, cols: number, rows: number) => void;
+  // Vanilla terminal methods
+  subscribeVanillaTerminal: (workingDir: string) => void;
+  unsubscribeVanillaTerminal: (workingDir: string) => void;
+  sendVanillaTerminalInput: (workingDir: string, data: string) => void;
+  sendVanillaTerminalResize: (workingDir: string, cols: number, rows: number) => void;
   connect: () => void;
   disconnect: () => void;
 }
@@ -146,6 +152,35 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
     [send]
   );
 
+  // Vanilla terminal methods
+  const subscribeVanillaTerminal = useCallback(
+    (workingDir: string) => {
+      send({ type: 'vanilla-terminal-subscribe' as WSMessageType, payload: { workingDir } });
+    },
+    [send]
+  );
+
+  const unsubscribeVanillaTerminal = useCallback(
+    (workingDir: string) => {
+      send({ type: 'vanilla-terminal-unsubscribe' as WSMessageType, payload: { workingDir } });
+    },
+    [send]
+  );
+
+  const sendVanillaTerminalInput = useCallback(
+    (workingDir: string, data: string) => {
+      send({ type: 'vanilla-terminal-input' as WSMessageType, payload: { workingDir, data } });
+    },
+    [send]
+  );
+
+  const sendVanillaTerminalResize = useCallback(
+    (workingDir: string, cols: number, rows: number) => {
+      send({ type: 'vanilla-terminal-resize' as WSMessageType, payload: { workingDir, cols, rows } });
+    },
+    [send]
+  );
+
   useEffect(() => {
     mountedRef.current = true;
 
@@ -166,6 +201,10 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
     unsubscribe,
     sendTerminalInput,
     sendTerminalResize,
+    subscribeVanillaTerminal,
+    unsubscribeVanillaTerminal,
+    sendVanillaTerminalInput,
+    sendVanillaTerminalResize,
     connect,
     disconnect,
   };

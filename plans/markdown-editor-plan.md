@@ -75,9 +75,9 @@ The editor appears as a right-side panel, per-instance:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│  CC Orchestrator                              [Plans]  [History] [☼]│
+│  CC Orchestrator                                    [History] [☼] [?]│
 ├─────────────────────────────────────────────────────────────────────┤
-│  [Tab: auth-refactor ●📄] [Tab: api-tests] [Tab: docs 📄] [+]       │
+│  [← Back] ● Auth Refactor [Working]     ~/projects [Plans][Terminal]│
 ├───────────────────────────────────────┬─────────────────────────────┤
 │                                       │  ┌─ Plans ──────────────┐  │
 │  ┌─ Terminal ───────────────────────┐ │  │ auth-plan.md      ●  │  │
@@ -93,6 +93,8 @@ The editor appears as a right-side panel, per-instance:
 └───────────────────────────────────────┴─────────────────────────────┘
 ```
 
+> **Note**: Plans and Terminal buttons are now in the expanded instance header (not the main app header). The panel is only available when viewing an expanded instance.
+
 ### Key UX Decisions
 
 1. **Per-instance plans**: Each terminal instance can have a linked plan
@@ -104,7 +106,9 @@ The editor appears as a right-side panel, per-instance:
 
 ### Panel Behavior
 
-- **Keyboard shortcut:** `Cmd+E` to toggle entire right panel (Plans button in header)
+- **Availability:** Only when viewing an expanded instance (not in card/list overview)
+- **Toggle button:** Located in expanded instance header (not main app header)
+- **Keyboard shortcut:** `Cmd+E` to toggle (only works in expanded view)
 - **Panel position:** Right side (vertical split)
 - **Horizontal resize:** Drag handle between terminal and right panel
 - **Vertical resize:** Drag handle between plans browser and editor (within panel)
@@ -382,9 +386,9 @@ Stored in the session state:
 
 ### Phase 4: Integration
 
-1. Add "Plans" button to main toolbar
-2. Implement panel toggle with Cmd+E
-3. Add "Associate plan" action to instance context menu
+1. Add "Plans" button to expanded instance header (not main toolbar)
+2. Pass panel state (`editorPanelOpen`, `onToggleEditorPanel`) to ExpandedInstanceView component
+3. Implement Cmd+E toggle (restricted to expanded view only)
 4. Add "Inject into instance" action
 
 ---

@@ -69,24 +69,29 @@ Extract these from the mockup's CSS variables and Tailwind config:
 
 | Component | Mockup Location | Key Styles |
 |-----------|-----------------|------------|
+| Left sidebar | Left side, collapsible | `w-56` expanded, `w-12` collapsed, session list |
 | Tab bar | Header area | `bg-surface-700`, status dot left of name |
 | Status dot | Tabs, cards, list rows | 12px circle, pulse animation for working |
 | Status badge | Instance rows | Pill shape, icon + text, colored border |
 | Instance card | Card layout view | `card-elevated` class, hover lift effect |
 | Terminal | Main content area | Dark bg, `terminal-text` class, bottom glow |
-| Plans panel | Right sidebar | Resizable, file tree + editor split |
+| Plans panel | Right sidebar (expanded view only) | Resizable, file tree + editor split, toggle in expanded instance header |
+| Terminal panel | Bottom panel (expanded view only) | Vanilla terminal for manual operations, toggle in expanded instance header |
 | Confirmation dialog | Modal overlay | `card-elevated`, centered, shadow-2xl |
 | Keyboard modal | Modal overlay | Grouped shortcuts, kbd styling |
+| Settings modal | Modal overlay | Terminal settings (theme, font size, font family) |
 
 ### Layout Specifications
 
 | Layout | Description | See in Mockup |
 |--------|-------------|---------------|
+| Left sidebar | Collapsible sessions list, auto-collapses on cards/list views | Toggle with ⌘B |
 | Tab bar | Horizontal tabs with overflow | Default view |
 | Card grid | 2-3 column grid of instance cards | Click "Cards" in layout switcher |
 | List view | Compact rows with status badges | Click "List" in layout switcher |
 | Focus mode | Single instance expanded, others in sidebar | Double-click or Enter on instance |
-| Plans panel | Right sidebar, vertical split | Click "Plans" button or ⌘E |
+| Plans panel | Right sidebar (expanded view only) | Click "Plans" in expanded instance header or ⌘E |
+| Terminal panel | Bottom panel (expanded view only) | Click "Terminal" in expanded instance header or ⌘` |
 
 ### Animations
 
@@ -196,20 +201,32 @@ The MVP focuses on **human management of multiple Claude Code instances**—maki
 #### 8. Plans/Markdown Editor Panel
 
 - Right-side panel with plans browser and WYSIWYG editor
+- **Only available when viewing an expanded instance** (not in card/list overview)
+- Toggle via "Plans" button in expanded instance header or ⌘E
 - Auto-discovery of plans from `{workingDir}/plans/` directory
 - File tree navigation with folder support
 - Toolbar: Bold, Italic, Underline, Headings, Lists
 - Inject plan content into terminal
 - Dirty state indicator for unsaved changes
-- Toggle panel with ⌘E, full-screen with ⌘⇧E
+- Full-screen editor with ⌘⇧E
 
-#### 9. Theme & Accessibility
+#### 9. Vanilla Terminal Panel
 
-- Light/dark mode toggle (light mode default)
+- Bottom panel for manual operations (git status, file viewing, etc.)
+- **Only available when viewing an expanded instance** (not in card/list overview)
+- Toggle via "Terminal" button in expanded instance header or ⌘`
+- Shows working directory of the current expanded instance
+- Resizable height (100-500px)
+- Not monitored for status (unlike Claude Code instances)
+- Persists when switching between expanded instances
+
+#### 10. Theme & Accessibility
+
+- Light/dark mode toggle (dark mode default)
 - Keyboard shortcuts modal (⌘?) showing all shortcuts
-- Full keyboard navigation: ⌘1-9 (tabs), ⌘[/] (prev/next), F2 (rename), ⌘W (close)
+- Full keyboard navigation: ⌘1-9 (tabs), ⌘[/] (prev/next), F2 (rename), ⌘W (close), ⌘E (plans, expanded view only), ⌘` (terminal, expanded view only)
 
-#### 10. Home Dashboard
+#### 11. Home Dashboard
 
 - Getting Started banner for new users
 - Stat cards showing instance counts by status
@@ -646,6 +663,9 @@ The orchestrator provides a way to generate/install these hooks for each instanc
 
 > **Design ref**: See mockup [layout specifications](#layout-specifications) and [animations](#animations). Toggle layouts in mockup to see each view.
 
+- [ ] Left sidebar for sessions (see mockup `LeftSidebar` component)
+- [ ] Sidebar collapse/expand toggle (⌘B)
+- [ ] Auto-collapse sidebar when switching to cards/list layout
 - [ ] Tab bar layout (default) - see mockup default view
 - [ ] Card/grid layout - see mockup `card-elevated` class, `hover-lift` animation
 - [ ] List layout - see mockup `InstanceRow` component
@@ -668,9 +688,10 @@ The orchestrator provides a way to generate/install these hooks for each instanc
 
 ### Milestone 8: Plans Editor
 
-> **Design ref**: See mockup Plans panel (toggle with "Plans" button or ⌘E). Also see [`markdown-editor-plan.md`](./markdown-editor-plan.md) for detailed specs.
+> **Design ref**: See mockup Plans panel in expanded instance view. Also see [`markdown-editor-plan.md`](./markdown-editor-plan.md) for detailed specs.
 
-- [ ] Right-side panel toggle (⌘E) - see mockup `slideIn` animation
+- [ ] Right-side panel toggle via expanded instance header button or ⌘E
+- [ ] Panel only visible when viewing expanded instance (not in card/list overview)
 - [ ] Plans directory discovery (`{workingDir}/plans/`)
 - [ ] File browser tree component (see mockup file tree with folder icons)
 - [ ] MDX Editor integration (see mockup editor toolbar styling)
@@ -681,6 +702,18 @@ The orchestrator provides a way to generate/install these hooks for each instanc
 - [ ] Inject plan into terminal (Inject button in mockup toolbar)
 - [ ] File watcher for external changes
 - [ ] Full-screen editor mode (⌘⇧E)
+
+### Milestone 8.5: Vanilla Terminal Panel
+
+> **Design ref**: See mockup bottom terminal panel in expanded instance view.
+
+- [ ] Add terminal state (`terminalOpen`, `terminalHeight`)
+- [ ] Create VanillaTerminal component (bottom panel)
+- [ ] Add Terminal button to expanded instance header
+- [ ] Implement ⌘` keyboard shortcut (expanded view only)
+- [ ] Vertical resize handling (100-500px)
+- [ ] Working directory display (matches expanded instance)
+- [ ] Update ShortcutsModal with terminal shortcut
 
 ### Milestone 9: Session History
 
@@ -707,6 +740,7 @@ The orchestrator provides a way to generate/install these hooks for each instanc
 
 ### Milestone 11: Polish & Documentation
 
+- [ ] Settings modal (⌘,) with terminal appearance settings - see mockup `SettingsModal` component
 - [ ] Error boundaries in React
 - [ ] Loading states for async operations
 - [ ] Empty states (no instances, no plans, no history)
@@ -1084,24 +1118,20 @@ process.on('uncaughtException', async (error) => {
 
 ```typescript
 interface UserPreferences {
-  // Appearance
+  // Terminal Appearance (MVP - implemented in mockup)
   theme: 'light' | 'dark' | 'system';
-  terminalFontSize: number;        // 10-24, default 13
+  terminalFontSize: number;        // 10-24, default 14
   terminalFontFamily: string;      // default 'JetBrains Mono'
-  terminalLineHeight: number;      // 1.0-2.0, default 1.5
 
-  // Behavior
-  idleTimeoutSeconds: number;      // 30-600, default 120
-  confirmCloseWorking: boolean;    // default true
-  confirmClosePinned: boolean;     // default true
-  restoreSessionOnStart: boolean;  // default true
-
-  // Keyboard
-  shortcuts: Record<string, string>; // customizable shortcuts
-
-  // Server
-  hookApiPort: number;             // default 3001
-  maxInstances: number;            // 1-20, default 10
+  // Future expansion
+  terminalLineHeight?: number;      // 1.0-2.0, default 1.5
+  idleTimeoutSeconds?: number;      // 30-600, default 120
+  confirmCloseWorking?: boolean;    // default true
+  confirmClosePinned?: boolean;     // default true
+  restoreSessionOnStart?: boolean;  // default true
+  shortcuts?: Record<string, string>; // customizable shortcuts
+  hookApiPort?: number;             // default 3001
+  maxInstances?: number;            // 1-20, default 10
 }
 ```
 
@@ -1111,16 +1141,19 @@ interface UserPreferences {
 - Loaded on app start, cached in memory
 - Changes broadcast to all connected clients
 
-### Settings UI (Future)
+### Settings UI
 
-A dedicated settings modal with sections:
-- Appearance
-- Terminal
-- Behavior
-- Keyboard Shortcuts
-- Advanced
+A settings modal (⌘,) with terminal appearance settings:
+- Theme (Light / Dark / System)
+- Font Size (10-24px)
+- Font Family (JetBrains Mono, Fira Code, SF Mono, Monaco, Menlo)
 
-For MVP: Use reasonable defaults, settings UI deferred.
+> **See it in mockup**: The settings modal is implemented in `mockups/v2-with-editor.html`. Open settings via the gear icon in the header or press ⌘,.
+
+Future expansion may include:
+- Behavior settings (confirm close, restore session)
+- Keyboard shortcut customization
+- Advanced settings (idle timeout, max instances)
 
 -----
 
@@ -1339,8 +1372,8 @@ Based on common Claude Code pain points:
 | Status detection | Hook-based (not heuristic/regex) | Reliable, official API |
 | Plan association | Auto-discovered from `{workingDir}/plans/` | Convention over configuration |
 | Editor library | MDX Editor | WYSIWYG, Notion-like experience |
-| Default theme | Light mode (dark mode available) | Modern preference |
-| Keyboard shortcuts | ⌘1-9 tabs, ⌘[/] prev/next, ⌘W close, ⌘E plans, ⌘? help | Standard conventions |
+| Default theme | Dark mode (light mode available) | Modern preference |
+| Keyboard shortcuts | ⌘1-9 tabs, ⌘[/] prev/next, ⌘W close, ⌘B sidebar, ⌘E plans (expanded only), ⌘` terminal (expanded only), ⌘, settings, ⌘? help | Standard conventions |
 
 ### Testing & CI
 

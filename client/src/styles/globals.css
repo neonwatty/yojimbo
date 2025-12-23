@@ -1,0 +1,166 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --surface-900: #f8fafc;
+  --surface-800: #f1f5f9;
+  --surface-700: #e2e8f0;
+  --surface-600: #cbd5e1;
+  --surface-500: #94a3b8;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+  --text-dim: #94a3b8;
+  --border-color: #cbd5e1;
+}
+
+.dark {
+  --surface-900: #0a0a0b;
+  --surface-800: #121214;
+  --surface-700: #1a1a1e;
+  --surface-600: #232328;
+  --surface-500: #2d2d33;
+  --text-primary: #ffffff;
+  --text-secondary: #d1d5db;
+  --text-muted: #6b7280;
+  --text-dim: #4b5563;
+  --border-color: #232328;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background: var(--surface-900);
+  font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  color: var(--text-primary);
+  margin: 0;
+  padding: 0;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--surface-700);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--surface-500);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--surface-600);
+}
+
+/* Terminal text */
+.terminal-text {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* Status pulse animation */
+.pulse-working {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* Active glow effect */
+.active-glow {
+  box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.6), 0 0 24px -4px rgba(245, 158, 11, 0.5);
+}
+
+/* Card elevated style */
+.card-elevated {
+  background: rgba(26, 26, 30, 0.8);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+:root .card-elevated {
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+/* Terminal glow effect */
+.terminal-glow {
+  position: relative;
+  overflow: visible;
+}
+
+.terminal-glow::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 120px;
+  background: linear-gradient(to top, rgba(34, 211, 238, 0.08) 0%, transparent 100%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Background atmosphere */
+.bg-atmosphere {
+  background:
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(245, 158, 11, 0.15) 0%, transparent 50%),
+    radial-gradient(ellipse 60% 40% at 100% 100%, rgba(34, 211, 238, 0.1) 0%, transparent 40%),
+    linear-gradient(180deg, var(--surface-800) 0%, var(--surface-900) 100%);
+}
+
+/* Hover effects */
+.hover-lift {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-2px);
+}
+
+.press-effect:active {
+  transform: scale(0.97);
+}
+
+.hover-scale {
+  transition: transform 0.15s ease;
+}
+
+.hover-scale:hover {
+  transform: scale(1.08);
+}
+
+/* Resize handles */
+.resize-handle-h {
+  width: 4px;
+  cursor: col-resize;
+  background: var(--surface-600);
+  transition: background 0.2s;
+}
+
+.resize-handle-h:hover {
+  background: #f59e0b;
+}
+
+.resize-handle-v {
+  height: 4px;
+  cursor: row-resize;
+  background: var(--surface-600);
+  transition: background 0.2s;
+}
+
+.resize-handle-v:hover {
+  background: #f59e0b;
+}
+
+/* Animation delays */
+.delay-1 { animation-delay: 0.08s; }
+.delay-2 { animation-delay: 0.16s; }
+.delay-3 { animation-delay: 0.24s; }
+.delay-4 { animation-delay: 0.32s; }
+.delay-5 { animation-delay: 0.4s; }

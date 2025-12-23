@@ -12,8 +12,12 @@ interface PTYInstance {
   workingDir: string;
 }
 
+// Terminal history buffer configuration
+const MAX_HISTORY_SIZE = 100000; // ~100KB per instance
+
 class PTYService extends EventEmitter {
   private instances: Map<string, PTYInstance> = new Map();
+  private history: Map<string, string> = new Map();
 
   spawn(id: string, workingDir: string, cols = 80, rows = 24): PTYInstance {
     const shell = process.platform === 'win32'
@@ -39,7 +43,14 @@ class PTYService extends EventEmitter {
     const instance: PTYInstance = { id, pty: ptyProcess, workingDir };
     this.instances.set(id, instance);
 
+    // Initialize history buffer for this instance
+    if (!this.history.has(id)) {
+      this.history.set(id, '');
+    }
+
     ptyProcess.onData((data) => {
+      // Store output in history buffer
+      this.appendHistory(id, data);
       this.emit('data', id, data);
     });
 
@@ -116,6 +127,27 @@ class PTYService extends EventEmitter {
       // Process may have exited or other error
       return null;
     }
+  }
+
+  // Terminal history management
+  private appendHistory(id: string, data: string): void {
+    let history = this.history.get(id) || '';
+    history += data;
+
+    // Trim history if it exceeds max size (keep the most recent data)
+    if (history.length > MAX_HISTORY_SIZE) {
+      history = history.slice(-MAX_HISTORY_SIZE);
+    }
+
+    this.history.set(id, history);
+  }
+
+  getHistory(id: string): string {
+    return this.history.get(id) || '';
+  }
+
+  clearHistory(id: string): void {
+    this.history.delete(id);
   }
 }
 

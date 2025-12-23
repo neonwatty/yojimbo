@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import type { Note, CreateNoteRequest, UpdateNoteRequest } from '@cc-orchestrator/shared';
+import { startWatching } from '../services/file-watcher.service.js';
 
 const router = Router();
 
@@ -50,6 +51,9 @@ router.get('/', (req, res) => {
     }
 
     scanDirectory(notesDir);
+
+    // Start watching for file changes in this directory
+    startWatching(expandPath(workingDir), 'note');
 
     res.json({ success: true, data: notes, hasNotesDir: true });
   } catch (error) {

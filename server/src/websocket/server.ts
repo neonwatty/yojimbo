@@ -150,6 +150,17 @@ function handleMessage(ws: WebSocket, message: WSClientMessage): void {
         }
         subscriptions.get(message.instanceId)!.add(ws);
         console.log(`Client subscribed to instance ${message.instanceId}`);
+
+        // Send terminal history to newly subscribed client
+        const history = ptyService.getHistory(message.instanceId);
+        if (history) {
+          send(ws, {
+            type: 'terminal:output',
+            instanceId: message.instanceId,
+            data: history,
+          });
+          console.log(`📜 Sent ${history.length} bytes of terminal history to client`);
+        }
       }
       break;
 

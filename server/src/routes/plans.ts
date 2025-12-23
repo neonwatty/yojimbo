@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import type { Plan, CreatePlanRequest, UpdatePlanRequest } from '@cc-orchestrator/shared';
+import { startWatching } from '../services/file-watcher.service.js';
 
 const router = Router();
 
@@ -50,6 +51,9 @@ router.get('/', (req, res) => {
     }
 
     scanDirectory(plansDir);
+
+    // Start watching for file changes in this directory
+    startWatching(expandPath(workingDir), 'plan');
 
     res.json({ success: true, data: plans, hasPlansDir: true });
   } catch (error) {

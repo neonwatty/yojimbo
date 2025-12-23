@@ -40,6 +40,9 @@ interface UIState {
   notesBrowserWidth: number;
   plansBrowserCollapsed: boolean;
   notesBrowserCollapsed: boolean;
+  // Command palette state (not persisted)
+  showCommandPalette: boolean;
+  pendingKeySequence: string | null;
 
   setCurrentView: (view: ViewType) => void;
   setLayout: (layout: LayoutType) => void;
@@ -62,6 +65,9 @@ interface UIState {
   setNotesBrowserWidth: (width: number) => void;
   togglePlansBrowserCollapsed: () => void;
   toggleNotesBrowserCollapsed: () => void;
+  // Command palette actions
+  setShowCommandPalette: (show: boolean) => void;
+  setPendingKeySequence: (key: string | null) => void;
   // Reset to defaults
   resetToDefaults: () => void;
 }
@@ -75,6 +81,9 @@ export const useUIStore = create<UIState>()(
       // Modal states always start closed (not persisted)
       showShortcutsModal: false,
       showSettingsModal: false,
+      // Command palette state (not persisted)
+      showCommandPalette: false,
+      pendingKeySequence: null,
 
       setCurrentView: (currentView) => set({ currentView }),
       setLayout: (layout) => set({ layout }),
@@ -96,6 +105,8 @@ export const useUIStore = create<UIState>()(
       setNotesBrowserWidth: (notesBrowserWidth) => set({ notesBrowserWidth }),
       togglePlansBrowserCollapsed: () => set((state) => ({ plansBrowserCollapsed: !state.plansBrowserCollapsed })),
       toggleNotesBrowserCollapsed: () => set((state) => ({ notesBrowserCollapsed: !state.notesBrowserCollapsed })),
+      setShowCommandPalette: (showCommandPalette) => set({ showCommandPalette }),
+      setPendingKeySequence: (pendingKeySequence) => set({ pendingKeySequence }),
       resetToDefaults: () => set(DEFAULT_UI_STATE),
     }),
     {

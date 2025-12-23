@@ -45,4 +45,79 @@ test.describe('Keyboard Shortcuts', () => {
     await basePage.closeModalWithEscape();
     await expect(basePage.page.locator('h2:has-text("Keyboard Shortcuts")')).not.toBeVisible();
   });
+
+  test('Cmd+K opens command palette', async ({ basePage }) => {
+    await basePage.goto('/instances');
+    await basePage.page.keyboard.press('Meta+k');
+    await expect(basePage.page.locator('input[placeholder="Search commands..."]')).toBeVisible();
+  });
+
+  test('Escape closes command palette', async ({ basePage }) => {
+    await basePage.goto('/instances');
+    await basePage.page.keyboard.press('Meta+k');
+    await expect(basePage.page.locator('input[placeholder="Search commands..."]')).toBeVisible();
+    await basePage.page.keyboard.press('Escape');
+    await expect(basePage.page.locator('input[placeholder="Search commands..."]')).not.toBeVisible();
+  });
+
+  test('G H navigates to home', async ({ basePage }) => {
+    await basePage.goto('/instances');
+    await basePage.page.keyboard.press('g');
+    await basePage.page.keyboard.press('h');
+    await expect(basePage.page).toHaveURL(/.*\/$/);
+  });
+
+  test('G I navigates to instances', async ({ basePage }) => {
+    await basePage.goto('/');
+    await basePage.page.keyboard.press('g');
+    await basePage.page.keyboard.press('i');
+    await expect(basePage.page).toHaveURL(/.*\/instances/);
+  });
+
+  test('G S navigates to history', async ({ basePage }) => {
+    await basePage.goto('/');
+    await basePage.page.keyboard.press('g');
+    await basePage.page.keyboard.press('s');
+    await expect(basePage.page).toHaveURL(/.*\/history/);
+  });
+
+  test('Cmd+N creates new instance', async ({ basePage, apiClient }) => {
+    await basePage.goto('/instances');
+    await basePage.page.keyboard.press('Meta+n');
+    // Should navigate to a new instance page
+    await basePage.page.waitForURL(/.*\/instances\/[a-f0-9-]+/);
+    await expect(basePage.page).toHaveURL(/.*\/instances\/[a-f0-9-]+/);
+  });
+});
+
+test.describe('Instance Keyboard Shortcuts', () => {
+  test('Cmd+P toggles pin on current instance', async ({ basePage, apiClient }) => {
+    // Create an instance first
+    const instance = await apiClient.createInstance({ name: 'test-pin', workingDir: '~' });
+    await basePage.goto(`/instances/${instance.id}`);
+
+    // Should not be pinned initially (no "pinned" badge in header)
+    await expect(basePage.page.locator('text=(1 pinned)')).not.toBeVisible();
+
+    // Toggle pin
+    await basePage.page.keyboard.press('Meta+p');
+    await basePage.page.waitForTimeout(300);
+
+    // Should now show pinned badge in header
+    await expect(basePage.page.locator('text=(1 pinned)')).toBeVisible();
+  });
+
+  test('Cmd+1 switches to first instance', async ({ basePage, apiClient }) => {
+    // Create two instances
+    const instance1 = await apiClient.createInstance({ name: 'first', workingDir: '~' });
+    const instance2 = await apiClient.createInstance({ name: 'second', workingDir: '~' });
+
+    // Start on second instance
+    await basePage.goto(`/instances/${instance2.id}`);
+
+    // Press Cmd+1 to go to first instance
+    await basePage.page.keyboard.press('Meta+1');
+    await basePage.page.waitForURL(`**/instances/${instance1.id}`);
+    await expect(basePage.page).toHaveURL(new RegExp(`/instances/${instance1.id}`));
+  });
 });

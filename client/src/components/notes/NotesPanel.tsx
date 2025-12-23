@@ -152,6 +152,9 @@ export function NotesPanel({ workingDir, isOpen, onClose, width, onWidthChange }
           <span className="text-sm font-semibold text-theme-primary flex items-center gap-2">
             <Icons.fileText />
             Notes
+            <span className="text-xs text-theme-muted font-normal truncate" title={`${workingDir}/notes`}>
+              · {workingDir}/notes
+            </span>
           </span>
           <div className="flex items-center gap-1">
             <button

@@ -152,6 +152,9 @@ export function PlansPanel({ workingDir, isOpen, onClose, width, onWidthChange }
           <span className="text-sm font-semibold text-theme-primary flex items-center gap-2">
             <Icons.file />
             Plans
+            <span className="text-xs text-theme-muted font-normal truncate" title={`${workingDir}/plans`}>
+              · {workingDir}/plans
+            </span>
           </span>
           <div className="flex items-center gap-1">
             <button

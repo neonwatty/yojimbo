@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { notesApi } from '../../api/client';
+import { useUIStore } from '../../store/uiStore';
 import { Icons } from '../common/Icons';
+import { Spinner } from '../common/Spinner';
 import type { Note } from '@cc-orchestrator/shared';
 
 interface NotesPanelProps {
@@ -11,6 +13,9 @@ interface NotesPanelProps {
   onWidthChange: (width: number) => void;
 }
 
+const MIN_BROWSER_WIDTH = 48;
+const MAX_BROWSER_WIDTH = 300;
+
 export function NotesPanel({ workingDir, isOpen, onClose, width, onWidthChange }: NotesPanelProps) {
   const [notes, setNotes] = useState<Note[]>([]);
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
@@ -19,6 +24,13 @@ export function NotesPanel({ workingDir, isOpen, onClose, width, onWidthChange }
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const {
+    notesBrowserWidth,
+    notesBrowserCollapsed,
+    setNotesBrowserWidth,
+    toggleNotesBrowserCollapsed,
+  } = useUIStore();
 
   // Fetch notes when working directory changes
   const fetchNotes = useCallback(async () => {
@@ -115,7 +127,7 @@ export function NotesPanel({ workingDir, isOpen, onClose, width, onWidthChange }
     }
   };
 
-  // Resize handling
+  // Panel resize handling
   const handleResizeStart = (e: React.MouseEvent) => {
     e.preventDefault();
     const startX = e.clientX;
@@ -136,6 +148,29 @@ export function NotesPanel({ workingDir, isOpen, onClose, width, onWidthChange }
     document.addEventListener('mouseup', handleMouseUp);
   };
 
+  // Browser resize handling
+  const handleBrowserResizeStart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startWidth = notesBrowserWidth;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const delta = e.clientX - startX;
+      const newWidth = Math.min(Math.max(startWidth + delta, MIN_BROWSER_WIDTH), MAX_BROWSER_WIDTH);
+      setNotesBrowserWidth(newWidth);
+    };
+
+    const handleMouseUp = () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  };
+
+  const browserWidth = notesBrowserCollapsed ? MIN_BROWSER_WIDTH : notesBrowserWidth;
+
   if (!isOpen) return null;
 
   return (
@@ -149,13 +184,16 @@ export function NotesPanel({ workingDir, isOpen, onClose, width, onWidthChange }
       <div className="flex-1 flex flex-col bg-surface-800 border-l border-surface-600 overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-3 py-3 border-b border-surface-600 flex-shrink-0">
-          <span className="text-sm font-semibold text-theme-primary flex items-center gap-2">
+          <div className="flex items-center gap-2 min-w-0 flex-1 mr-2">
             <Icons.fileText />
-            Notes
-            <span className="text-xs text-theme-muted font-normal truncate" title={`${workingDir}/notes`}>
-              · {workingDir}/notes
-            </span>
-          </span>
+            <span className="text-sm font-semibold text-theme-primary flex-shrink-0">Notes</span>
+            {isLoading && <Spinner size="sm" className="text-accent flex-shrink-0" />}
+            {!isLoading && (
+              <span className="text-xs text-theme-muted font-normal truncate min-w-0" title={`${workingDir}/notes`}>
+                · {workingDir}/notes
+              </span>
+            )}
+          </div>
           <div className="flex items-center gap-1">
             <button
               onClick={handleCreateNote}
@@ -177,67 +215,107 @@ export function NotesPanel({ workingDir, isOpen, onClose, width, onWidthChange }
         {/* Content */}
         <div className="flex-1 flex overflow-hidden">
           {/* File browser */}
-          <div className="w-48 border-r border-surface-600 overflow-auto flex-shrink-0">
-            {isLoading ? (
-              <div className="p-4 text-theme-muted text-sm">Loading...</div>
-            ) : error ? (
-              <div className="p-4 text-red-400 text-sm">{error}</div>
-            ) : notes.length === 0 ? (
-              <div className="p-4 text-center text-theme-muted">
-                <div className="opacity-50 mb-2">
-                  <Icons.folder />
-                </div>
-                <p className="text-xs">No notes folder found</p>
-                <p className="text-xs mt-1 opacity-70">Create notes/ in your project</p>
-              </div>
-            ) : (
-              <div className="py-2">
-                {/* Root notes */}
-                {rootNotes.map((note) => (
-                  <button
-                    key={note.id}
-                    onClick={() => handleSelectNote(note)}
-                    className={`w-full flex items-center gap-2 px-3 py-1.5 text-left text-sm transition-colors
-                      ${selectedNote?.id === note.id ? 'bg-accent/20 text-theme-primary' : 'text-theme-secondary hover:bg-surface-700'}`}
-                  >
-                    <Icons.fileText />
-                    <span className="truncate flex-1">{note.name}</span>
-                    {note.isDirty && <span className="w-2 h-2 rounded-full bg-accent" />}
-                  </button>
-                ))}
+          <div
+            className="border-r border-surface-600 overflow-hidden flex-shrink-0 flex flex-col transition-all duration-200 ease-out"
+            style={{ width: browserWidth }}
+          >
+            {/* Browser header with collapse toggle */}
+            <div className="flex items-center justify-between px-2 py-1.5 border-b border-surface-700 flex-shrink-0">
+              {!notesBrowserCollapsed && (
+                <span className="text-xs text-theme-muted font-medium truncate">Files</span>
+              )}
+              <button
+                onClick={toggleNotesBrowserCollapsed}
+                className="p-1 rounded hover:bg-surface-700 text-theme-muted hover:text-theme-primary transition-colors ml-auto"
+                title={notesBrowserCollapsed ? 'Expand file browser' : 'Collapse file browser'}
+              >
+                {notesBrowserCollapsed ? <Icons.panelLeftOpen /> : <Icons.panelLeftClose />}
+              </button>
+            </div>
 
-                {/* Folders */}
-                {folders.map((folder) => (
-                  <div key={folder}>
-                    <button
-                      onClick={() => toggleFolder(folder)}
-                      className="w-full flex items-center gap-2 px-3 py-1.5 text-left text-sm text-theme-secondary hover:bg-surface-700 transition-colors"
-                    >
-                      {expandedFolders.has(folder) ? <Icons.chevronDown /> : <Icons.chevronRight />}
-                      {expandedFolders.has(folder) ? <Icons.folderOpen /> : <Icons.folder />}
-                      <span className="truncate">{folder}</span>
-                    </button>
-                    {expandedFolders.has(folder) && (
-                      <div className="ml-4">
-                        {groupedNotes[folder].map((note) => (
-                          <button
-                            key={note.id}
-                            onClick={() => handleSelectNote(note)}
-                            className={`w-full flex items-center gap-2 px-3 py-1.5 text-left text-sm transition-colors
-                              ${selectedNote?.id === note.id ? 'bg-accent/20 text-theme-primary' : 'text-theme-secondary hover:bg-surface-700'}`}
-                          >
-                            <Icons.fileText />
-                            <span className="truncate flex-1">{note.name}</span>
-                            {note.isDirty && <span className="w-2 h-2 rounded-full bg-accent" />}
-                          </button>
-                        ))}
-                      </div>
-                    )}
+            {/* Browser content */}
+            <div className="flex-1 overflow-auto">
+              {isLoading ? (
+                <div className="flex items-center justify-center h-full">
+                  <Spinner size="md" className="text-accent" />
+                </div>
+              ) : error ? (
+                <div className="p-4 text-red-400 text-sm">{error}</div>
+              ) : notes.length === 0 ? (
+                <div className="p-4 text-center text-theme-muted">
+                  <div className="opacity-50 mb-2">
+                    <Icons.folder />
                   </div>
-                ))}
-              </div>
-            )}
+                  {!notesBrowserCollapsed && (
+                    <>
+                      <p className="text-xs">No notes folder found</p>
+                      <p className="text-xs mt-1 opacity-70">Create notes/ in your project</p>
+                    </>
+                  )}
+                </div>
+              ) : (
+                <div className="py-2">
+                  {/* Root notes */}
+                  {rootNotes.map((note) => (
+                    <button
+                      key={note.id}
+                      onClick={() => handleSelectNote(note)}
+                      className={`w-full flex items-center gap-2 px-3 py-1.5 text-left text-sm transition-colors
+                        ${selectedNote?.id === note.id ? 'bg-accent/20 text-theme-primary' : 'text-theme-secondary hover:bg-surface-700'}`}
+                      title={notesBrowserCollapsed ? note.name : undefined}
+                    >
+                      <Icons.fileText />
+                      {!notesBrowserCollapsed && (
+                        <>
+                          <span className="truncate flex-1">{note.name}</span>
+                          {note.isDirty && <span className="w-2 h-2 rounded-full bg-accent" />}
+                        </>
+                      )}
+                    </button>
+                  ))}
+
+                  {/* Folders */}
+                  {folders.map((folder) => (
+                    <div key={folder}>
+                      <button
+                        onClick={() => toggleFolder(folder)}
+                        className="w-full flex items-center gap-2 px-3 py-1.5 text-left text-sm text-theme-secondary hover:bg-surface-700 transition-colors"
+                        title={notesBrowserCollapsed ? folder : undefined}
+                      >
+                        {!notesBrowserCollapsed && (expandedFolders.has(folder) ? <Icons.chevronDown /> : <Icons.chevronRight />)}
+                        {expandedFolders.has(folder) ? <Icons.folderOpen /> : <Icons.folder />}
+                        {!notesBrowserCollapsed && <span className="truncate">{folder}</span>}
+                      </button>
+                      {expandedFolders.has(folder) && !notesBrowserCollapsed && (
+                        <div className="ml-4">
+                          {groupedNotes[folder].map((note) => (
+                            <button
+                              key={note.id}
+                              onClick={() => handleSelectNote(note)}
+                              className={`w-full flex items-center gap-2 px-3 py-1.5 text-left text-sm transition-colors
+                                ${selectedNote?.id === note.id ? 'bg-accent/20 text-theme-primary' : 'text-theme-secondary hover:bg-surface-700'}`}
+                            >
+                              <Icons.fileText />
+                              <span className="truncate flex-1">{note.name}</span>
+                              {note.isDirty && <span className="w-2 h-2 rounded-full bg-accent" />}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
+
+          {/* Browser resize handle */}
+          {!notesBrowserCollapsed && (
+            <div
+              className="w-1 bg-transparent hover:bg-accent/50 cursor-col-resize flex-shrink-0 transition-colors"
+              onMouseDown={handleBrowserResizeStart}
+            />
+          )}
 
           {/* Editor/Preview */}
           <div className="flex-1 flex flex-col overflow-hidden">

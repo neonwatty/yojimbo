@@ -151,4 +151,82 @@ test.describe('Notes Panel', () => {
       }
     }
   });
+
+  test('can collapse and expand file browser', async ({ instancesPage }) => {
+    // Ensure notes directory exists with a test note
+    if (!fs.existsSync(notesDir)) {
+      fs.mkdirSync(notesDir, { recursive: true });
+    }
+    fs.writeFileSync(testNotePath, '# Test Note\n\nTest content.');
+
+    await instancesPage.gotoInstances();
+    await instancesPage.createNewInstance();
+    await expect(instancesPage.page).toHaveURL(/.*\/instances\/[a-zA-Z0-9-]+$/);
+
+    // Open notes panel
+    await instancesPage.page.locator('button:has-text("Notes")').click();
+    await instancesPage.page.waitForTimeout(500);
+
+    // File browser should be expanded - "Files" label should be visible
+    await expect(instancesPage.page.locator('text=Files').first()).toBeVisible();
+
+    // Find and click the collapse button
+    const collapseButton = instancesPage.page.locator('button[title="Collapse file browser"]');
+    await expect(collapseButton).toBeVisible();
+    await collapseButton.click();
+    await instancesPage.page.waitForTimeout(300);
+
+    // After collapse, "Files" label should be hidden
+    await expect(instancesPage.page.locator('span:has-text("Files")').first()).not.toBeVisible();
+
+    // Expand button should now be visible
+    const expandButton = instancesPage.page.locator('button[title="Expand file browser"]');
+    await expect(expandButton).toBeVisible();
+
+    // Click expand to restore
+    await expandButton.click();
+    await instancesPage.page.waitForTimeout(300);
+
+    // "Files" label should be visible again
+    await expect(instancesPage.page.locator('text=Files').first()).toBeVisible();
+  });
+
+  test('updates path when terminal CWD changes', async ({ instancesPage }) => {
+    // Create notes directories in both locations
+    const desktopNotesDir = path.join(os.homedir(), 'Desktop', 'notes');
+    const homeNotesDir = path.join(os.homedir(), 'notes');
+
+    // Ensure Desktop/notes exists
+    if (!fs.existsSync(desktopNotesDir)) {
+      fs.mkdirSync(desktopNotesDir, { recursive: true });
+    }
+    // Ensure ~/notes exists
+    if (!fs.existsSync(homeNotesDir)) {
+      fs.mkdirSync(homeNotesDir, { recursive: true });
+    }
+
+    await instancesPage.gotoInstances();
+    await instancesPage.createNewInstance();
+    await expect(instancesPage.page).toHaveURL(/.*\/instances\/[a-zA-Z0-9-]+$/);
+
+    // Open notes panel
+    await instancesPage.page.locator('button:has-text("Notes")').click();
+    await instancesPage.page.waitForTimeout(500);
+
+    // Get initial path display (should contain home directory)
+    const pathDisplay = instancesPage.page.locator('[title$="/notes"]').first();
+    await expect(pathDisplay).toBeVisible();
+
+    // Change directory in terminal to Desktop
+    const terminal = instancesPage.page.locator('.xterm-helper-textarea');
+    await terminal.focus();
+    await terminal.fill('cd ~/Desktop');
+    await instancesPage.page.keyboard.press('Enter');
+
+    // Wait for CWD polling to detect the change (polls every 2 seconds)
+    await instancesPage.page.waitForTimeout(3000);
+
+    // Path should now show Desktop/notes
+    await expect(instancesPage.page.locator('[title*="Desktop/notes"]')).toBeVisible({ timeout: 5000 });
+  });
 });

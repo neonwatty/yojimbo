@@ -198,12 +198,14 @@ export default function InstancesPage() {
         {/* Terminal + Plans Panel */}
         <div className="flex-1 flex overflow-hidden">
           {/* Terminal */}
-          <div className="flex-1 overflow-hidden">
-            <Terminal
-              instanceId={instance.id}
-              theme={theme === 'dark' ? 'dark' : 'light'}
-            />
-          </div>
+          {terminalPanelOpen && (
+            <div className="flex-1 overflow-hidden">
+              <Terminal
+                instanceId={instance.id}
+                theme={theme === 'dark' ? 'dark' : 'light'}
+              />
+            </div>
+          )}
 
           {/* Plans Panel */}
           <PlansPanel
@@ -213,6 +215,16 @@ export default function InstancesPage() {
             width={panelWidth}
             onWidthChange={setPanelWidth}
           />
+
+          {/* Empty state when both panels are closed */}
+          {!terminalPanelOpen && !editorPanelOpen && (
+            <div className="flex-1 flex items-center justify-center bg-surface-800">
+              <div className="text-center text-theme-muted">
+                <Icons.terminal />
+                <p className="mt-2 text-sm">Use the buttons above to show Terminal or Plans</p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );

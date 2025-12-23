@@ -41,7 +41,7 @@ test.describe('Status Workflow', () => {
     await fetch(`${API_BASE}/hooks/status`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ event: 'working', projectDir: workingDir }),
+      body: JSON.stringify({ event: 'working', projectDir: workingDir, instanceId }),
     });
 
     // Wait for WebSocket update
@@ -70,7 +70,7 @@ test.describe('Status Workflow', () => {
     await fetch(`${API_BASE}/hooks/notification`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ projectDir: workingDir }),
+      body: JSON.stringify({ projectDir: workingDir, instanceId }),
     });
 
     // Wait for WebSocket update
@@ -99,7 +99,7 @@ test.describe('Status Workflow', () => {
     await fetch(`${API_BASE}/hooks/status`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ event: 'working', projectDir: workingDir }),
+      body: JSON.stringify({ event: 'working', projectDir: workingDir, instanceId }),
     });
     await instancesPage.page.waitForTimeout(500);
     await expect(statusBadge(instancesPage.page, 'Working')).toBeVisible({ timeout: 5000 });
@@ -108,7 +108,7 @@ test.describe('Status Workflow', () => {
     await fetch(`${API_BASE}/hooks/stop`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ projectDir: workingDir }),
+      body: JSON.stringify({ projectDir: workingDir, instanceId }),
     });
     await instancesPage.page.waitForTimeout(500);
 
@@ -138,7 +138,7 @@ test.describe('Status Workflow', () => {
     await fetch(`${API_BASE}/hooks/status`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ event: 'working', projectDir: workingDir }),
+      body: JSON.stringify({ event: 'working', projectDir: workingDir, instanceId }),
     });
     await instancesPage.page.waitForTimeout(500);
     await expect(statusBadge(instancesPage.page, 'Working')).toBeVisible({ timeout: 5000 });
@@ -147,7 +147,7 @@ test.describe('Status Workflow', () => {
     await fetch(`${API_BASE}/hooks/notification`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ projectDir: workingDir }),
+      body: JSON.stringify({ projectDir: workingDir, instanceId }),
     });
     await instancesPage.page.waitForTimeout(500);
     await expect(statusBadge(instancesPage.page, 'Awaiting')).toBeVisible({ timeout: 5000 });
@@ -156,7 +156,7 @@ test.describe('Status Workflow', () => {
     await fetch(`${API_BASE}/hooks/stop`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ projectDir: workingDir }),
+      body: JSON.stringify({ projectDir: workingDir, instanceId }),
     });
     await instancesPage.page.waitForTimeout(500);
     await expect(statusBadge(instancesPage.page, 'Idle')).toBeVisible({ timeout: 5000 });
@@ -180,7 +180,7 @@ test.describe('Status Workflow', () => {
     await fetch(`${API_BASE}/hooks/status`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ event: 'working', projectDir: workingDir }),
+      body: JSON.stringify({ event: 'working', projectDir: workingDir, instanceId }),
     });
     await instancesPage.page.waitForTimeout(500);
 

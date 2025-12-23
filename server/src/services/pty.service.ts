@@ -28,6 +28,7 @@ class PTYService extends EventEmitter {
         ...process.env,
         TERM: 'xterm-256color',
         COLORTERM: 'truecolor',
+        CC_INSTANCE_ID: id, // Pass instance ID to child processes (used by hooks)
       },
     });
 

@@ -8,13 +8,25 @@ const CLAUDE_SETTINGS_PATH = path.join(os.homedir(), '.claude', 'settings.json')
 const SERVER_URL = 'http://localhost:3456';
 
 const ORCHESTRATOR_HOOKS = {
+  UserPromptSubmit: [
+    {
+      matcher: '',
+      hooks: [
+        {
+          type: 'command',
+          command: `curl -sX POST ${SERVER_URL}/api/hooks/status -H 'Content-Type: application/json' -d '{"event":"working","projectDir":"'"$CLAUDE_PROJECT_DIR"'","instanceId":"'"$CC_INSTANCE_ID"'"}' > /dev/null 2>&1 || true`,
+          timeout: 5,
+        },
+      ],
+    },
+  ],
   PreToolUse: [
     {
       matcher: 'Bash|Write|Edit|Read|Glob|Grep',
       hooks: [
         {
           type: 'command',
-          command: `curl -sX POST ${SERVER_URL}/api/hooks/status -H 'Content-Type: application/json' -d '{"event":"working","projectDir":"'"$CLAUDE_PROJECT_DIR"'"}' > /dev/null 2>&1 || true`,
+          command: `curl -sX POST ${SERVER_URL}/api/hooks/status -H 'Content-Type: application/json' -d '{"event":"working","projectDir":"'"$CLAUDE_PROJECT_DIR"'","instanceId":"'"$CC_INSTANCE_ID"'"}' > /dev/null 2>&1 || true`,
           timeout: 5,
         },
       ],
@@ -26,7 +38,7 @@ const ORCHESTRATOR_HOOKS = {
       hooks: [
         {
           type: 'command',
-          command: `curl -sX POST ${SERVER_URL}/api/hooks/status -H 'Content-Type: application/json' -d '{"event":"idle","projectDir":"'"$CLAUDE_PROJECT_DIR"'"}' > /dev/null 2>&1 || true`,
+          command: `curl -sX POST ${SERVER_URL}/api/hooks/status -H 'Content-Type: application/json' -d '{"event":"idle","projectDir":"'"$CLAUDE_PROJECT_DIR"'","instanceId":"'"$CC_INSTANCE_ID"'"}' > /dev/null 2>&1 || true`,
           timeout: 5,
         },
       ],
@@ -38,7 +50,7 @@ const ORCHESTRATOR_HOOKS = {
       hooks: [
         {
           type: 'command',
-          command: `curl -sX POST ${SERVER_URL}/api/hooks/notification -H 'Content-Type: application/json' -d '{"event":"awaiting","projectDir":"'"$CLAUDE_PROJECT_DIR"'"}' > /dev/null 2>&1 || true`,
+          command: `curl -sX POST ${SERVER_URL}/api/hooks/notification -H 'Content-Type: application/json' -d '{"event":"awaiting","projectDir":"'"$CLAUDE_PROJECT_DIR"'","instanceId":"'"$CC_INSTANCE_ID"'"}' > /dev/null 2>&1 || true`,
           timeout: 5,
         },
       ],
@@ -50,7 +62,7 @@ const ORCHESTRATOR_HOOKS = {
       hooks: [
         {
           type: 'command',
-          command: `curl -sX POST ${SERVER_URL}/api/hooks/stop -H 'Content-Type: application/json' -d '{"event":"stopped","projectDir":"'"$CLAUDE_PROJECT_DIR"'"}' > /dev/null 2>&1 || true`,
+          command: `curl -sX POST ${SERVER_URL}/api/hooks/stop -H 'Content-Type: application/json' -d '{"event":"stopped","projectDir":"'"$CLAUDE_PROJECT_DIR"'","instanceId":"'"$CC_INSTANCE_ID"'"}' > /dev/null 2>&1 || true`,
           timeout: 5,
         },
       ],
@@ -121,6 +133,7 @@ function installHooks() {
 
   console.log('✅ Hooks installed successfully!\n');
   console.log('The following hooks have been added:');
+  console.log('  - UserPromptSubmit: Detects when user submits a prompt (working status)');
   console.log('  - PreToolUse: Detects when Claude starts using tools (working status)');
   console.log('  - PostToolUse: Detects when Claude finishes tool use (idle status)');
   console.log('  - Notification: Detects when Claude awaits input');

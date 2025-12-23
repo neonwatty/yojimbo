@@ -6,7 +6,16 @@ import type { HookStatusEvent, HookNotificationEvent, HookStopEvent, InstanceSta
 
 const router = Router();
 
-// Helper to find instance by working directory
+// Helper to find instance by ID
+function findInstanceById(instanceId: string): any | null {
+  if (!instanceId) return null;
+  const db = getDatabase();
+  return db
+    .prepare('SELECT * FROM instances WHERE id = ? AND closed_at IS NULL')
+    .get(instanceId) || null;
+}
+
+// Helper to find instance by working directory (fallback)
 function findInstanceByWorkingDir(projectDir: string): any | null {
   const db = getDatabase();
 
@@ -68,17 +77,18 @@ function updateInstanceStatus(instanceId: string, status: InstanceStatus): void 
 // POST /api/hooks/status - Receive status updates (working/idle)
 router.post('/status', (req, res) => {
   try {
-    const { event, projectDir } = req.body as HookStatusEvent;
+    const { event, projectDir, instanceId } = req.body as HookStatusEvent & { instanceId?: string };
 
-    console.log(`🔔 Hook status event: ${event} for ${projectDir}`);
+    console.log(`🔔 Hook status event: ${event} for ${projectDir} (instanceId: ${instanceId || 'none'})`);
 
-    const instance = findInstanceByWorkingDir(projectDir);
+    // Try to find by instanceId first (more reliable), fall back to projectDir
+    const instance = findInstanceById(instanceId || '') || findInstanceByWorkingDir(projectDir);
 
     if (instance) {
       const status: InstanceStatus = event === 'working' ? 'working' : 'idle';
       updateInstanceStatus(instance.id, status);
     } else {
-      console.log(`⚠️ No instance found for: ${projectDir}`);
+      console.log(`⚠️ No instance found for: ${projectDir} (instanceId: ${instanceId || 'none'})`);
     }
 
     res.json({ ok: true });
@@ -91,16 +101,17 @@ router.post('/status', (req, res) => {
 // POST /api/hooks/notification - Receive notification events (awaiting input)
 router.post('/notification', (req, res) => {
   try {
-    const { projectDir } = req.body as HookNotificationEvent;
+    const { projectDir, instanceId } = req.body as HookNotificationEvent & { instanceId?: string };
 
-    console.log(`🔔 Hook notification event for ${projectDir}`);
+    console.log(`🔔 Hook notification event for ${projectDir} (instanceId: ${instanceId || 'none'})`);
 
-    const instance = findInstanceByWorkingDir(projectDir);
+    // Try to find by instanceId first (more reliable), fall back to projectDir
+    const instance = findInstanceById(instanceId || '') || findInstanceByWorkingDir(projectDir);
 
     if (instance) {
       updateInstanceStatus(instance.id, 'awaiting');
     } else {
-      console.log(`⚠️ No instance found for: ${projectDir}`);
+      console.log(`⚠️ No instance found for: ${projectDir} (instanceId: ${instanceId || 'none'})`);
     }
 
     res.json({ ok: true });
@@ -113,16 +124,17 @@ router.post('/notification', (req, res) => {
 // POST /api/hooks/stop - Receive stop events
 router.post('/stop', (req, res) => {
   try {
-    const { projectDir } = req.body as HookStopEvent;
+    const { projectDir, instanceId } = req.body as HookStopEvent & { instanceId?: string };
 
-    console.log(`🔔 Hook stop event for ${projectDir}`);
+    console.log(`🔔 Hook stop event for ${projectDir} (instanceId: ${instanceId || 'none'})`);
 
-    const instance = findInstanceByWorkingDir(projectDir);
+    // Try to find by instanceId first (more reliable), fall back to projectDir
+    const instance = findInstanceById(instanceId || '') || findInstanceByWorkingDir(projectDir);
 
     if (instance) {
       updateInstanceStatus(instance.id, 'idle');
     } else {
-      console.log(`⚠️ No instance found for: ${projectDir}`);
+      console.log(`⚠️ No instance found for: ${projectDir} (instanceId: ${instanceId || 'none'})`);
     }
 
     res.json({ ok: true });

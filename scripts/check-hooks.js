@@ -43,7 +43,7 @@ function checkHooks() {
     return;
   }
 
-  const hookTypes = ['PreToolUse', 'PostToolUse', 'Notification', 'Stop'];
+  const hookTypes = ['UserPromptSubmit', 'PreToolUse', 'PostToolUse', 'Notification', 'Stop'];
   let installedCount = 0;
 
   console.log('Hook Status:');

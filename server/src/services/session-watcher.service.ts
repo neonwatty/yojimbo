@@ -141,7 +141,7 @@ async function processSessionFile(filePath: string): Promise<void> {
 
 async function parseJsonlFile(filePath: string, _skipLines: number = 0): Promise<ParsedSession | null> {
   const messages: ParsedMessage[] = [];
-  let lineNumber = 0;
+  let _lineNumber = 0;
   let startedAt: string | null = null;
   let endedAt: string | null = null;
   let sessionId: string | null = null;
@@ -155,7 +155,7 @@ async function parseJsonlFile(filePath: string, _skipLines: number = 0): Promise
   });
 
   for await (const line of rl) {
-    lineNumber++;
+    _lineNumber++;
 
     if (!line.trim()) continue;
 

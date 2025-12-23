@@ -1,0 +1,95 @@
+import * as pty from 'node-pty';
+import { EventEmitter } from 'events';
+import os from 'os';
+
+interface PTYInstance {
+  id: string;
+  pty: pty.IPty;
+  workingDir: string;
+}
+
+class PTYService extends EventEmitter {
+  private instances: Map<string, PTYInstance> = new Map();
+
+  spawn(id: string, workingDir: string, cols = 80, rows = 24): PTYInstance {
+    const shell = process.platform === 'win32'
+      ? 'powershell.exe'
+      : process.env.SHELL || '/bin/zsh';
+
+    // Expand ~ to home directory
+    const cwd = workingDir.replace(/^~/, os.homedir());
+
+    const ptyProcess = pty.spawn(shell, [], {
+      name: 'xterm-256color',
+      cols,
+      rows,
+      cwd,
+      env: {
+        ...process.env,
+        TERM: 'xterm-256color',
+        COLORTERM: 'truecolor',
+      },
+    });
+
+    const instance: PTYInstance = { id, pty: ptyProcess, workingDir };
+    this.instances.set(id, instance);
+
+    ptyProcess.onData((data) => {
+      this.emit('data', id, data);
+    });
+
+    ptyProcess.onExit(({ exitCode }) => {
+      this.emit('exit', id, exitCode);
+      this.instances.delete(id);
+    });
+
+    console.log(`🖥️  PTY spawned: ${id} (pid: ${ptyProcess.pid}) in ${cwd}`);
+
+    return instance;
+  }
+
+  write(id: string, data: string): void {
+    const instance = this.instances.get(id);
+    if (instance) {
+      instance.pty.write(data);
+    }
+  }
+
+  resize(id: string, cols: number, rows: number): void {
+    const instance = this.instances.get(id);
+    if (instance) {
+      instance.pty.resize(cols, rows);
+    }
+  }
+
+  kill(id: string): boolean {
+    const instance = this.instances.get(id);
+    if (instance) {
+      console.log(`🛑 Killing PTY: ${id}`);
+      instance.pty.kill();
+      this.instances.delete(id);
+      return true;
+    }
+    return false;
+  }
+
+  getPid(id: string): number | undefined {
+    return this.instances.get(id)?.pty.pid;
+  }
+
+  has(id: string): boolean {
+    return this.instances.has(id);
+  }
+
+  getAll(): string[] {
+    return Array.from(this.instances.keys());
+  }
+
+  killAll(): void {
+    for (const [id] of this.instances) {
+      this.kill(id);
+    }
+  }
+}
+
+export const ptyService = new PTYService();

@@ -73,3 +73,15 @@ ehthumbs.db
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+
+# SQLite database
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Backups
+backups/
+
+# Keep the data directory structure
+!server/data/.gitkeep

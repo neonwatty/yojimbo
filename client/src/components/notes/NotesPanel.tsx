@@ -74,7 +74,7 @@ export function NotesPanel({ workingDir, isOpen, onClose, width, onWidthChange }
 
   const handleSelectNote = async (note: Note) => {
     try {
-      const response = await notesApi.get(note.path);
+      const response = await notesApi.get(note.id);
       if (response.data) {
         setSelectedNote(response.data);
         setEditContent(response.data.content);
@@ -88,7 +88,7 @@ export function NotesPanel({ workingDir, isOpen, onClose, width, onWidthChange }
   const handleSave = async () => {
     if (!selectedNote) return;
     try {
-      await notesApi.update(selectedNote.path, { content: editContent });
+      await notesApi.update(selectedNote.id, { content: editContent });
       setSelectedNote({ ...selectedNote, content: editContent, isDirty: false });
       setIsEditing(false);
       fetchNotes(); // Refresh the list

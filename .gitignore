@@ -36,6 +36,7 @@ coverage/
 # Cache
 .cache/
 .parcel-cache/
+.vite/
 .eslintcache
 .stylelintcache
 *.tsbuildinfo

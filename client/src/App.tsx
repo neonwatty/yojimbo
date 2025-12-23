@@ -1,22 +1,30 @@
-import { useEffect } from 'react';
-import { Routes, Route, useNavigate } from 'react-router-dom';
+import { useEffect, useCallback } from 'react';
+import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { useSettingsStore } from './store/settingsStore';
 import { useUIStore } from './store/uiStore';
+import { useInstancesStore } from './store/instancesStore';
 import { useInstances } from './hooks/useInstances';
+import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import MainLayout from './components/layout/MainLayout';
 import HomePage from './pages/HomePage';
 import InstancesPage from './pages/InstancesPage';
 import HistoryPage from './pages/HistoryPage';
 import { ShortcutsModal, SettingsModal } from './components/modals';
+import { CommandPalette } from './components/common/CommandPalette';
+import { instancesApi } from './api/client';
 
 function App() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { theme } = useSettingsStore();
+  const { instances } = useInstancesStore();
   const {
     showShortcutsModal,
     showSettingsModal,
+    showCommandPalette,
     setShowShortcutsModal,
     setShowSettingsModal,
+    setShowCommandPalette,
     toggleLeftSidebar,
     toggleEditorPanel,
     toggleNotesPanel,
@@ -25,6 +33,52 @@ function App() {
 
   // Initialize instance fetching and WebSocket subscription
   useInstances();
+
+  // Instance switching handlers
+  const switchToInstance = useCallback((index: number) => {
+    if (instances[index]) {
+      navigate(`/instances/${instances[index].id}`);
+    }
+  }, [instances, navigate]);
+
+  const cycleInstance = useCallback((direction: 'prev' | 'next') => {
+    const match = location.pathname.match(/\/instances\/(.+)/);
+    if (!match || instances.length === 0) return;
+
+    const currentIndex = instances.findIndex(i => i.id === match[1]);
+    if (currentIndex === -1) return;
+
+    const newIndex = direction === 'next'
+      ? (currentIndex + 1) % instances.length
+      : (currentIndex - 1 + instances.length) % instances.length;
+
+    navigate(`/instances/${instances[newIndex].id}`);
+  }, [instances, location.pathname, navigate]);
+
+  const handleNewInstance = useCallback(async () => {
+    const response = await instancesApi.create({
+      name: `instance-${instances.length + 1}`,
+      workingDir: '~',
+    });
+    if (response.data) {
+      navigate(`/instances/${response.data.id}`);
+    }
+  }, [instances.length, navigate]);
+
+  // Use keyboard shortcuts hook for new shortcuts
+  useKeyboardShortcuts({
+    onCommandPalette: () => setShowCommandPalette(true),
+    onNewInstance: handleNewInstance,
+    onSwitchInstance: switchToInstance,
+    onCycleInstance: cycleInstance,
+    onNavigation: (page) => {
+      switch (page) {
+        case 'home': navigate('/'); break;
+        case 'instances': navigate('/instances'); break;
+        case 'history': navigate('/history'); break;
+      }
+    },
+  });
 
   // Apply theme to document
   useEffect(() => {
@@ -97,6 +151,10 @@ function App() {
 
       // Escape: Close modals or go back
       if (e.key === 'Escape') {
+        if (showCommandPalette) {
+          setShowCommandPalette(false);
+          return;
+        }
         if (showShortcutsModal) {
           setShowShortcutsModal(false);
           return;
@@ -119,12 +177,14 @@ function App() {
     navigate,
     showShortcutsModal,
     showSettingsModal,
+    showCommandPalette,
     toggleLeftSidebar,
     toggleEditorPanel,
     toggleNotesPanel,
     toggleTerminalPanel,
     setShowShortcutsModal,
     setShowSettingsModal,
+    setShowCommandPalette,
   ]);
 
   return (
@@ -139,6 +199,7 @@ function App() {
       </MainLayout>
 
       {/* Global Modals */}
+      <CommandPalette isOpen={showCommandPalette} onClose={() => setShowCommandPalette(false)} />
       <ShortcutsModal isOpen={showShortcutsModal} onClose={() => setShowShortcutsModal(false)} />
       <SettingsModal isOpen={showSettingsModal} onClose={() => setShowSettingsModal(false)} />
     </>

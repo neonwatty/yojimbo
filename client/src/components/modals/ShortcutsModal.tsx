@@ -8,20 +8,32 @@ interface ShortcutsModalProps {
 
 const shortcuts = [
   {
-    category: 'Navigation',
+    category: 'Quick Actions',
     items: [
-      { keys: ['⌘', '1-9'], description: 'Switch to instance and expand' },
-      { keys: ['⌘', '['], description: 'Previous instance' },
-      { keys: ['⌘', ']'], description: 'Next instance' },
+      { keys: ['⌘', 'K'], description: 'Open command palette' },
+      { keys: ['⌘', 'N'], description: 'Create new instance' },
+      { keys: ['⌘', '/'], description: 'Show keyboard shortcuts' },
+      { keys: ['⌘', ','], description: 'Open settings' },
     ],
   },
   {
-    category: 'Instances',
+    category: 'Navigation',
     items: [
-      { keys: ['Enter'], description: 'Expand selected instance' },
-      { keys: ['Esc'], description: 'Return to overview / Cancel' },
-      { keys: ['F2'], description: 'Rename active instance' },
-      { keys: ['⌘', 'W'], description: 'Close active instance' },
+      { keys: ['G', 'H'], description: 'Go to Home' },
+      { keys: ['G', 'I'], description: 'Go to Instances' },
+      { keys: ['G', 'S'], description: 'Go to History' },
+      { keys: ['⌘', '1-9'], description: 'Switch to instance by position' },
+      { keys: ['⌘', '['], description: 'Previous instance' },
+      { keys: ['⌘', ']'], description: 'Next instance' },
+      { keys: ['Esc'], description: 'Return to overview / Close modal' },
+    ],
+  },
+  {
+    category: 'Instance Actions',
+    items: [
+      { keys: ['⌘', 'W'], description: 'Close current instance' },
+      { keys: ['⌘', 'P'], description: 'Toggle pin' },
+      { keys: ['F2'], description: 'Rename instance' },
     ],
   },
   {
@@ -29,14 +41,8 @@ const shortcuts = [
     items: [
       { keys: ['⌘', 'B'], description: 'Toggle sessions sidebar' },
       { keys: ['⌘', 'E'], description: 'Toggle plans panel' },
+      { keys: ['⌘', '⇧', 'N'], description: 'Toggle notes panel' },
       { keys: ['⌘', '`'], description: 'Toggle terminal panel' },
-    ],
-  },
-  {
-    category: 'General',
-    items: [
-      { keys: ['⌘', '?'], description: 'Show keyboard shortcuts' },
-      { keys: ['⌘', ','], description: 'Open settings' },
     ],
   },
 ];

@@ -17,6 +17,12 @@ export function LeftSidebar() {
   const pinnedInstances = instances.filter((i) => i.isPinned);
   const unpinnedInstances = instances.filter((i) => !i.isPinned);
 
+  // Get the index for keyboard shortcut badge (1-9)
+  const getInstanceIndex = (instId: string): number | null => {
+    const idx = instances.findIndex(i => i.id === instId);
+    return idx >= 0 && idx < 9 ? idx + 1 : null;
+  };
+
   // Confirmation dialog state
   const [confirmInstance, setConfirmInstance] = useState<Instance | null>(null);
 
@@ -135,7 +141,50 @@ export function LeftSidebar() {
           <div className="text-xs font-medium text-theme-muted uppercase tracking-wider px-2 mb-2 flex items-center gap-1">
             <span className="text-accent">★</span> Pinned
           </div>
-          {pinnedInstances.map((inst) => (
+          {pinnedInstances.map((inst) => {
+            const shortcutNum = getInstanceIndex(inst.id);
+            return (
+              <div
+                key={inst.id}
+                onClick={() => handleSelectInstance(inst.id)}
+                className={`group w-full flex items-center gap-2 px-2 py-2 rounded-lg text-left transition-colors mb-1 cursor-pointer
+                  ${expandedId === inst.id
+                    ? 'bg-accent/20 text-theme-primary ring-1 ring-accent'
+                    : activeInstanceId === inst.id
+                    ? 'bg-surface-700 text-theme-primary'
+                    : 'text-theme-secondary hover:bg-surface-700'}`}
+              >
+                {shortcutNum && (
+                  <span className="w-5 h-5 rounded bg-surface-600 text-[10px] flex items-center justify-center text-theme-muted font-mono flex-shrink-0">
+                    {shortcutNum}
+                  </span>
+                )}
+                <StatusDot status={inst.status} size="sm" />
+                <span className="flex-1 truncate text-sm">{inst.name}</span>
+                {inst.status === 'awaiting' && (
+                  <span className="w-2 h-2 rounded-full bg-state-awaiting animate-pulse group-hover:hidden" />
+                )}
+                <button
+                  onClick={(e) => handleCloseInstance(e, inst)}
+                  className="hidden group-hover:block p-0.5 rounded hover:bg-surface-600 text-theme-muted hover:text-red-400 transition-colors"
+                  title="Close instance"
+                >
+                  <Icons.close />
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* All instances section */}
+      <div className="flex-1 overflow-auto px-2 py-2">
+        <div className="text-xs font-medium text-theme-muted uppercase tracking-wider px-2 mb-2">
+          All Sessions
+        </div>
+        {unpinnedInstances.map((inst) => {
+          const shortcutNum = getInstanceIndex(inst.id);
+          return (
             <div
               key={inst.id}
               onClick={() => handleSelectInstance(inst.id)}
@@ -146,6 +195,11 @@ export function LeftSidebar() {
                   ? 'bg-surface-700 text-theme-primary'
                   : 'text-theme-secondary hover:bg-surface-700'}`}
             >
+              {shortcutNum && (
+                <span className="w-5 h-5 rounded bg-surface-600 text-[10px] flex items-center justify-center text-theme-muted font-mono flex-shrink-0">
+                  {shortcutNum}
+                </span>
+              )}
               <StatusDot status={inst.status} size="sm" />
               <span className="flex-1 truncate text-sm">{inst.name}</span>
               {inst.status === 'awaiting' && (
@@ -159,40 +213,8 @@ export function LeftSidebar() {
                 <Icons.close />
               </button>
             </div>
-          ))}
-        </div>
-      )}
-
-      {/* All instances section */}
-      <div className="flex-1 overflow-auto px-2 py-2">
-        <div className="text-xs font-medium text-theme-muted uppercase tracking-wider px-2 mb-2">
-          All Sessions
-        </div>
-        {unpinnedInstances.map((inst) => (
-          <div
-            key={inst.id}
-            onClick={() => handleSelectInstance(inst.id)}
-            className={`group w-full flex items-center gap-2 px-2 py-2 rounded-lg text-left transition-colors mb-1 cursor-pointer
-              ${expandedId === inst.id
-                ? 'bg-accent/20 text-theme-primary ring-1 ring-accent'
-                : activeInstanceId === inst.id
-                ? 'bg-surface-700 text-theme-primary'
-                : 'text-theme-secondary hover:bg-surface-700'}`}
-          >
-            <StatusDot status={inst.status} size="sm" />
-            <span className="flex-1 truncate text-sm">{inst.name}</span>
-            {inst.status === 'awaiting' && (
-              <span className="w-2 h-2 rounded-full bg-state-awaiting animate-pulse group-hover:hidden" />
-            )}
-            <button
-              onClick={(e) => handleCloseInstance(e, inst)}
-              className="hidden group-hover:block p-0.5 rounded hover:bg-surface-600 text-theme-muted hover:text-red-400 transition-colors"
-              title="Close instance"
-            >
-              <Icons.close />
-            </button>
-          </div>
-        ))}
+          );
+        })}
 
         {unpinnedInstances.length === 0 && pinnedInstances.length === 0 && (
           <div className="text-center py-8 text-theme-muted text-sm">

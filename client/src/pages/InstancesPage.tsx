@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useInstancesStore } from '../store/instancesStore';
 import { useUIStore } from '../store/uiStore';
 import { useSettingsStore } from '../store/settingsStore';
+import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { Terminal } from '../components/terminal';
 import { CardLayout } from '../components/instances/CardLayout';
 import { ListLayout } from '../components/instances/ListLayout';
@@ -27,6 +28,46 @@ export default function InstancesPage() {
 
   // Confirm dialog state
   const [confirmInstance, setConfirmInstance] = useState<Instance | null>(null);
+
+  // Get current instance for keyboard shortcuts
+  const currentInstance = id ? instances.find(i => i.id === id) : null;
+
+  // Instance-specific keyboard shortcut handlers
+  const handleKeyboardClose = useCallback(() => {
+    if (currentInstance) {
+      if (currentInstance.status === 'working' || currentInstance.status === 'awaiting' || currentInstance.isPinned) {
+        setConfirmInstance(currentInstance);
+      } else {
+        instancesApi.close(currentInstance.id).then(() => {
+          removeInstance(currentInstance.id);
+          navigate('/instances');
+        }).catch(console.error);
+      }
+    }
+  }, [currentInstance, navigate, removeInstance]);
+
+  const handleKeyboardTogglePin = useCallback(() => {
+    if (currentInstance) {
+      instancesApi.update(currentInstance.id, { isPinned: !currentInstance.isPinned })
+        .then(() => updateInstance(currentInstance.id, { isPinned: !currentInstance.isPinned }))
+        .catch(console.error);
+    }
+  }, [currentInstance, updateInstance]);
+
+  const handleKeyboardRename = useCallback(() => {
+    if (currentInstance) {
+      setEditingId(currentInstance.id);
+      setEditingName(currentInstance.name);
+    }
+  }, [currentInstance]);
+
+  // Instance-specific keyboard shortcuts
+  useKeyboardShortcuts({
+    enabled: !!id, // Only active when viewing a specific instance
+    onCloseInstance: handleKeyboardClose,
+    onTogglePin: handleKeyboardTogglePin,
+    onRenameInstance: handleKeyboardRename,
+  });
 
   const handleSelect = useCallback((instanceId: string) => {
     setActiveInstanceId(instanceId);

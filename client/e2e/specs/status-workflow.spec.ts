@@ -185,8 +185,8 @@ test.describe('Status Workflow', () => {
     await instancesPage.page.waitForTimeout(500);
 
     // The sidebar should show the status dot (working = green/active)
-    // Check that the sidebar has the instance button with a status indicator
-    const sidebarButton = instancesPage.page.locator('button').filter({ hasText: 'instance-' }).first();
-    await expect(sidebarButton).toBeVisible();
+    // Check that the sidebar has the instance item with a status indicator
+    const sidebarItem = instancesPage.page.locator('.group').filter({ hasText: 'instance-' }).first();
+    await expect(sidebarItem).toBeVisible();
   });
 });

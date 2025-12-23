@@ -1,4 +1,4 @@
-.PHONY: dev start stop build lint lint-fix test test-unit test-e2e clean db-reset db-migrate install hooks-install hooks-uninstall help
+.PHONY: dev start stop build lint lint-fix knip test test-unit test-e2e clean db-reset db-migrate install hooks-install hooks-uninstall help
 
 # Default target
 .DEFAULT_GOAL := help
@@ -63,6 +63,11 @@ lint:
 lint-fix:
 	@echo "$(CYAN)Running ESLint with auto-fix...$(NC)"
 	npm run lint:fix
+
+## knip: Check for unused dependencies, exports, and files
+knip:
+	@echo "$(CYAN)Running Knip...$(NC)"
+	npm run knip
 
 ## format: Format code with Prettier (if configured)
 format:

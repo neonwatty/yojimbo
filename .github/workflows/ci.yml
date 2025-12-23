@@ -27,6 +27,9 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: Check for unused dependencies and files (Knip)
+        run: npm run knip
+
       - name: Build all packages (type check)
         run: npm run build
 

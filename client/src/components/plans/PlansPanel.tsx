@@ -1,8 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { plansApi } from '../../api/client';
 import { useUIStore } from '../../store/uiStore';
+import { useFileChangesStore } from '../../store/fileChangesStore';
+import { useFileWatcher } from '../../hooks/useFileWatcher';
 import { Icons } from '../common/Icons';
 import { Spinner } from '../common/Spinner';
+import { MarkdownRenderer } from '../common/MarkdownRenderer';
 import type { Plan } from '@cc-orchestrator/shared';
 
 interface PlansPanelProps {
@@ -31,6 +34,17 @@ export function PlansPanel({ workingDir, isOpen, onClose, width, onWidthChange }
     setPlansBrowserWidth,
     togglePlansBrowserCollapsed,
   } = useUIStore();
+
+  // File watcher for external changes
+  useFileWatcher();
+  const { changes, clearChange, dismissChange } = useFileChangesStore();
+
+  // Check if selected plan has external changes
+  const selectedPlanChange = selectedPlan
+    ? Array.from(changes.values()).find(
+        (c) => c.filePath === selectedPlan.path && c.fileType === 'plan' && !c.dismissed
+      )
+    : null;
 
   // Fetch plans when working directory changes
   const fetchPlans = useCallback(async () => {
@@ -106,6 +120,21 @@ export function PlansPanel({ workingDir, isOpen, onClose, width, onWidthChange }
       fetchPlans(); // Refresh the list
     } catch (err) {
       console.error('Failed to save plan:', err);
+    }
+  };
+
+  const handleReloadPlan = async () => {
+    if (!selectedPlan || !selectedPlanChange) return;
+    try {
+      const response = await plansApi.get(selectedPlan.path);
+      if (response.data) {
+        setSelectedPlan(response.data);
+        setEditContent(response.data.content);
+        setIsEditing(false);
+        clearChange(selectedPlanChange.fileId);
+      }
+    } catch (err) {
+      console.error('Failed to reload plan:', err);
     }
   };
 
@@ -346,13 +375,45 @@ export function PlansPanel({ workingDir, isOpen, onClose, width, onWidthChange }
                     ) : (
                       <button
                         onClick={() => setIsEditing(true)}
-                        className="px-2 py-1 text-xs rounded bg-surface-700 text-theme-muted hover:text-theme-primary transition-colors"
+                        className="flex items-center gap-1.5 px-2 py-1 text-xs rounded bg-surface-700 text-theme-muted hover:text-theme-primary transition-colors"
+                        title="Edit source"
                       >
+                        <Icons.code />
                         Edit
                       </button>
                     )}
                   </div>
                 </div>
+
+                {/* External change notification */}
+                {selectedPlanChange && (
+                  <div className="flex items-center gap-2 px-3 py-2 bg-amber-500/20 border-b border-amber-500/30 flex-shrink-0">
+                    <Icons.alertCircle />
+                    <span className="text-xs text-amber-400 flex-1">
+                      {selectedPlanChange.changeType === 'deleted'
+                        ? 'This file was deleted externally.'
+                        : isEditing
+                        ? 'This file was modified externally. Your unsaved changes may conflict.'
+                        : 'This file was modified externally.'}
+                    </span>
+                    {selectedPlanChange.changeType !== 'deleted' && (
+                      <button
+                        onClick={handleReloadPlan}
+                        className="flex items-center gap-1 px-2 py-1 text-xs rounded bg-amber-500/30 text-amber-300 hover:bg-amber-500/40 transition-colors"
+                      >
+                        <Icons.refresh />
+                        Reload
+                      </button>
+                    )}
+                    <button
+                      onClick={() => dismissChange(selectedPlanChange.fileId)}
+                      className="p-1 rounded hover:bg-amber-500/30 text-amber-400 transition-colors"
+                      title="Dismiss"
+                    >
+                      <Icons.x />
+                    </button>
+                  </div>
+                )}
 
                 {/* Content area */}
                 <div className="flex-1 overflow-auto p-4">
@@ -364,11 +425,7 @@ export function PlansPanel({ workingDir, isOpen, onClose, width, onWidthChange }
                       spellCheck={false}
                     />
                   ) : (
-                    <div className="prose prose-invert prose-sm max-w-none">
-                      <pre className="whitespace-pre-wrap text-sm text-theme-secondary font-mono">
-                        {selectedPlan.content}
-                      </pre>
-                    </div>
+                    <MarkdownRenderer content={selectedPlan.content} />
                   )}
                 </div>
               </>

@@ -6,6 +6,7 @@ const API_BASE = 'http://localhost:3456/api';
 
 interface ApiClient {
   listInstances(): Promise<{ id: string; name: string }[]>;
+  createInstance(data: { name: string; workingDir: string }): Promise<{ id: string; name: string }>;
   closeInstance(id: string): Promise<void>;
   cleanupAllInstances(): Promise<void>;
 }
@@ -16,6 +17,16 @@ function createApiClient(): ApiClient {
       const response = await fetch(`${API_BASE}/instances`);
       const data = await response.json();
       return data.data || [];
+    },
+
+    async createInstance(data: { name: string; workingDir: string }) {
+      const response = await fetch(`${API_BASE}/instances`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      const result = await response.json();
+      return result.data;
     },
 
     async closeInstance(id: string) {

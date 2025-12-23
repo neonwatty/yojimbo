@@ -134,7 +134,18 @@ export type WSServerMessageType =
   | 'session:updated'
   | 'status:changed'
   | 'cwd:changed'
+  | 'file:changed'
+  | 'file:deleted'
   | 'error';
+
+export interface FileChangeEvent {
+  fileType: 'note' | 'plan';
+  fileId: string;
+  filePath: string;
+  workingDir: string;
+  changeType: 'modified' | 'deleted';
+  timestamp: string;
+}
 
 export interface WSServerMessage {
   type: WSServerMessageType;
@@ -144,6 +155,7 @@ export interface WSServerMessage {
   status?: InstanceStatus;
   session?: Session;
   cwd?: string;
+  fileChange?: FileChangeEvent;
   error?: string;
 }
 

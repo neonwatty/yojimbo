@@ -212,6 +212,7 @@ export default function InstancesPage() {
           {terminalPanelOpen && (
             <div className="flex-1 overflow-hidden">
               <Terminal
+                key={instance.id}
                 instanceId={instance.id}
                 theme={theme === 'dark' ? 'dark' : 'light'}
               />
@@ -252,58 +253,62 @@ export default function InstancesPage() {
 
   // Grid/List view
   return (
-    <div className="flex-1 overflow-auto bg-surface-800">
-      {layout === 'cards' ? (
-        <CardLayout
-          instances={instances}
-          activeId={null}
-          onSelect={handleSelect}
-          onTogglePin={handleTogglePin}
-          onClose={handleClose}
-          onExpand={handleExpand}
-          onReorder={handleReorder}
-          onNewInstance={handleNewInstance}
-          editingId={editingId}
-          editingName={editingName}
-          onStartEditing={handleStartEditing}
-          onEditingNameChange={setEditingName}
-          onConfirmRename={handleConfirmRename}
-          onCancelEditing={handleCancelEditing}
-        />
-      ) : (
-        <ListLayout
-          instances={instances}
-          activeId={null}
-          onSelect={handleSelect}
-          onTogglePin={handleTogglePin}
-          onClose={handleClose}
-          onExpand={handleExpand}
-          onReorder={handleReorder}
-          editingId={editingId}
-          editingName={editingName}
-          onStartEditing={handleStartEditing}
-          onEditingNameChange={setEditingName}
-          onConfirmRename={handleConfirmRename}
-          onCancelEditing={handleCancelEditing}
-        />
-      )}
+    <div className="flex-1 flex flex-col overflow-hidden bg-surface-800">
+      {/* Content area */}
+      <div className="flex-1 overflow-auto">
+        {layout === 'cards' ? (
+          <CardLayout
+            instances={instances}
+            activeId={null}
+            onSelect={handleSelect}
+            onTogglePin={handleTogglePin}
+            onClose={handleClose}
+            onExpand={handleExpand}
+            onReorder={handleReorder}
+            onNewInstance={handleNewInstance}
+            editingId={editingId}
+            editingName={editingName}
+            onStartEditing={handleStartEditing}
+            onEditingNameChange={setEditingName}
+            onConfirmRename={handleConfirmRename}
+            onCancelEditing={handleCancelEditing}
+          />
+        ) : (
+          <ListLayout
+            instances={instances}
+            activeId={null}
+            onSelect={handleSelect}
+            onTogglePin={handleTogglePin}
+            onClose={handleClose}
+            onExpand={handleExpand}
+            onReorder={handleReorder}
+            editingId={editingId}
+            editingName={editingName}
+            onStartEditing={handleStartEditing}
+            onEditingNameChange={setEditingName}
+            onConfirmRename={handleConfirmRename}
+            onCancelEditing={handleCancelEditing}
+          />
+        )}
 
-      {instances.length === 0 && (
-        <div className="flex items-center justify-center h-full min-h-[400px]">
-          <div className="text-center">
-            <div className="text-6xl mb-4">🖥️</div>
-            <h3 className="text-xl font-semibold text-theme-primary mb-2">No instances yet</h3>
-            <p className="text-theme-muted mb-4">Create your first Claude Code instance to get started.</p>
-            <button
-              onClick={handleNewInstance}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-accent text-surface-900 font-medium rounded-lg hover:bg-accent-bright transition-colors"
-            >
-              <Icons.plus />
-              Create Instance
-            </button>
+        {/* Empty state when no instances exist */}
+        {instances.length === 0 && (
+          <div className="flex items-center justify-center h-full min-h-[400px]">
+            <div className="text-center">
+              <div className="text-6xl mb-4">🖥️</div>
+              <h3 className="text-xl font-semibold text-theme-primary mb-2">No instances yet</h3>
+              <p className="text-theme-muted mb-4">Create your first Claude Code instance to get started.</p>
+              <button
+                onClick={handleNewInstance}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-accent text-surface-900 font-medium rounded-lg hover:bg-accent-bright transition-colors"
+              >
+                <Icons.plus />
+                Create Instance
+              </button>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Confirm Dialog */}
       {confirmInstance && (

@@ -4,7 +4,7 @@ import { instancesApi } from '../api/client';
 import { useWebSocket } from './useWebSocket';
 import type { Instance } from '@cc-orchestrator/shared';
 
-const WS_URL = `ws://${window.location.hostname}:3456`;
+const WS_URL = `ws://${window.location.hostname}:3456/ws`;
 
 export function useInstances() {
   const { instances, setInstances, addInstance, updateInstance, removeInstance } = useInstancesStore();

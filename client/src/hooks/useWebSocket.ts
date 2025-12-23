@@ -11,13 +11,25 @@ interface UseWebSocketOptions {
 }
 
 export function useWebSocket(url: string, options: UseWebSocketOptions = {}) {
-  const { onOpen, onClose, onError, reconnectInterval = 3000, maxReconnectAttempts = 5 } = options;
+  const { reconnectInterval = 3000, maxReconnectAttempts = 5 } = options;
 
   const wsRef = useRef<WebSocket | null>(null);
   const handlersRef = useRef<Map<string, Set<MessageHandler>>>(new Map());
   const reconnectAttemptsRef = useRef(0);
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
   const [isConnected, setIsConnected] = useState(false);
+
+  // Store callbacks in refs to avoid recreating connect function
+  const onOpenRef = useRef(options.onOpen);
+  const onCloseRef = useRef(options.onClose);
+  const onErrorRef = useRef(options.onError);
+
+  // Update refs when callbacks change
+  useEffect(() => {
+    onOpenRef.current = options.onOpen;
+    onCloseRef.current = options.onClose;
+    onErrorRef.current = options.onError;
+  }, [options.onOpen, options.onClose, options.onError]);
 
   const connect = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
@@ -27,12 +39,12 @@ export function useWebSocket(url: string, options: UseWebSocketOptions = {}) {
     ws.onopen = () => {
       setIsConnected(true);
       reconnectAttemptsRef.current = 0;
-      onOpen?.();
+      onOpenRef.current?.();
     };
 
     ws.onclose = () => {
       setIsConnected(false);
-      onClose?.();
+      onCloseRef.current?.();
 
       // Attempt reconnection
       if (reconnectAttemptsRef.current < maxReconnectAttempts) {
@@ -42,7 +54,7 @@ export function useWebSocket(url: string, options: UseWebSocketOptions = {}) {
     };
 
     ws.onerror = (error) => {
-      onError?.(error);
+      onErrorRef.current?.(error);
     };
 
     ws.onmessage = (event) => {
@@ -66,7 +78,7 @@ export function useWebSocket(url: string, options: UseWebSocketOptions = {}) {
     };
 
     wsRef.current = ws;
-  }, [url, onOpen, onClose, onError, reconnectInterval, maxReconnectAttempts]);
+  }, [url, reconnectInterval, maxReconnectAttempts]);
 
   const disconnect = useCallback(() => {
     if (reconnectTimeoutRef.current) {

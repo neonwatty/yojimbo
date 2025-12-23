@@ -91,7 +91,7 @@ export default function InstancesPage() {
     try {
       const response = await instancesApi.create({
         name: `instance-${instances.length + 1}`,
-        workingDir: process.env.HOME || '~',
+        workingDir: '~',
       });
       if (response.data) {
         navigate(`/instances/${response.data.id}`);

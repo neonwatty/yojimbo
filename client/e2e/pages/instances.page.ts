@@ -1,0 +1,78 @@
+import { Page, Locator, expect } from '@playwright/test';
+import { BasePage } from './base.page';
+
+export class InstancesPage extends BasePage {
+  readonly newInstanceButton: Locator;
+  readonly instanceCards: Locator;
+
+  constructor(page: Page) {
+    super(page);
+    // Target the card that contains "New Instance" span (excludes tooltip)
+    this.newInstanceButton = page.locator('.grid > div').filter({ has: page.locator('span:has-text("New Instance")') });
+    this.instanceCards = page.locator('.grid > div').filter({ hasNot: page.locator('span:has-text("New Instance")') });
+  }
+
+  async gotoInstances() {
+    await this.goto('/instances');
+  }
+
+  async createNewInstance() {
+    await this.newInstanceButton.click();
+    await this.page.waitForTimeout(500);
+  }
+
+  async getInstanceCount(): Promise<number> {
+    return this.instanceCards.count();
+  }
+
+  async getInstanceCard(name: string): Locator {
+    return this.page.locator('.grid > div').filter({ hasText: name }).first();
+  }
+
+  async getInstanceCardByIndex(index: number): Locator {
+    return this.instanceCards.nth(index);
+  }
+
+  async clickInstanceCard(name: string) {
+    const card = await this.getInstanceCard(name);
+    await card.click();
+  }
+
+  async doubleClickInstanceCard(name: string) {
+    const card = await this.getInstanceCard(name);
+    await card.dblclick();
+  }
+
+  async expandInstance(name: string) {
+    const card = await this.getInstanceCard(name);
+    await card.hover();
+    const expandButton = card.locator('button[title="Expand"]');
+    await expandButton.click();
+  }
+
+  async closeInstance(name: string) {
+    const card = await this.getInstanceCard(name);
+    await card.hover();
+    const closeButton = card.locator('button[title="Close"]');
+    await closeButton.click();
+  }
+
+  async renameInstance(oldName: string, newName: string) {
+    const card = await this.getInstanceCard(oldName);
+    const nameElement = card.locator('span').filter({ hasText: oldName }).first();
+    await nameElement.dblclick();
+
+    const input = card.locator('input');
+    await input.clear();
+    await input.fill(newName);
+    await input.press('Enter');
+  }
+
+  async waitForInstanceWithName(name: string, timeout = 5000) {
+    await expect(this.page.locator('.grid > div').filter({ hasText: name })).toBeVisible({ timeout });
+  }
+
+  async isInstanceVisible(name: string): Promise<boolean> {
+    return this.page.locator('.grid > div').filter({ hasText: name }).isVisible();
+  }
+}

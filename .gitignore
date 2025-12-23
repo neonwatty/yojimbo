@@ -85,3 +85,5 @@ backups/
 
 # Keep the data directory structure
 !server/data/.gitkeep
+client/playwright-report/
+client/test-results/

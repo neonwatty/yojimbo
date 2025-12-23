@@ -9,7 +9,7 @@ interface TerminalProps {
   onStatusChange?: (status: string) => void;
 }
 
-const WS_URL = `ws://${window.location.hostname}:3456`;
+const WS_URL = `ws://${window.location.hostname}:3456/ws`;
 
 export function Terminal({ instanceId, theme = 'dark', onStatusChange }: TerminalProps) {
   const containerRef = useRef<HTMLDivElement>(null);

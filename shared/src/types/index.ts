@@ -133,6 +133,7 @@ export type WSServerMessageType =
   | 'instance:closed'
   | 'session:updated'
   | 'status:changed'
+  | 'cwd:changed'
   | 'error';
 
 export interface WSServerMessage {
@@ -142,6 +143,7 @@ export interface WSServerMessage {
   instance?: Instance;
   status?: InstanceStatus;
   session?: Session;
+  cwd?: string;
   error?: string;
 }
 

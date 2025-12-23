@@ -110,4 +110,23 @@ export const Icons = {
       <circle cx="12" cy="17" r="0.5" fill="currentColor" />
     </svg>
   ),
+  chevronLeft: () => (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <polyline points="15 18 9 12 15 6" />
+    </svg>
+  ),
+  panelLeftClose: () => (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+      <path d="M9 3v18" />
+      <path d="M14 9l-3 3 3 3" />
+    </svg>
+  ),
+  panelLeftOpen: () => (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+      <path d="M9 3v18" />
+      <path d="M16 9l3 3-3 3" />
+    </svg>
+  ),
 };

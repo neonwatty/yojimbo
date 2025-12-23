@@ -5,6 +5,7 @@ interface InstancesState {
   instances: Instance[];
   activeInstanceId: string | null;
   expandedInstanceId: string | null;
+  currentCwds: Record<string, string>; // instanceId -> current working directory
 
   setInstances: (instances: Instance[]) => void;
   addInstance: (instance: Instance) => void;
@@ -13,12 +14,14 @@ interface InstancesState {
   setActiveInstanceId: (id: string | null) => void;
   setExpandedInstanceId: (id: string | null) => void;
   reorderInstances: (instanceIds: string[]) => void;
+  setCurrentCwd: (instanceId: string, cwd: string) => void;
 }
 
 export const useInstancesStore = create<InstancesState>((set) => ({
   instances: [],
   activeInstanceId: null,
   expandedInstanceId: null,
+  currentCwds: {},
 
   setInstances: (instances) => set({ instances }),
 
@@ -35,11 +38,15 @@ export const useInstancesStore = create<InstancesState>((set) => ({
     })),
 
   removeInstance: (id) =>
-    set((state) => ({
-      instances: state.instances.filter((inst) => inst.id !== id),
-      activeInstanceId: state.activeInstanceId === id ? null : state.activeInstanceId,
-      expandedInstanceId: state.expandedInstanceId === id ? null : state.expandedInstanceId,
-    })),
+    set((state) => {
+      const { [id]: _, ...remainingCwds } = state.currentCwds;
+      return {
+        instances: state.instances.filter((inst) => inst.id !== id),
+        activeInstanceId: state.activeInstanceId === id ? null : state.activeInstanceId,
+        expandedInstanceId: state.expandedInstanceId === id ? null : state.expandedInstanceId,
+        currentCwds: remainingCwds,
+      };
+    }),
 
   setActiveInstanceId: (activeInstanceId) => set({ activeInstanceId }),
 
@@ -53,4 +60,9 @@ export const useInstancesStore = create<InstancesState>((set) => ({
         .filter((inst): inst is Instance => inst !== undefined);
       return { instances: reordered };
     }),
+
+  setCurrentCwd: (instanceId, cwd) =>
+    set((state) => ({
+      currentCwds: { ...state.currentCwds, [instanceId]: cwd },
+    })),
 }));

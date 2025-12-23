@@ -1,6 +1,10 @@
 import * as pty from 'node-pty';
 import { EventEmitter } from 'events';
 import os from 'os';
+import { exec } from 'child_process';
+import { promisify } from 'util';
+
+const execAsync = promisify(exec);
 
 interface PTYInstance {
   id: string;
@@ -89,6 +93,28 @@ class PTYService extends EventEmitter {
   killAll(): void {
     for (const [id] of this.instances) {
       this.kill(id);
+    }
+  }
+
+  async getCwd(id: string): Promise<string | null> {
+    const instance = this.instances.get(id);
+    if (!instance) return null;
+
+    const pid = instance.pty.pid;
+    try {
+      if (process.platform === 'darwin') {
+        // macOS: use lsof to get cwd
+        const { stdout } = await execAsync(`lsof -p ${pid} | grep cwd | awk '{print $9}'`);
+        return stdout.trim() || null;
+      } else if (process.platform === 'linux') {
+        // Linux: use /proc filesystem
+        const { stdout } = await execAsync(`readlink /proc/${pid}/cwd`);
+        return stdout.trim() || null;
+      }
+      return null;
+    } catch {
+      // Process may have exited or other error
+      return null;
     }
   }
 }

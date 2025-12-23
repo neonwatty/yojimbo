@@ -17,7 +17,7 @@ import type { Instance } from '@cc-orchestrator/shared';
 export default function InstancesPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { instances, setActiveInstanceId, updateInstance, removeInstance, reorderInstances } = useInstancesStore();
+  const { instances, setActiveInstanceId, updateInstance, removeInstance, reorderInstances, currentCwds } = useInstancesStore();
   const { layout, editorPanelOpen, toggleEditorPanel, setEditorPanelOpen, notesPanelOpen, toggleNotesPanel, setNotesPanelOpen, notesPanelWidth, setNotesPanelWidth, terminalPanelOpen, toggleTerminalPanel, panelWidth, setPanelWidth } = useUIStore();
   const { theme } = useSettingsStore();
 
@@ -220,7 +220,7 @@ export default function InstancesPage() {
 
           {/* Plans Panel */}
           <PlansPanel
-            workingDir={instance.workingDir}
+            workingDir={currentCwds[instance.id] || instance.workingDir}
             isOpen={editorPanelOpen}
             onClose={() => setEditorPanelOpen(false)}
             width={panelWidth}
@@ -229,7 +229,7 @@ export default function InstancesPage() {
 
           {/* Notes Panel */}
           <NotesPanel
-            workingDir={instance.workingDir}
+            workingDir={currentCwds[instance.id] || instance.workingDir}
             isOpen={notesPanelOpen}
             onClose={() => setNotesPanelOpen(false)}
             width={notesPanelWidth}

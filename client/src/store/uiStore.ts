@@ -16,6 +16,11 @@ interface UIState {
   browserHeight: number;
   showShortcutsModal: boolean;
   showSettingsModal: boolean;
+  // File browser state for Plans/Notes panels
+  plansBrowserWidth: number;
+  notesBrowserWidth: number;
+  plansBrowserCollapsed: boolean;
+  notesBrowserCollapsed: boolean;
 
   setCurrentView: (view: ViewType) => void;
   setLayout: (layout: LayoutType) => void;
@@ -33,6 +38,11 @@ interface UIState {
   setBrowserHeight: (height: number) => void;
   setShowShortcutsModal: (show: boolean) => void;
   setShowSettingsModal: (show: boolean) => void;
+  // File browser setters
+  setPlansBrowserWidth: (width: number) => void;
+  setNotesBrowserWidth: (width: number) => void;
+  togglePlansBrowserCollapsed: () => void;
+  toggleNotesBrowserCollapsed: () => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -48,6 +58,10 @@ export const useUIStore = create<UIState>((set) => ({
   browserHeight: 180,
   showShortcutsModal: false,
   showSettingsModal: false,
+  plansBrowserWidth: 192,
+  notesBrowserWidth: 192,
+  plansBrowserCollapsed: false,
+  notesBrowserCollapsed: false,
 
   setCurrentView: (currentView) => set({ currentView }),
   setLayout: (layout) => set({ layout }),
@@ -65,4 +79,8 @@ export const useUIStore = create<UIState>((set) => ({
   setBrowserHeight: (browserHeight) => set({ browserHeight }),
   setShowShortcutsModal: (showShortcutsModal) => set({ showShortcutsModal }),
   setShowSettingsModal: (showSettingsModal) => set({ showSettingsModal }),
+  setPlansBrowserWidth: (plansBrowserWidth) => set({ plansBrowserWidth }),
+  setNotesBrowserWidth: (notesBrowserWidth) => set({ notesBrowserWidth }),
+  togglePlansBrowserCollapsed: () => set((state) => ({ plansBrowserCollapsed: !state.plansBrowserCollapsed })),
+  toggleNotesBrowserCollapsed: () => set((state) => ({ notesBrowserCollapsed: !state.notesBrowserCollapsed })),
 }));

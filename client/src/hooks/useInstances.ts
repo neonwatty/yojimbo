@@ -7,7 +7,7 @@ import type { Instance } from '@cc-orchestrator/shared';
 const WS_URL = `ws://${window.location.hostname}:3456/ws`;
 
 export function useInstances() {
-  const { instances, setInstances, addInstance, updateInstance, removeInstance } = useInstancesStore();
+  const { instances, setInstances, addInstance, updateInstance, removeInstance, setCurrentCwd } = useInstancesStore();
 
   const { subscribe, isConnected } = useWebSocket(WS_URL, {
     onOpen: () => {
@@ -51,13 +51,19 @@ export function useInstances() {
       updateInstance(instanceId, { status });
     });
 
+    const unsubscribeCwd = subscribe('cwd:changed', (data: unknown) => {
+      const { instanceId, cwd } = data as { instanceId: string; cwd: string };
+      setCurrentCwd(instanceId, cwd);
+    });
+
     return () => {
       unsubscribeCreated();
       unsubscribeUpdated();
       unsubscribeClosed();
       unsubscribeStatus();
+      unsubscribeCwd();
     };
-  }, [isConnected, subscribe, addInstance, updateInstance, removeInstance]);
+  }, [isConnected, subscribe, addInstance, updateInstance, removeInstance, setCurrentCwd]);
 
   // Fetch instances on mount
   useEffect(() => {

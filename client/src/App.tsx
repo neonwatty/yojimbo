@@ -19,6 +19,7 @@ function App() {
     setShowSettingsModal,
     toggleLeftSidebar,
     toggleEditorPanel,
+    toggleNotesPanel,
     toggleTerminalPanel,
   } = useUIStore();
 
@@ -51,6 +52,13 @@ function App() {
       if (isMod && e.key === 'e') {
         e.preventDefault();
         toggleEditorPanel();
+        return;
+      }
+
+      // Cmd/Ctrl + Shift + N: Toggle notes panel
+      if (isMod && e.shiftKey && e.key === 'n') {
+        e.preventDefault();
+        toggleNotesPanel();
         return;
       }
 
@@ -101,6 +109,7 @@ function App() {
     showSettingsModal,
     toggleLeftSidebar,
     toggleEditorPanel,
+    toggleNotesPanel,
     toggleTerminalPanel,
     setShowShortcutsModal,
     setShowSettingsModal,

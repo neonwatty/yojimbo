@@ -16,6 +16,7 @@
     "start": "npm run start --workspace=server",
     "lint": "npm run lint --workspaces --if-present",
     "lint:fix": "npm run lint:fix --workspaces --if-present",
+    "knip": "knip",
     "test": "npm run test --workspaces --if-present",
     "test:unit": "npm run test:unit --workspaces --if-present",
     "test:e2e": "npm run test:e2e --workspace=client",
@@ -25,6 +26,7 @@
   },
   "devDependencies": {
     "concurrently": "^8.2.2",
+    "knip": "^5.76.3",
     "typescript": "^5.3.3"
   },
   "engines": {

@@ -88,6 +88,12 @@ test-e2e:
 	@echo "$(CYAN)Running E2E tests...$(NC)"
 	npm run test:e2e
 
+## test-e2e-claude: Run E2E tests with real Claude Code integration
+test-e2e-claude:
+	@echo "$(CYAN)Running Claude integration tests...$(NC)"
+	@echo "$(YELLOW)Note: Requires Claude CLI installed and hooks configured$(NC)"
+	npm run test:e2e:claude --workspace=client
+
 ## test-watch: Run tests in watch mode
 test-watch:
 	@echo "$(CYAN)Running tests in watch mode...$(NC)"

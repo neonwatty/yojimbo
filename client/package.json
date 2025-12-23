@@ -12,7 +12,8 @@
     "test": "vitest run",
     "test:unit": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:e2e:claude": "TEST_CLAUDE_INTEGRATION=1 playwright test --grep 'Claude Integration'"
   },
   "dependencies": {
     "@cc-orchestrator/shared": "*",

@@ -104,4 +104,40 @@ test.describe('Instance Management', () => {
     // URL should change to include instance ID
     await expect(instancesPage.page).toHaveURL(/.*\/instances\/.+/);
   });
+
+  test('can close an instance from sidebar with confirmation', async ({ instancesPage }) => {
+    await instancesPage.gotoInstances();
+    await instancesPage.createNewInstance();
+
+    // Wait for expanded view
+    await expect(instancesPage.page).toHaveURL(/.*\/instances\/[a-zA-Z0-9-]+$/);
+
+    // The instance should appear in the sidebar - hover over it to see the close button
+    const sidebarInstance = instancesPage.page.locator('.group').filter({ hasText: 'instance-' }).first();
+    await sidebarInstance.hover();
+
+    // Click the close button in the sidebar
+    const closeButton = sidebarInstance.locator('button[title="Close instance"]');
+    await closeButton.click();
+
+    // Confirmation dialog should appear
+    await expect(instancesPage.page.getByRole('heading', { name: 'Close Instance' })).toBeVisible();
+    await expect(instancesPage.page.locator('text=Are you sure you want to close')).toBeVisible();
+
+    // Click Cancel - dialog should close
+    await instancesPage.page.locator('button:has-text("Cancel")').click();
+    await expect(instancesPage.page.getByRole('heading', { name: 'Close Instance' })).not.toBeVisible();
+
+    // Instance should still be there
+    await expect(sidebarInstance).toBeVisible();
+
+    // Now click close again and confirm
+    await sidebarInstance.hover();
+    await closeButton.click();
+    await instancesPage.page.getByRole('button', { name: 'Close Instance', exact: true }).click();
+
+    // Wait for navigation and verify we're back at overview
+    await instancesPage.page.waitForTimeout(500);
+    await expect(instancesPage.page).toHaveURL(/.*\/instances$/);
+  });
 });

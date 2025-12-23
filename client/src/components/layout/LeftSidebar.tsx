@@ -1,18 +1,24 @@
+import { useState, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useInstancesStore } from '../../store/instancesStore';
 import { useUIStore } from '../../store/uiStore';
 import { StatusDot } from '../common/Status';
 import Tooltip from '../common/Tooltip';
 import { Icons } from '../common/Icons';
+import { instancesApi } from '../../api/client';
+import type { Instance } from '@cc-orchestrator/shared';
 
 export function LeftSidebar() {
   const navigate = useNavigate();
   const { id: expandedId } = useParams();
-  const { instances, activeInstanceId, setActiveInstanceId } = useInstancesStore();
+  const { instances, activeInstanceId, setActiveInstanceId, removeInstance } = useInstancesStore();
   const { leftSidebarOpen, toggleLeftSidebar } = useUIStore();
 
   const pinnedInstances = instances.filter((i) => i.isPinned);
   const unpinnedInstances = instances.filter((i) => !i.isPinned);
+
+  // Confirmation dialog state
+  const [confirmInstance, setConfirmInstance] = useState<Instance | null>(null);
 
   const handleSelectInstance = (instanceId: string) => {
     setActiveInstanceId(instanceId);
@@ -23,6 +29,25 @@ export function LeftSidebar() {
     navigate('/instances');
     // The new instance action will be handled by the instances page
   };
+
+  const handleCloseInstance = useCallback((e: React.MouseEvent, instance: Instance) => {
+    e.stopPropagation(); // Prevent selecting the instance
+    setConfirmInstance(instance);
+  }, []);
+
+  const performClose = useCallback(async (instanceId: string) => {
+    try {
+      await instancesApi.close(instanceId);
+      removeInstance(instanceId);
+      // Check current pathname to see if we're viewing the closed instance
+      // Use window.location.pathname to get the current value at runtime (not stale closure)
+      if (window.location.pathname === `/instances/${instanceId}`) {
+        navigate('/instances');
+      }
+    } catch (error) {
+      console.error('Failed to close instance:', error);
+    }
+  }, [navigate, removeInstance]);
 
   // Collapsed sidebar
   if (!leftSidebarOpen) {
@@ -111,10 +136,10 @@ export function LeftSidebar() {
             <span className="text-accent">★</span> Pinned
           </div>
           {pinnedInstances.map((inst) => (
-            <button
+            <div
               key={inst.id}
               onClick={() => handleSelectInstance(inst.id)}
-              className={`w-full flex items-center gap-2 px-2 py-2 rounded-lg text-left transition-colors mb-1
+              className={`group w-full flex items-center gap-2 px-2 py-2 rounded-lg text-left transition-colors mb-1 cursor-pointer
                 ${expandedId === inst.id
                   ? 'bg-accent/20 text-theme-primary ring-1 ring-accent'
                   : activeInstanceId === inst.id
@@ -124,9 +149,16 @@ export function LeftSidebar() {
               <StatusDot status={inst.status} size="sm" />
               <span className="flex-1 truncate text-sm">{inst.name}</span>
               {inst.status === 'awaiting' && (
-                <span className="w-2 h-2 rounded-full bg-state-awaiting animate-pulse" />
+                <span className="w-2 h-2 rounded-full bg-state-awaiting animate-pulse group-hover:hidden" />
               )}
-            </button>
+              <button
+                onClick={(e) => handleCloseInstance(e, inst)}
+                className="hidden group-hover:block p-0.5 rounded hover:bg-surface-600 text-theme-muted hover:text-red-400 transition-colors"
+                title="Close instance"
+              >
+                <Icons.close />
+              </button>
+            </div>
           ))}
         </div>
       )}
@@ -137,10 +169,10 @@ export function LeftSidebar() {
           All Sessions
         </div>
         {unpinnedInstances.map((inst) => (
-          <button
+          <div
             key={inst.id}
             onClick={() => handleSelectInstance(inst.id)}
-            className={`w-full flex items-center gap-2 px-2 py-2 rounded-lg text-left transition-colors mb-1
+            className={`group w-full flex items-center gap-2 px-2 py-2 rounded-lg text-left transition-colors mb-1 cursor-pointer
               ${expandedId === inst.id
                 ? 'bg-accent/20 text-theme-primary ring-1 ring-accent'
                 : activeInstanceId === inst.id
@@ -150,9 +182,16 @@ export function LeftSidebar() {
             <StatusDot status={inst.status} size="sm" />
             <span className="flex-1 truncate text-sm">{inst.name}</span>
             {inst.status === 'awaiting' && (
-              <span className="w-2 h-2 rounded-full bg-state-awaiting animate-pulse" />
+              <span className="w-2 h-2 rounded-full bg-state-awaiting animate-pulse group-hover:hidden" />
             )}
-          </button>
+            <button
+              onClick={(e) => handleCloseInstance(e, inst)}
+              className="hidden group-hover:block p-0.5 rounded hover:bg-surface-600 text-theme-muted hover:text-red-400 transition-colors"
+              title="Close instance"
+            >
+              <Icons.close />
+            </button>
+          </div>
         ))}
 
         {unpinnedInstances.length === 0 && pinnedInstances.length === 0 && (
@@ -176,6 +215,41 @@ export function LeftSidebar() {
           <span>{instances.filter((i) => i.status === 'awaiting').length} awaiting</span>
         </div>
       </div>
+
+      {/* Confirm Close Dialog */}
+      {confirmInstance && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="card-elevated rounded-xl p-6 max-w-md shadow-2xl bg-surface-700">
+            <h3 className="text-lg font-semibold mb-2 text-theme-primary">Close Instance</h3>
+            <p className="text-theme-muted mb-6">
+              {confirmInstance.status === 'working'
+                ? `"${confirmInstance.name}" is currently working. Are you sure you want to close it?`
+                : confirmInstance.status === 'awaiting'
+                ? `"${confirmInstance.name}" is awaiting input. Are you sure you want to close it?`
+                : confirmInstance.isPinned
+                ? `"${confirmInstance.name}" is pinned. Are you sure you want to close it?`
+                : `Are you sure you want to close "${confirmInstance.name}"?`}
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setConfirmInstance(null)}
+                className="px-4 py-2 rounded-lg text-theme-muted hover:text-theme-primary hover:bg-surface-600 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  performClose(confirmInstance.id);
+                  setConfirmInstance(null);
+                }}
+                className="px-4 py-2 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30 transition-colors"
+              >
+                Close Instance
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

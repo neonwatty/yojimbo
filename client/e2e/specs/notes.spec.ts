@@ -103,15 +103,16 @@ test.describe('Notes Panel', () => {
     // Click on the test note to select it and wait for content to load
     await noteButton.click();
 
-    // Wait for the note name to appear in the editor toolbar (indicates content loaded)
-    await expect(instancesPage.page.locator('span:has-text("e2e-test-note.md")')).toBeVisible({ timeout: 5000 });
+    // Wait for WYSIWYG editor content to load
+    const editorContent = instancesPage.page.locator('.mdx-editor-content');
+    await expect(editorContent).toBeVisible({ timeout: 5000 });
 
-    // Wait for the Edit button to appear
-    const editButton = instancesPage.page.locator('button:has-text("Edit")');
-    await expect(editButton).toBeVisible({ timeout: 5000 });
-    await editButton.click();
+    // Switch to Source mode for reliable text editing
+    const sourceButton = instancesPage.page.locator('button:has-text("Source")');
+    await expect(sourceButton).toBeVisible({ timeout: 5000 });
+    await sourceButton.click();
 
-    // Edit the content in the textarea (use the notes panel textarea, not terminal)
+    // Edit the content in the textarea (source mode shows a textarea)
     const textarea = instancesPage.page.locator('textarea:not([aria-label="Terminal input"])');
     await expect(textarea).toBeVisible({ timeout: 5000 });
     await textarea.fill('# Test Note\n\nEdited content from E2E test.');

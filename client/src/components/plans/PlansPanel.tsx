@@ -80,20 +80,6 @@ export function PlansPanel({ workingDir, isOpen, onClose, width, onWidthChange }
     setEditContent('');
   }, [workingDir]);
 
-  // Keyboard shortcut: Cmd+S to save
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 's' && selectedPlan) {
-        e.preventDefault();
-        handleSave();
-      }
-    };
-    if (isOpen) {
-      window.addEventListener('keydown', handleKeyDown);
-      return () => window.removeEventListener('keydown', handleKeyDown);
-    }
-  }, [isOpen, selectedPlan]);
-
   // Group plans by folder
   const groupedPlans = plans.reduce(
     (acc, plan) => {
@@ -134,7 +120,7 @@ export function PlansPanel({ workingDir, isOpen, onClose, width, onWidthChange }
     }
   };
 
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     if (!selectedPlan) return;
     try {
       // Get content from editor ref if available, otherwise use editContent state
@@ -148,7 +134,21 @@ export function PlansPanel({ workingDir, isOpen, onClose, width, onWidthChange }
     } catch {
       // Error toast shown by API layer
     }
-  };
+  }, [selectedPlan, editContent, markAsSaved, fetchPlans]);
+
+  // Keyboard shortcut: Cmd+S to save
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 's' && selectedPlan) {
+        e.preventDefault();
+        handleSave();
+      }
+    };
+    if (isOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+      return () => window.removeEventListener('keydown', handleKeyDown);
+    }
+  }, [isOpen, selectedPlan, handleSave]);
 
   const handleReloadPlan = async () => {
     if (!selectedPlan || !selectedPlanChange) return;

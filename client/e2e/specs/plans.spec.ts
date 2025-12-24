@@ -82,8 +82,7 @@ test.describe('Plans Panel', () => {
     expect(fs.existsSync(testPlanPath)).toBe(true);
   });
 
-  test.skip('can edit and save a plan', async ({ instancesPage }) => {
-    // TODO: Plan selection click not working in test environment - needs investigation
+  test('can edit and save a plan', async ({ instancesPage }) => {
     // Create a test plan file first
     if (!fs.existsSync(plansDir)) {
       fs.mkdirSync(plansDir, { recursive: true });
@@ -105,29 +104,32 @@ test.describe('Plans Panel', () => {
     await planFileButton.click();
 
     // Wait for the plan name to appear in the editor toolbar (indicates content loaded)
-    await expect(instancesPage.page.locator('span:has-text("e2e-test-plan.md")')).toBeVisible({ timeout: 5000 });
+    const editorToolbar = instancesPage.page.locator('.text-sm.text-theme-primary.font-medium:has-text("e2e-test-plan.md")');
+    await expect(editorToolbar).toBeVisible({ timeout: 5000 });
 
-    // Wait for the Edit button to appear
-    const editButton = instancesPage.page.locator('button:has-text("Edit")');
-    await expect(editButton).toBeVisible({ timeout: 5000 });
-    await editButton.click();
+    // The WYSIWYG editor should be visible with the content
+    const editor = instancesPage.page.locator('[contenteditable="true"]');
+    await expect(editor).toBeVisible({ timeout: 5000 });
 
-    // Edit the content in the textarea (use the plans panel textarea, not terminal)
-    const textarea = instancesPage.page.locator('textarea:not([aria-label="Terminal input"])');
-    await expect(textarea).toBeVisible({ timeout: 5000 });
-    await textarea.fill('# Test Plan\n\nEdited content from E2E test.');
+    // Click in the editor and add new content
+    await editor.click();
+    await instancesPage.page.keyboard.press('End');
+    await instancesPage.page.keyboard.press('Enter');
+    await instancesPage.page.keyboard.type('Edited content from E2E test.');
 
     // Click Save button
     await instancesPage.page.locator('button:has-text("Save")').click();
-    await instancesPage.page.waitForTimeout(500);
+
+    // Verify toast notification appears
+    await expect(instancesPage.page.locator('text=Plan saved')).toBeVisible({ timeout: 5000 });
 
     // Verify file was updated
+    await instancesPage.page.waitForTimeout(500);
     const content = fs.readFileSync(testPlanPath, 'utf-8');
     expect(content).toContain('Edited content from E2E test');
   });
 
-  test.skip('can save plan with Cmd+S keyboard shortcut', async ({ instancesPage }) => {
-    // TODO: Plan selection click not working in test environment - needs investigation
+  test('can save plan with Cmd+S keyboard shortcut', async ({ instancesPage }) => {
     // Create a test plan file first
     if (!fs.existsSync(plansDir)) {
       fs.mkdirSync(plansDir, { recursive: true });
@@ -147,23 +149,27 @@ test.describe('Plans Panel', () => {
     await planFileButton.click();
 
     // Wait for the plan name to appear in the editor toolbar
-    await expect(instancesPage.page.locator('span:has-text("e2e-test-plan.md")')).toBeVisible({ timeout: 5000 });
+    const editorToolbar = instancesPage.page.locator('.text-sm.text-theme-primary.font-medium:has-text("e2e-test-plan.md")');
+    await expect(editorToolbar).toBeVisible({ timeout: 5000 });
 
-    // Click Edit to enter edit mode
-    const editButton = instancesPage.page.locator('button:has-text("Edit")');
-    await expect(editButton).toBeVisible({ timeout: 5000 });
-    await editButton.click();
+    // The WYSIWYG editor should be visible with the content
+    const editor = instancesPage.page.locator('[contenteditable="true"]');
+    await expect(editor).toBeVisible({ timeout: 5000 });
 
-    // Edit the content
-    const textarea = instancesPage.page.locator('textarea:not([aria-label="Terminal input"])');
-    await expect(textarea).toBeVisible({ timeout: 5000 });
-    await textarea.fill('# Test Plan\n\nSaved with Cmd+S shortcut.');
+    // Click in the editor and add new content
+    await editor.click();
+    await instancesPage.page.keyboard.press('End');
+    await instancesPage.page.keyboard.press('Enter');
+    await instancesPage.page.keyboard.type('Saved with Cmd+S shortcut.');
 
     // Save with Cmd+S
     await instancesPage.page.keyboard.press('Meta+s');
-    await instancesPage.page.waitForTimeout(500);
+
+    // Verify toast notification appears
+    await expect(instancesPage.page.locator('text=Plan saved')).toBeVisible({ timeout: 5000 });
 
     // Verify file was updated
+    await instancesPage.page.waitForTimeout(500);
     const content = fs.readFileSync(testPlanPath, 'utf-8');
     expect(content).toContain('Saved with Cmd+S shortcut');
   });
@@ -344,8 +350,9 @@ test.describe('Plans Panel', () => {
       await planButton.click();
       await instancesPage.page.waitForTimeout(300);
 
-      // Verify plan content is displayed (plan name in toolbar)
-      await expect(instancesPage.page.locator('span:has-text("cwd-test-plan.md")')).toBeVisible();
+      // Verify plan content is displayed (plan name in editor toolbar)
+      const editorToolbar = instancesPage.page.locator('.text-sm.text-theme-primary.font-medium:has-text("cwd-test-plan.md")');
+      await expect(editorToolbar).toBeVisible();
 
       // Change directory in terminal
       const terminal = instancesPage.page.locator('.xterm-helper-textarea');
@@ -356,8 +363,8 @@ test.describe('Plans Panel', () => {
       // Wait for CWD polling to detect the change
       await instancesPage.page.waitForTimeout(3000);
 
-      // The plan name should no longer be in the toolbar (selection cleared)
-      await expect(instancesPage.page.locator('span:has-text("cwd-test-plan.md")')).not.toBeVisible({ timeout: 5000 });
+      // The plan name should no longer be in the editor toolbar (selection cleared)
+      await expect(editorToolbar).not.toBeVisible({ timeout: 5000 });
 
       // Should show empty state or file list for new directory
       const emptyState = instancesPage.page.locator('text=No plans');

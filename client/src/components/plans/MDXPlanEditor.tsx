@@ -26,20 +26,20 @@ import {
 import '@mdxeditor/editor/style.css';
 import { useSettingsStore } from '../../store/settingsStore';
 
-export interface MDXNoteEditorProps {
+export interface MDXPlanEditorProps {
   markdown: string;
   onChange?: (markdown: string) => void;
   readOnly?: boolean;
   placeholder?: string;
 }
 
-export interface MDXNoteEditorRef {
+export interface MDXPlanEditorRef {
   getMarkdown: () => string;
   setMarkdown: (markdown: string) => void;
   focus: () => void;
 }
 
-export const MDXNoteEditor = forwardRef<MDXNoteEditorRef, MDXNoteEditorProps>(
+export const MDXPlanEditor = forwardRef<MDXPlanEditorRef, MDXPlanEditorProps>(
   ({ markdown, onChange, readOnly = false, placeholder }, ref) => {
     const { theme } = useSettingsStore();
     const editorRef = useRef<MDXEditorMethods>(null);
@@ -125,4 +125,4 @@ export const MDXNoteEditor = forwardRef<MDXNoteEditorRef, MDXNoteEditorProps>(
   }
 );
 
-MDXNoteEditor.displayName = 'MDXNoteEditor';
+MDXPlanEditor.displayName = 'MDXPlanEditor';

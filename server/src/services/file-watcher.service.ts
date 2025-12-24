@@ -7,7 +7,7 @@ import type { FileChangeEvent, WSServerMessage } from '@cc-orchestrator/shared';
 interface WatchedDirectory {
   watcher: FSWatcher;
   workingDir: string;
-  fileType: 'note' | 'plan';
+  fileType: 'plan';
 }
 
 // Track active watchers by working directory + type
@@ -17,7 +17,7 @@ const watchers = new Map<string, WatchedDirectory>();
 const debounceTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
 // Get a unique key for a watcher
-function getWatcherKey(workingDir: string, fileType: 'note' | 'plan'): string {
+function getWatcherKey(workingDir: string, fileType: 'plan'): string {
   return `${workingDir}:${fileType}`;
 }
 
@@ -41,8 +41,8 @@ function debounceFileChange(filePath: string, callback: () => void, delay = 100)
   debounceTimers.set(filePath, timer);
 }
 
-// Start watching a directory for notes or plans
-export function startWatching(workingDir: string, fileType: 'note' | 'plan'): void {
+// Start watching a directory for plans
+export function startWatching(workingDir: string, fileType: 'plan'): void {
   const key = getWatcherKey(workingDir, fileType);
 
   // Already watching this directory
@@ -50,8 +50,7 @@ export function startWatching(workingDir: string, fileType: 'note' | 'plan'): vo
     return;
   }
 
-  const dirName = fileType === 'note' ? 'notes' : 'plans';
-  const watchPath = path.join(workingDir, dirName);
+  const watchPath = path.join(workingDir, 'plans');
 
   console.log(`👁️ Starting file watcher for ${watchPath}`);
 
@@ -114,12 +113,12 @@ export function startWatching(workingDir: string, fileType: 'note' | 'plan'): vo
 }
 
 // Stop watching a specific directory
-export function stopWatching(workingDir: string, fileType: 'note' | 'plan'): void {
+export function stopWatching(workingDir: string, fileType: 'plan'): void {
   const key = getWatcherKey(workingDir, fileType);
   const watchedDir = watchers.get(key);
 
   if (watchedDir) {
-    console.log(`👁️ Stopping file watcher for ${workingDir}/${fileType}s`);
+    console.log(`👁️ Stopping file watcher for ${workingDir}/plans`);
     watchedDir.watcher.close();
     watchers.delete(key);
   }
@@ -141,6 +140,6 @@ export function stopAllWatchers(): void {
 }
 
 // Check if a directory is being watched
-export function isWatching(workingDir: string, fileType: 'note' | 'plan'): boolean {
+export function isWatching(workingDir: string, fileType: 'plan'): boolean {
   return watchers.has(getWatcherKey(workingDir, fileType));
 }

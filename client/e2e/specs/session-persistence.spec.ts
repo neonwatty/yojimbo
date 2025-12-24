@@ -5,23 +5,6 @@ test.describe('Session Persistence', () => {
     await apiClient.cleanupAllInstances();
   });
 
-  test('preserves notes panel open state across refresh', async ({ instancesPage }) => {
-    await instancesPage.gotoInstances();
-    await instancesPage.createNewInstance();
-    await expect(instancesPage.page).toHaveURL(/.*\/instances\/[a-zA-Z0-9-]+$/);
-
-    // Open notes panel
-    await instancesPage.page.locator('button:has-text("Notes")').click();
-    await expect(instancesPage.page.locator('button[title="New note"]')).toBeVisible();
-
-    // Reload the page
-    await instancesPage.page.reload();
-    await instancesPage.page.waitForLoadState('networkidle');
-
-    // Notes panel should still be open after reload
-    await expect(instancesPage.page.locator('button[title="New note"]')).toBeVisible({ timeout: 5000 });
-  });
-
   test('preserves plans panel open state across refresh', async ({ instancesPage }) => {
     await instancesPage.gotoInstances();
     await instancesPage.createNewInstance();
@@ -78,29 +61,5 @@ test.describe('Session Persistence', () => {
 
     // Settings modal should NOT be visible after reload (modals don't persist)
     await expect(instancesPage.page.locator('h2:has-text("Settings")')).not.toBeVisible();
-  });
-
-  test('preserves file browser collapsed state in notes panel', async ({ instancesPage }) => {
-    await instancesPage.gotoInstances();
-    await instancesPage.createNewInstance();
-    await expect(instancesPage.page).toHaveURL(/.*\/instances\/[a-zA-Z0-9-]+$/);
-
-    // Open notes panel
-    await instancesPage.page.locator('button:has-text("Notes")').click();
-    await instancesPage.page.waitForTimeout(500);
-
-    // Find and click the collapse button
-    const collapseButton = instancesPage.page.locator('button[title="Collapse file browser"]');
-    if (await collapseButton.isVisible()) {
-      await collapseButton.click();
-      await instancesPage.page.waitForTimeout(300);
-    }
-
-    // Reload the page
-    await instancesPage.page.reload();
-    await instancesPage.page.waitForLoadState('networkidle');
-
-    // File browser should still be collapsed after reload
-    await expect(instancesPage.page.locator('button[title="Expand file browser"]')).toBeVisible({ timeout: 5000 });
   });
 });

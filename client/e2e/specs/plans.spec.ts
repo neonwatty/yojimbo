@@ -344,8 +344,9 @@ test.describe('Plans Panel', () => {
       await planButton.click();
       await instancesPage.page.waitForTimeout(300);
 
-      // Verify plan content is displayed (plan name in toolbar)
-      await expect(instancesPage.page.locator('span:has-text("cwd-test-plan.md")')).toBeVisible();
+      // Verify plan content is displayed (plan name in editor toolbar)
+      const editorToolbar = instancesPage.page.locator('.text-sm.text-theme-primary.font-medium:has-text("cwd-test-plan.md")');
+      await expect(editorToolbar).toBeVisible();
 
       // Change directory in terminal
       const terminal = instancesPage.page.locator('.xterm-helper-textarea');
@@ -356,8 +357,8 @@ test.describe('Plans Panel', () => {
       // Wait for CWD polling to detect the change
       await instancesPage.page.waitForTimeout(3000);
 
-      // The plan name should no longer be in the toolbar (selection cleared)
-      await expect(instancesPage.page.locator('span:has-text("cwd-test-plan.md")')).not.toBeVisible({ timeout: 5000 });
+      // The plan name should no longer be in the editor toolbar (selection cleared)
+      await expect(editorToolbar).not.toBeVisible({ timeout: 5000 });
 
       // Should show empty state or file list for new directory
       const emptyState = instancesPage.page.locator('text=No plans');

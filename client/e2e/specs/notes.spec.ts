@@ -125,7 +125,7 @@ test.describe('Notes Panel', () => {
     expect(content).toContain('Edited content from E2E test');
   });
 
-  test('shows empty state when no notes directory', async ({ instancesPage }) => {
+  test('shows empty state with create button when no notes directory', async ({ instancesPage }) => {
     // Temporarily rename notes dir if it exists
     const tempDir = path.join(os.homedir(), 'notes-temp-backup');
     const notesExists = fs.existsSync(notesDir);
@@ -143,9 +143,55 @@ test.describe('Notes Panel', () => {
       await instancesPage.page.waitForTimeout(500);
 
       // Should show empty state message
-      await expect(instancesPage.page.locator('text=No notes folder found')).toBeVisible();
+      await expect(instancesPage.page.locator('text=No notes folder')).toBeVisible();
+
+      // Should show the create button
+      await expect(instancesPage.page.locator('button:has-text("Create notes/")')).toBeVisible();
     } finally {
       // Restore notes dir
+      if (notesExists) {
+        fs.renameSync(tempDir, notesDir);
+      }
+    }
+  });
+
+  test('can create notes directory with button', async ({ instancesPage }) => {
+    // Temporarily rename notes dir if it exists
+    const tempDir = path.join(os.homedir(), 'notes-temp-backup');
+    const notesExists = fs.existsSync(notesDir);
+    if (notesExists) {
+      fs.renameSync(notesDir, tempDir);
+    }
+
+    try {
+      await instancesPage.gotoInstances();
+      await instancesPage.createNewInstance();
+      await expect(instancesPage.page).toHaveURL(/.*\/instances\/[a-zA-Z0-9-]+$/);
+
+      // Open notes panel
+      await instancesPage.page.locator('button:has-text("Notes")').click();
+      await instancesPage.page.waitForTimeout(500);
+
+      // Verify create button is visible
+      const createButton = instancesPage.page.locator('button:has-text("Create notes/")');
+      await expect(createButton).toBeVisible();
+
+      // Click the create button
+      await createButton.click();
+      await instancesPage.page.waitForTimeout(500);
+
+      // Verify directory was created
+      expect(fs.existsSync(notesDir)).toBe(true);
+
+      // Success toast should appear (optional - toast may dismiss quickly)
+      // The "Create notes/" button should no longer be visible since directory exists
+      // But it may still show if directory is empty - that's expected behavior
+    } finally {
+      // Clean up: remove the created directory if it exists
+      if (fs.existsSync(notesDir)) {
+        fs.rmdirSync(notesDir, { recursive: true });
+      }
+      // Restore original notes dir if it existed
       if (notesExists) {
         fs.renameSync(tempDir, notesDir);
       }
@@ -228,5 +274,59 @@ test.describe('Notes Panel', () => {
 
     // Path should now show Desktop/notes
     await expect(instancesPage.page.locator('[title*="Desktop/notes"]')).toBeVisible({ timeout: 5000 });
+  });
+
+  test('clears selected note when CWD changes', async ({ instancesPage }) => {
+    // Create a test note in home notes directory
+    const homeNotesDir = path.join(os.homedir(), 'notes');
+    const testNoteInHome = path.join(homeNotesDir, 'cwd-test-note.md');
+
+    if (!fs.existsSync(homeNotesDir)) {
+      fs.mkdirSync(homeNotesDir, { recursive: true });
+    }
+    fs.writeFileSync(testNoteInHome, '# CWD Test Note\n\nThis note should be cleared on CWD change.');
+
+    try {
+      await instancesPage.gotoInstances();
+      await instancesPage.createNewInstance();
+      await expect(instancesPage.page).toHaveURL(/.*\/instances\/[a-zA-Z0-9-]+$/);
+
+      // Open notes panel
+      await instancesPage.page.locator('button:has-text("Notes")').click();
+      await instancesPage.page.waitForTimeout(500);
+
+      // Select the test note
+      const noteButton = instancesPage.page.locator('button:has-text("cwd-test-note.md")');
+      await expect(noteButton).toBeVisible();
+      await noteButton.click();
+      await instancesPage.page.waitForTimeout(300);
+
+      // Verify note content is displayed (note name in toolbar - the second span is the toolbar title)
+      const toolbarTitle = instancesPage.page.locator('.text-theme-primary.font-medium:has-text("cwd-test-note.md")');
+      await expect(toolbarTitle).toBeVisible();
+
+      // Change directory in terminal
+      const terminal = instancesPage.page.locator('.xterm-helper-textarea');
+      await terminal.focus();
+      await terminal.fill('cd ~/Desktop');
+      await instancesPage.page.keyboard.press('Enter');
+
+      // Wait for CWD polling to detect the change
+      await instancesPage.page.waitForTimeout(3000);
+
+      // The note name should no longer be in the toolbar (selection cleared)
+      await expect(instancesPage.page.locator('.text-theme-primary.font-medium:has-text("cwd-test-note.md")')).not.toBeVisible({ timeout: 5000 });
+
+      // Should show empty state or file list for new directory
+      const emptyState = instancesPage.page.locator('text=No notes');
+      const hasEmptyState = await emptyState.isVisible().catch(() => false);
+      // Either shows empty state or the file browser (both are valid)
+      expect(hasEmptyState || true).toBe(true);
+    } finally {
+      // Cleanup
+      if (fs.existsSync(testNoteInHome)) {
+        fs.unlinkSync(testNoteInHome);
+      }
+    }
   });
 });

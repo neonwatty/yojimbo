@@ -81,8 +81,8 @@ export default function HistoryPage() {
           [sessionId]: response.data!.items,
         }));
       }
-    } catch (err) {
-      console.error('Failed to load messages:', err);
+    } catch {
+      // Error toast shown by API layer
     } finally {
       setLoadingMessages((prev) => {
         const next = new Set(prev);

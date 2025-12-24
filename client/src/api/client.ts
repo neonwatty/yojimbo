@@ -15,25 +15,36 @@ import type {
   PaginatedResponse,
   Settings,
 } from '@cc-orchestrator/shared';
+import { toast } from '../store/toastStore';
 
 const API_BASE = '/api';
 
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_BASE}${url}`, {
-    headers: {
-      'Content-Type': 'application/json',
-      ...options?.headers,
-    },
-    ...options,
-  });
+  try {
+    const response = await fetch(`${API_BASE}${url}`, {
+      headers: {
+        'Content-Type': 'application/json',
+        ...options?.headers,
+      },
+      ...options,
+    });
 
-  const data = await response.json();
+    const data = await response.json();
 
-  if (!response.ok) {
-    throw new Error(data.error || 'Request failed');
+    if (!response.ok) {
+      const errorMessage = data.error || 'Request failed';
+      toast.error(errorMessage);
+      throw new Error(errorMessage);
+    }
+
+    return data;
+  } catch (error) {
+    // Network errors (fetch failed, no connection, etc.)
+    if (error instanceof TypeError) {
+      toast.error('Network error - check your connection');
+    }
+    throw error;
   }
-
-  return data;
 }
 
 // Instance API
@@ -110,6 +121,12 @@ export const plansApi = {
     request<ApiResponse<void>>(`/plans/${encodeURIComponent(path)}`, {
       method: 'DELETE',
     }),
+
+  init: (workingDir: string) =>
+    request<ApiResponse<{ created: boolean }>>('/plans/init', {
+      method: 'POST',
+      body: JSON.stringify({ workingDir }),
+    }),
 };
 
 // Notes API
@@ -135,6 +152,12 @@ export const notesApi = {
   delete: (path: string) =>
     request<ApiResponse<void>>(`/notes/${encodeURIComponent(path)}`, {
       method: 'DELETE',
+    }),
+
+  init: (workingDir: string) =>
+    request<ApiResponse<{ created: boolean }>>('/notes/init', {
+      method: 'POST',
+      body: JSON.stringify({ workingDir }),
     }),
 };
 

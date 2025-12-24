@@ -4,6 +4,7 @@ import { useInstancesStore } from '../../store/instancesStore';
 import { useSettingsStore } from '../../store/settingsStore';
 import { Icons } from '../common/Icons';
 import Tooltip from '../common/Tooltip';
+import { ConnectionStatus } from '../common/ConnectionStatus';
 
 export default function Header() {
   const navigate = useNavigate();
@@ -27,11 +28,14 @@ export default function Header() {
         >
           <span className="text-accent font-extrabold">CC</span> Orchestrator
         </h1>
-        <div className="text-xs text-theme-muted font-mono">
-          {instances.length} instances
-          {pinnedCount > 0 && (
-            <span className="ml-2 text-accent">({pinnedCount} pinned)</span>
-          )}
+        <div className="flex items-center gap-3">
+          <div className="text-xs text-theme-muted font-mono">
+            {instances.length} {instances.length === 1 ? 'instance' : 'instances'}
+            {pinnedCount > 0 && (
+              <span className="ml-2 text-accent">({pinnedCount} pinned)</span>
+            )}
+          </div>
+          <ConnectionStatus />
         </div>
       </div>
 

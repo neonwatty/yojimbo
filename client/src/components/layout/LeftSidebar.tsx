@@ -50,8 +50,8 @@ export function LeftSidebar() {
       if (window.location.pathname === `/instances/${instanceId}`) {
         navigate('/instances');
       }
-    } catch (error) {
-      console.error('Failed to close instance:', error);
+    } catch {
+      // Error toast already shown by API layer
     }
   }, [navigate, removeInstance]);
 

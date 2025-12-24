@@ -41,7 +41,7 @@ export default function InstancesPage() {
         instancesApi.close(currentInstance.id).then(() => {
           removeInstance(currentInstance.id);
           navigate('/instances');
-        }).catch(console.error);
+        }).catch(() => { /* Error toast shown by API layer */ });
       }
     }
   }, [currentInstance, navigate, removeInstance]);
@@ -50,7 +50,7 @@ export default function InstancesPage() {
     if (currentInstance) {
       instancesApi.update(currentInstance.id, { isPinned: !currentInstance.isPinned })
         .then(() => updateInstance(currentInstance.id, { isPinned: !currentInstance.isPinned }))
-        .catch(console.error);
+        .catch(() => { /* Error toast shown by API layer */ });
     }
   }, [currentInstance, updateInstance]);
 
@@ -83,8 +83,8 @@ export default function InstancesPage() {
       try {
         await instancesApi.update(instanceId, { isPinned: !instance.isPinned });
         updateInstance(instanceId, { isPinned: !instance.isPinned });
-      } catch (error) {
-        console.error('Failed to toggle pin:', error);
+      } catch {
+        // Error toast shown by API layer
       }
     }
   }, [instances, updateInstance]);
@@ -104,8 +104,8 @@ export default function InstancesPage() {
       if (id === instanceId) {
         navigate('/instances');
       }
-    } catch (error) {
-      console.error('Failed to close instance:', error);
+    } catch {
+      // Error toast shown by API layer
     }
   }, [id, navigate, removeInstance]);
 
@@ -124,8 +124,8 @@ export default function InstancesPage() {
 
     try {
       await instancesApi.reorder({ instanceIds });
-    } catch (error) {
-      console.error('Failed to save order:', error);
+    } catch {
+      // Error toast shown by API layer
     }
   }, [instances, reorderInstances]);
 
@@ -138,8 +138,8 @@ export default function InstancesPage() {
       if (response.data) {
         navigate(`/instances/${response.data.id}`);
       }
-    } catch (error) {
-      console.error('Failed to create instance:', error);
+    } catch {
+      // Error toast shown by API layer
     }
   }, [instances.length, navigate]);
 
@@ -153,8 +153,8 @@ export default function InstancesPage() {
       try {
         await instancesApi.update(instanceId, { name: editingName.trim() });
         updateInstance(instanceId, { name: editingName.trim() });
-      } catch (error) {
-        console.error('Failed to rename:', error);
+      } catch {
+        // Error toast shown by API layer
       }
     }
     setEditingId(null);

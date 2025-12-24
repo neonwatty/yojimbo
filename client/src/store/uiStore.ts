@@ -43,6 +43,9 @@ interface UIState {
   // Command palette state (not persisted)
   showCommandPalette: boolean;
   pendingKeySequence: string | null;
+  // Connection state (not persisted)
+  isConnected: boolean;
+  reconnectAttempts: number;
 
   setCurrentView: (view: ViewType) => void;
   setLayout: (layout: LayoutType) => void;
@@ -68,6 +71,8 @@ interface UIState {
   // Command palette actions
   setShowCommandPalette: (show: boolean) => void;
   setPendingKeySequence: (key: string | null) => void;
+  // Connection state actions
+  setConnectionState: (connected: boolean, attempts?: number) => void;
   // Reset to defaults
   resetToDefaults: () => void;
 }
@@ -84,6 +89,9 @@ export const useUIStore = create<UIState>()(
       // Command palette state (not persisted)
       showCommandPalette: false,
       pendingKeySequence: null,
+      // Connection state (not persisted)
+      isConnected: false,
+      reconnectAttempts: 0,
 
       setCurrentView: (currentView) => set({ currentView }),
       setLayout: (layout) => set({ layout }),
@@ -107,6 +115,7 @@ export const useUIStore = create<UIState>()(
       toggleNotesBrowserCollapsed: () => set((state) => ({ notesBrowserCollapsed: !state.notesBrowserCollapsed })),
       setShowCommandPalette: (showCommandPalette) => set({ showCommandPalette }),
       setPendingKeySequence: (pendingKeySequence) => set({ pendingKeySequence }),
+      setConnectionState: (isConnected, reconnectAttempts = 0) => set({ isConnected, reconnectAttempts }),
       resetToDefaults: () => set(DEFAULT_UI_STATE),
     }),
     {

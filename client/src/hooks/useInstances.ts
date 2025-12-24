@@ -22,8 +22,8 @@ export function useInstances() {
       if (response.data) {
         setInstances(response.data);
       }
-    } catch (error) {
-      console.error('Failed to fetch instances:', error);
+    } catch {
+      // Error toast shown by API layer
     }
   }, [setInstances]);
 

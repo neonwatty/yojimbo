@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { plansApi } from '../../api/client';
 import { useUIStore } from '../../store/uiStore';
+import { toast } from '../../store/toastStore';
 import { useFileChangesStore } from '../../store/fileChangesStore';
 import { useFileWatcher } from '../../hooks/useFileWatcher';
 import { Icons } from '../common/Icons';
@@ -21,6 +22,7 @@ const MAX_BROWSER_WIDTH = 300;
 
 export function PlansPanel({ workingDir, isOpen, onClose, width, onWidthChange }: PlansPanelProps) {
   const [plans, setPlans] = useState<Plan[]>([]);
+  const [hasPlansDir, setHasPlansDir] = useState(true);
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const [editContent, setEditContent] = useState('');
   const [isEditing, setIsEditing] = useState(false);
@@ -56,9 +58,11 @@ export function PlansPanel({ workingDir, isOpen, onClose, width, onWidthChange }
       if (response.data) {
         setPlans(response.data);
       }
-    } catch (err) {
+      // Check if plans directory exists (from API response)
+      setHasPlansDir((response as { hasPlansDir?: boolean }).hasPlansDir !== false);
+    } catch {
       setError('Failed to load plans');
-      console.error('Failed to fetch plans:', err);
+      // Error toast shown by API layer
     } finally {
       setIsLoading(false);
     }
@@ -69,6 +73,13 @@ export function PlansPanel({ workingDir, isOpen, onClose, width, onWidthChange }
       fetchPlans();
     }
   }, [isOpen, fetchPlans]);
+
+  // Clear selected plan when working directory changes
+  useEffect(() => {
+    setSelectedPlan(null);
+    setIsEditing(false);
+    setEditContent('');
+  }, [workingDir]);
 
   // Group plans by folder
   const groupedPlans = plans.reduce(
@@ -106,8 +117,8 @@ export function PlansPanel({ workingDir, isOpen, onClose, width, onWidthChange }
         setEditContent(response.data.content);
         setIsEditing(false);
       }
-    } catch (err) {
-      console.error('Failed to load plan:', err);
+    } catch {
+      // Error toast shown by API layer
     }
   };
 
@@ -118,8 +129,8 @@ export function PlansPanel({ workingDir, isOpen, onClose, width, onWidthChange }
       setSelectedPlan({ ...selectedPlan, content: editContent, isDirty: false });
       setIsEditing(false);
       fetchPlans(); // Refresh the list
-    } catch (err) {
-      console.error('Failed to save plan:', err);
+    } catch {
+      // Error toast shown by API layer
     }
   };
 
@@ -133,8 +144,8 @@ export function PlansPanel({ workingDir, isOpen, onClose, width, onWidthChange }
         setIsEditing(false);
         clearChange(selectedPlanChange.fileId);
       }
-    } catch (err) {
-      console.error('Failed to reload plan:', err);
+    } catch {
+      // Error toast shown by API layer
     }
   };
 
@@ -151,8 +162,20 @@ export function PlansPanel({ workingDir, isOpen, onClose, width, onWidthChange }
         await fetchPlans();
         handleSelectPlan(response.data);
       }
-    } catch (err) {
-      console.error('Failed to create plan:', err);
+    } catch {
+      // Error toast shown by API layer
+    }
+  };
+
+  const handleCreateDirectory = async () => {
+    try {
+      const response = await plansApi.init(workingDir);
+      if (response.data?.created) {
+        toast.success('Created plans/ folder');
+        await fetchPlans();
+      }
+    } catch {
+      // Error toast shown by API layer
     }
   };
 
@@ -270,16 +293,30 @@ export function PlansPanel({ workingDir, isOpen, onClose, width, onWidthChange }
                 </div>
               ) : error ? (
                 <div className="p-4 text-red-400 text-sm">{error}</div>
-              ) : plans.length === 0 ? (
+              ) : !hasPlansDir ? (
                 <div className="p-4 text-center text-theme-muted">
                   <div className="opacity-50 mb-2">
                     <Icons.folder />
                   </div>
                   {!plansBrowserCollapsed && (
                     <>
-                      <p className="text-xs">No plans folder found</p>
-                      <p className="text-xs mt-1 opacity-70">Create plans/ in your project</p>
+                      <p className="text-xs">No plans folder</p>
+                      <button
+                        onClick={handleCreateDirectory}
+                        className="mt-2 px-3 py-1.5 text-xs bg-accent/20 text-accent hover:bg-accent/30 rounded transition-colors"
+                      >
+                        Create plans/
+                      </button>
                     </>
+                  )}
+                </div>
+              ) : plans.length === 0 ? (
+                <div className="p-4 text-center text-theme-muted">
+                  <div className="opacity-50 mb-2">
+                    <Icons.file />
+                  </div>
+                  {!plansBrowserCollapsed && (
+                    <p className="text-xs">No plans yet</p>
                   )}
                 </div>
               ) : (

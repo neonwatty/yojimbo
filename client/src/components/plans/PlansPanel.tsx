@@ -39,7 +39,7 @@ export function PlansPanel({ workingDir, isOpen, onClose, width, onWidthChange }
 
   // File watcher for external changes
   useFileWatcher();
-  const { changes, clearChange, dismissChange } = useFileChangesStore();
+  const { changes, clearChange, dismissChange, markAsSaved } = useFileChangesStore();
 
   // Check if selected plan has external changes
   const selectedPlanChange = selectedPlan
@@ -80,6 +80,20 @@ export function PlansPanel({ workingDir, isOpen, onClose, width, onWidthChange }
     setIsEditing(false);
     setEditContent('');
   }, [workingDir]);
+
+  // Keyboard shortcut: Cmd+S to save
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 's' && isEditing && selectedPlan) {
+        e.preventDefault();
+        handleSave();
+      }
+    };
+    if (isOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+      return () => window.removeEventListener('keydown', handleKeyDown);
+    }
+  }, [isOpen, isEditing, selectedPlan]);
 
   // Group plans by folder
   const groupedPlans = plans.reduce(
@@ -125,6 +139,8 @@ export function PlansPanel({ workingDir, isOpen, onClose, width, onWidthChange }
   const handleSave = async () => {
     if (!selectedPlan) return;
     try {
+      // Mark file as saved to prevent file watcher from showing external change notification
+      markAsSaved(selectedPlan.path);
       await plansApi.update(selectedPlan.path, { content: editContent });
       setSelectedPlan({ ...selectedPlan, content: editContent, isDirty: false });
       setIsEditing(false);

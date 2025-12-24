@@ -41,7 +41,7 @@ export function NotesPanel({ workingDir, isOpen, onClose, width, onWidthChange }
 
   // File watcher for external changes
   useFileWatcher();
-  const { changes, clearChange, dismissChange } = useFileChangesStore();
+  const { changes, clearChange, dismissChange, markAsSaved } = useFileChangesStore();
 
   // Check if selected note has external changes
   const selectedNoteChange = selectedNote
@@ -83,6 +83,20 @@ export function NotesPanel({ workingDir, isOpen, onClose, width, onWidthChange }
     setShowSource(false);
     setSourceContent('');
   }, [workingDir]);
+
+  // Keyboard shortcut: Cmd+S to save
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 's' && isDirty && selectedNote) {
+        e.preventDefault();
+        handleSave();
+      }
+    };
+    if (isOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+      return () => window.removeEventListener('keydown', handleKeyDown);
+    }
+  }, [isOpen, isDirty, selectedNote]);
 
   // Group notes by folder
   const groupedNotes = notes.reduce(
@@ -134,6 +148,8 @@ export function NotesPanel({ workingDir, isOpen, onClose, width, onWidthChange }
         ? sourceContent
         : (editorRef.current?.getMarkdown() || selectedNote.content);
 
+      // Mark file as saved to prevent file watcher from showing external change notification
+      markAsSaved(selectedNote.path);
       await notesApi.update(selectedNote.id, { content });
       setSelectedNote({ ...selectedNote, content, isDirty: false });
       setIsDirty(false);

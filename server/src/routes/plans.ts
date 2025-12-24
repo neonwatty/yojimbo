@@ -116,6 +116,33 @@ router.put('/:id', (req, res) => {
   }
 });
 
+// POST /api/plans/init - Initialize plans directory
+router.post('/init', (req, res) => {
+  try {
+    const { workingDir } = req.body as { workingDir: string };
+
+    if (!workingDir) {
+      return res.status(400).json({ success: false, error: 'workingDir is required' });
+    }
+
+    const plansDir = path.join(expandPath(workingDir), 'plans');
+
+    if (fs.existsSync(plansDir)) {
+      return res.json({ success: true, data: { created: false, message: 'Directory already exists' } });
+    }
+
+    fs.mkdirSync(plansDir, { recursive: true });
+
+    // Start watching for file changes in this directory
+    startWatching(expandPath(workingDir), 'plan');
+
+    res.status(201).json({ success: true, data: { created: true } });
+  } catch (error) {
+    console.error('Error initializing plans directory:', error);
+    res.status(500).json({ success: false, error: 'Failed to create plans directory' });
+  }
+});
+
 // POST /api/plans - Create new plan file
 router.post('/', (req, res) => {
   try {

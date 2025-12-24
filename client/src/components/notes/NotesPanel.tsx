@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { notesApi } from '../../api/client';
 import { useUIStore } from '../../store/uiStore';
+import { toast } from '../../store/toastStore';
 import { useFileChangesStore } from '../../store/fileChangesStore';
 import { useFileWatcher } from '../../hooks/useFileWatcher';
 import { Icons } from '../common/Icons';
@@ -21,6 +22,7 @@ const MAX_BROWSER_WIDTH = 300;
 
 export function NotesPanel({ workingDir, isOpen, onClose, width, onWidthChange }: NotesPanelProps) {
   const [notes, setNotes] = useState<Note[]>([]);
+  const [hasNotesDir, setHasNotesDir] = useState(true);
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
   const [editContent, setEditContent] = useState('');
   const [isEditing, setIsEditing] = useState(false);
@@ -56,9 +58,11 @@ export function NotesPanel({ workingDir, isOpen, onClose, width, onWidthChange }
       if (response.data) {
         setNotes(response.data);
       }
-    } catch (err) {
+      // Check if notes directory exists (from API response)
+      setHasNotesDir((response as { hasNotesDir?: boolean }).hasNotesDir !== false);
+    } catch {
       setError('Failed to load notes');
-      console.error('Failed to fetch notes:', err);
+      // Error toast shown by API layer
     } finally {
       setIsLoading(false);
     }
@@ -69,6 +73,13 @@ export function NotesPanel({ workingDir, isOpen, onClose, width, onWidthChange }
       fetchNotes();
     }
   }, [isOpen, fetchNotes]);
+
+  // Clear selected note when working directory changes
+  useEffect(() => {
+    setSelectedNote(null);
+    setIsEditing(false);
+    setEditContent('');
+  }, [workingDir]);
 
   // Group notes by folder
   const groupedNotes = notes.reduce(
@@ -106,8 +117,8 @@ export function NotesPanel({ workingDir, isOpen, onClose, width, onWidthChange }
         setEditContent(response.data.content);
         setIsEditing(false);
       }
-    } catch (err) {
-      console.error('Failed to load note:', err);
+    } catch {
+      // Error toast shown by API layer
     }
   };
 
@@ -118,8 +129,8 @@ export function NotesPanel({ workingDir, isOpen, onClose, width, onWidthChange }
       setSelectedNote({ ...selectedNote, content: editContent, isDirty: false });
       setIsEditing(false);
       fetchNotes(); // Refresh the list
-    } catch (err) {
-      console.error('Failed to save note:', err);
+    } catch {
+      // Error toast shown by API layer
     }
   };
 
@@ -133,8 +144,8 @@ export function NotesPanel({ workingDir, isOpen, onClose, width, onWidthChange }
         setIsEditing(false);
         clearChange(selectedNoteChange.fileId);
       }
-    } catch (err) {
-      console.error('Failed to reload note:', err);
+    } catch {
+      // Error toast shown by API layer
     }
   };
 
@@ -151,8 +162,20 @@ export function NotesPanel({ workingDir, isOpen, onClose, width, onWidthChange }
         await fetchNotes();
         handleSelectNote(response.data);
       }
-    } catch (err) {
-      console.error('Failed to create note:', err);
+    } catch {
+      // Error toast shown by API layer
+    }
+  };
+
+  const handleCreateDirectory = async () => {
+    try {
+      const response = await notesApi.init(workingDir);
+      if (response.data?.created) {
+        toast.success('Created notes/ folder');
+        await fetchNotes();
+      }
+    } catch {
+      // Error toast shown by API layer
     }
   };
 
@@ -270,16 +293,30 @@ export function NotesPanel({ workingDir, isOpen, onClose, width, onWidthChange }
                 </div>
               ) : error ? (
                 <div className="p-4 text-red-400 text-sm">{error}</div>
-              ) : notes.length === 0 ? (
+              ) : !hasNotesDir ? (
                 <div className="p-4 text-center text-theme-muted">
                   <div className="opacity-50 mb-2">
                     <Icons.folder />
                   </div>
                   {!notesBrowserCollapsed && (
                     <>
-                      <p className="text-xs">No notes folder found</p>
-                      <p className="text-xs mt-1 opacity-70">Create notes/ in your project</p>
+                      <p className="text-xs">No notes folder</p>
+                      <button
+                        onClick={handleCreateDirectory}
+                        className="mt-2 px-3 py-1.5 text-xs bg-accent/20 text-accent hover:bg-accent/30 rounded transition-colors"
+                      >
+                        Create notes/
+                      </button>
                     </>
+                  )}
+                </div>
+              ) : notes.length === 0 ? (
+                <div className="p-4 text-center text-theme-muted">
+                  <div className="opacity-50 mb-2">
+                    <Icons.fileText />
+                  </div>
+                  {!notesBrowserCollapsed && (
+                    <p className="text-xs">No notes yet</p>
                   )}
                 </div>
               ) : (

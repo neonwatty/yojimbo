@@ -116,6 +116,33 @@ router.put('/:id', (req, res) => {
   }
 });
 
+// POST /api/notes/init - Initialize notes directory
+router.post('/init', (req, res) => {
+  try {
+    const { workingDir } = req.body as { workingDir: string };
+
+    if (!workingDir) {
+      return res.status(400).json({ success: false, error: 'workingDir is required' });
+    }
+
+    const notesDir = path.join(expandPath(workingDir), 'notes');
+
+    if (fs.existsSync(notesDir)) {
+      return res.json({ success: true, data: { created: false, message: 'Directory already exists' } });
+    }
+
+    fs.mkdirSync(notesDir, { recursive: true });
+
+    // Start watching for file changes in this directory
+    startWatching(expandPath(workingDir), 'note');
+
+    res.status(201).json({ success: true, data: { created: true } });
+  } catch (error) {
+    console.error('Error initializing notes directory:', error);
+    res.status(500).json({ success: false, error: 'Failed to create notes directory' });
+  }
+});
+
 // POST /api/notes - Create new note file
 router.post('/', (req, res) => {
   try {

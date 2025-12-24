@@ -11,6 +11,7 @@ import InstancesPage from './pages/InstancesPage';
 import HistoryPage from './pages/HistoryPage';
 import { ShortcutsModal, SettingsModal } from './components/modals';
 import { CommandPalette } from './components/common/CommandPalette';
+import { ToastContainer } from './components/common/Toast';
 import { instancesApi } from './api/client';
 
 function App() {
@@ -202,6 +203,9 @@ function App() {
       <CommandPalette isOpen={showCommandPalette} onClose={() => setShowCommandPalette(false)} />
       <ShortcutsModal isOpen={showShortcutsModal} onClose={() => setShowShortcutsModal(false)} />
       <SettingsModal isOpen={showSettingsModal} onClose={() => setShowSettingsModal(false)} />
+
+      {/* Toast Notifications */}
+      <ToastContainer />
     </>
   );
 }

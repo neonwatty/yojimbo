@@ -1,4 +1,5 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
+import { useUIStore } from '../store/uiStore';
 
 type MessageHandler = (data: unknown) => void;
 
@@ -39,6 +40,7 @@ export function useWebSocket(url: string, options: UseWebSocketOptions = {}) {
     ws.onopen = () => {
       setIsConnected(true);
       reconnectAttemptsRef.current = 0;
+      useUIStore.getState().setConnectionState(true, 0);
       onOpenRef.current?.();
     };
 
@@ -49,7 +51,10 @@ export function useWebSocket(url: string, options: UseWebSocketOptions = {}) {
       // Attempt reconnection
       if (reconnectAttemptsRef.current < maxReconnectAttempts) {
         reconnectAttemptsRef.current++;
+        useUIStore.getState().setConnectionState(false, reconnectAttemptsRef.current);
         reconnectTimeoutRef.current = setTimeout(connect, reconnectInterval);
+      } else {
+        useUIStore.getState().setConnectionState(false, 0);
       }
     };
 

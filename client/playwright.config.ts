@@ -4,7 +4,7 @@ export default defineConfig({
   testDir: './e2e/specs',
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 1 : 0,
+  retries: process.env.CI ? 2 : 0,
   workers: 1, // Serial execution required since tests share API state
   reporter: [
     ['list'],

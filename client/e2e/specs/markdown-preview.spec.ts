@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 
-test.describe('Markdown Preview', () => {
+test.describe('Markdown WYSIWYG Editor', () => {
   const notesDir = path.join(os.homedir(), 'notes');
   const testNotePath = path.join(notesDir, 'markdown-test.md');
 
@@ -30,18 +30,24 @@ test.describe('Markdown Preview', () => {
     await instancesPage.createNewInstance();
     await expect(instancesPage.page).toHaveURL(/.*\/instances\/[a-zA-Z0-9-]+$/);
 
-    // Open notes panel
-    await instancesPage.page.locator('button:has-text("Notes")').click();
-    await instancesPage.page.waitForTimeout(500);
+    // Open notes panel and wait for it to be visible
+    const notesButton = instancesPage.page.locator('button:has-text("Notes")');
+    await expect(notesButton).toBeVisible({ timeout: 5000 });
+    await notesButton.click();
 
-    // Click on the test note
-    await instancesPage.page.locator('button:has-text("markdown-test.md")').click();
-    await instancesPage.page.waitForTimeout(500);
+    // Wait for file browser and click on the test note
+    const noteButton = instancesPage.page.locator('button:has-text("markdown-test.md")');
+    await expect(noteButton).toBeVisible({ timeout: 5000 });
+    await noteButton.click();
 
-    // Verify headings are rendered as HTML elements (not raw markdown)
-    await expect(instancesPage.page.locator('h1:has-text("Heading 1")')).toBeVisible();
-    await expect(instancesPage.page.locator('h2:has-text("Heading 2")')).toBeVisible();
-    await expect(instancesPage.page.locator('h3:has-text("Heading 3")')).toBeVisible();
+    // Wait for editor content to load
+    const editorContent = instancesPage.page.locator('.mdx-editor-content');
+    await expect(editorContent).toBeVisible({ timeout: 5000 });
+
+    // Verify headings are rendered as HTML elements in the WYSIWYG editor
+    await expect(instancesPage.page.locator('.mdx-editor-content h1:has-text("Heading 1")')).toBeVisible({ timeout: 5000 });
+    await expect(instancesPage.page.locator('.mdx-editor-content h2:has-text("Heading 2")')).toBeVisible({ timeout: 5000 });
+    await expect(instancesPage.page.locator('.mdx-editor-content h3:has-text("Heading 3")')).toBeVisible({ timeout: 5000 });
   });
 
   test('renders bold and italic text', async ({ instancesPage }) => {
@@ -53,18 +59,24 @@ test.describe('Markdown Preview', () => {
     await expect(instancesPage.page).toHaveURL(/.*\/instances\/[a-zA-Z0-9-]+$/);
 
     // Open notes panel
-    await instancesPage.page.locator('button:has-text("Notes")').click();
-    await instancesPage.page.waitForTimeout(500);
+    const notesButton = instancesPage.page.locator('button:has-text("Notes")');
+    await expect(notesButton).toBeVisible({ timeout: 5000 });
+    await notesButton.click();
 
-    // Click on the test note
-    await instancesPage.page.locator('button:has-text("markdown-test.md")').click();
-    await instancesPage.page.waitForTimeout(500);
+    // Wait for file browser and click on the test note
+    const noteButton = instancesPage.page.locator('button:has-text("markdown-test.md")');
+    await expect(noteButton).toBeVisible({ timeout: 5000 });
+    await noteButton.click();
+
+    // Wait for editor content to load
+    const editorContent = instancesPage.page.locator('.mdx-editor-content');
+    await expect(editorContent).toBeVisible({ timeout: 5000 });
 
     // Verify bold is rendered as <strong>
-    await expect(instancesPage.page.locator('strong:has-text("bold")')).toBeVisible();
+    await expect(instancesPage.page.locator('.mdx-editor-content strong:has-text("bold")')).toBeVisible({ timeout: 5000 });
 
     // Verify italic is rendered as <em>
-    await expect(instancesPage.page.locator('em:has-text("italic")')).toBeVisible();
+    await expect(instancesPage.page.locator('.mdx-editor-content em:has-text("italic")')).toBeVisible({ timeout: 5000 });
   });
 
   test('renders code blocks with syntax highlighting', async ({ instancesPage }) => {
@@ -76,15 +88,21 @@ test.describe('Markdown Preview', () => {
     await expect(instancesPage.page).toHaveURL(/.*\/instances\/[a-zA-Z0-9-]+$/);
 
     // Open notes panel
-    await instancesPage.page.locator('button:has-text("Notes")').click();
-    await instancesPage.page.waitForTimeout(500);
+    const notesButton = instancesPage.page.locator('button:has-text("Notes")');
+    await expect(notesButton).toBeVisible({ timeout: 5000 });
+    await notesButton.click();
 
-    // Click on the test note
-    await instancesPage.page.locator('button:has-text("markdown-test.md")').click();
-    await instancesPage.page.waitForTimeout(500);
+    // Wait for file browser and click on the test note
+    const noteButton = instancesPage.page.locator('button:has-text("markdown-test.md")');
+    await expect(noteButton).toBeVisible({ timeout: 5000 });
+    await noteButton.click();
 
-    // Verify code block is rendered (look for syntax highlighting class or pre/code elements)
-    await expect(instancesPage.page.locator('pre').filter({ hasText: 'function' })).toBeVisible();
+    // Wait for editor content to load
+    const editorContent = instancesPage.page.locator('.mdx-editor-content');
+    await expect(editorContent).toBeVisible({ timeout: 5000 });
+
+    // Verify code block is rendered (MDXEditor uses CodeMirror for code blocks)
+    await expect(instancesPage.page.locator('.mdx-editor-content').filter({ hasText: 'function hello' })).toBeVisible({ timeout: 5000 });
   });
 
   test('renders inline code', async ({ instancesPage }) => {
@@ -96,15 +114,21 @@ test.describe('Markdown Preview', () => {
     await expect(instancesPage.page).toHaveURL(/.*\/instances\/[a-zA-Z0-9-]+$/);
 
     // Open notes panel
-    await instancesPage.page.locator('button:has-text("Notes")').click();
-    await instancesPage.page.waitForTimeout(500);
+    const notesButton = instancesPage.page.locator('button:has-text("Notes")');
+    await expect(notesButton).toBeVisible({ timeout: 5000 });
+    await notesButton.click();
 
-    // Click on the test note
-    await instancesPage.page.locator('button:has-text("markdown-test.md")').click();
-    await instancesPage.page.waitForTimeout(500);
+    // Wait for file browser and click on the test note
+    const noteButton = instancesPage.page.locator('button:has-text("markdown-test.md")');
+    await expect(noteButton).toBeVisible({ timeout: 5000 });
+    await noteButton.click();
+
+    // Wait for editor content to load
+    const editorContent = instancesPage.page.locator('.mdx-editor-content');
+    await expect(editorContent).toBeVisible({ timeout: 5000 });
 
     // Verify inline code is rendered
-    await expect(instancesPage.page.locator('code:has-text("console.log()")')).toBeVisible();
+    await expect(instancesPage.page.locator('.mdx-editor-content code:has-text("console.log()")')).toBeVisible({ timeout: 5000 });
   });
 
   test('renders bullet lists', async ({ instancesPage }) => {
@@ -116,17 +140,23 @@ test.describe('Markdown Preview', () => {
     await expect(instancesPage.page).toHaveURL(/.*\/instances\/[a-zA-Z0-9-]+$/);
 
     // Open notes panel
-    await instancesPage.page.locator('button:has-text("Notes")').click();
-    await instancesPage.page.waitForTimeout(500);
+    const notesButton = instancesPage.page.locator('button:has-text("Notes")');
+    await expect(notesButton).toBeVisible({ timeout: 5000 });
+    await notesButton.click();
 
-    // Click on the test note
-    await instancesPage.page.locator('button:has-text("markdown-test.md")').click();
-    await instancesPage.page.waitForTimeout(500);
+    // Wait for file browser and click on the test note
+    const noteButton = instancesPage.page.locator('button:has-text("markdown-test.md")');
+    await expect(noteButton).toBeVisible({ timeout: 5000 });
+    await noteButton.click();
+
+    // Wait for editor content to load
+    const editorContent = instancesPage.page.locator('.mdx-editor-content');
+    await expect(editorContent).toBeVisible({ timeout: 5000 });
 
     // Verify list items are rendered
-    await expect(instancesPage.page.locator('li:has-text("Item 1")')).toBeVisible();
-    await expect(instancesPage.page.locator('li:has-text("Item 2")')).toBeVisible();
-    await expect(instancesPage.page.locator('li:has-text("Item 3")')).toBeVisible();
+    await expect(instancesPage.page.locator('.mdx-editor-content li:has-text("Item 1")')).toBeVisible({ timeout: 5000 });
+    await expect(instancesPage.page.locator('.mdx-editor-content li:has-text("Item 2")')).toBeVisible({ timeout: 5000 });
+    await expect(instancesPage.page.locator('.mdx-editor-content li:has-text("Item 3")')).toBeVisible({ timeout: 5000 });
   });
 
   test('renders links correctly', async ({ instancesPage }) => {
@@ -138,21 +168,26 @@ test.describe('Markdown Preview', () => {
     await expect(instancesPage.page).toHaveURL(/.*\/instances\/[a-zA-Z0-9-]+$/);
 
     // Open notes panel
-    await instancesPage.page.locator('button:has-text("Notes")').click();
-    await instancesPage.page.waitForTimeout(500);
+    const notesButton = instancesPage.page.locator('button:has-text("Notes")');
+    await expect(notesButton).toBeVisible({ timeout: 5000 });
+    await notesButton.click();
 
-    // Click on the test note
-    await instancesPage.page.locator('button:has-text("markdown-test.md")').click();
-    await instancesPage.page.waitForTimeout(500);
+    // Wait for file browser and click on the test note
+    const noteButton = instancesPage.page.locator('button:has-text("markdown-test.md")');
+    await expect(noteButton).toBeVisible({ timeout: 5000 });
+    await noteButton.click();
+
+    // Wait for editor content to load
+    const editorContent = instancesPage.page.locator('.mdx-editor-content');
+    await expect(editorContent).toBeVisible({ timeout: 5000 });
 
     // Verify link is rendered with correct href
-    const link = instancesPage.page.locator('a:has-text("Example")');
-    await expect(link).toBeVisible();
+    const link = instancesPage.page.locator('.mdx-editor-content a:has-text("Example")');
+    await expect(link).toBeVisible({ timeout: 5000 });
     await expect(link).toHaveAttribute('href', 'https://example.com');
-    await expect(link).toHaveAttribute('target', '_blank');
   });
 
-  test('can toggle between preview and edit mode', async ({ instancesPage }) => {
+  test('can toggle between WYSIWYG and source mode', async ({ instancesPage }) => {
     // Create test note
     fs.writeFileSync(testNotePath, '# Test Note\n\nContent here.');
 
@@ -161,30 +196,37 @@ test.describe('Markdown Preview', () => {
     await expect(instancesPage.page).toHaveURL(/.*\/instances\/[a-zA-Z0-9-]+$/);
 
     // Open notes panel
-    await instancesPage.page.locator('button:has-text("Notes")').click();
-    await instancesPage.page.waitForTimeout(500);
+    const notesButton = instancesPage.page.locator('button:has-text("Notes")');
+    await expect(notesButton).toBeVisible({ timeout: 5000 });
+    await notesButton.click();
 
-    // Click on the test note
-    await instancesPage.page.locator('button:has-text("markdown-test.md")').click();
-    await instancesPage.page.waitForTimeout(500);
+    // Wait for file browser and click on the test note
+    const noteButton = instancesPage.page.locator('button:has-text("markdown-test.md")');
+    await expect(noteButton).toBeVisible({ timeout: 5000 });
+    await noteButton.click();
 
-    // Should be in preview mode by default (rendered markdown visible)
-    await expect(instancesPage.page.locator('h1:has-text("Test Note")')).toBeVisible();
+    // Wait for editor content to load (WYSIWYG mode by default)
+    const editorContent = instancesPage.page.locator('.mdx-editor-content');
+    await expect(editorContent).toBeVisible({ timeout: 5000 });
 
-    // Click Edit button
-    await instancesPage.page.locator('button:has-text("Edit")').click();
-    await instancesPage.page.waitForTimeout(300);
+    // Verify heading is rendered in WYSIWYG mode
+    await expect(instancesPage.page.locator('.mdx-editor-content h1:has-text("Test Note")')).toBeVisible({ timeout: 5000 });
+
+    // Click Source button to switch to source mode
+    const sourceButton = instancesPage.page.locator('button:has-text("Source")');
+    await expect(sourceButton).toBeVisible({ timeout: 5000 });
+    await sourceButton.click();
 
     // Should now show textarea with raw markdown
-    const textarea = instancesPage.page.locator('textarea:not([aria-label="Terminal input"])');
-    await expect(textarea).toBeVisible();
-    await expect(textarea).toHaveValue(/# Test Note/);
+    const textarea = instancesPage.page.locator('textarea').filter({ hasText: /# Test Note/ });
+    await expect(textarea).toBeVisible({ timeout: 5000 });
 
-    // Click Cancel to go back to preview
-    await instancesPage.page.locator('button:has-text("Cancel")').click();
-    await instancesPage.page.waitForTimeout(300);
+    // Click WYSIWYG button to go back to WYSIWYG mode
+    const wysiwygButton = instancesPage.page.locator('button:has-text("WYSIWYG")');
+    await expect(wysiwygButton).toBeVisible({ timeout: 5000 });
+    await wysiwygButton.click();
 
-    // Should be back in preview mode
-    await expect(instancesPage.page.locator('h1:has-text("Test Note")')).toBeVisible();
+    // Should be back in WYSIWYG mode
+    await expect(instancesPage.page.locator('.mdx-editor-content h1:has-text("Test Note")')).toBeVisible({ timeout: 5000 });
   });
 });

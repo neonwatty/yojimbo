@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { notesApi } from '../../api/client';
 import { useUIStore } from '../../store/uiStore';
 import { toast } from '../../store/toastStore';
@@ -6,7 +6,7 @@ import { useFileChangesStore } from '../../store/fileChangesStore';
 import { useFileWatcher } from '../../hooks/useFileWatcher';
 import { Icons } from '../common/Icons';
 import { Spinner } from '../common/Spinner';
-import { MarkdownRenderer } from '../common/MarkdownRenderer';
+import { MDXNoteEditor, type MDXNoteEditorRef } from './MDXNoteEditor';
 import type { Note } from '@cc-orchestrator/shared';
 
 interface NotesPanelProps {
@@ -24,11 +24,13 @@ export function NotesPanel({ workingDir, isOpen, onClose, width, onWidthChange }
   const [notes, setNotes] = useState<Note[]>([]);
   const [hasNotesDir, setHasNotesDir] = useState(true);
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
-  const [editContent, setEditContent] = useState('');
-  const [isEditing, setIsEditing] = useState(false);
+  const [isDirty, setIsDirty] = useState(false);
+  const [showSource, setShowSource] = useState(false);
+  const [sourceContent, setSourceContent] = useState('');
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const editorRef = useRef<MDXNoteEditorRef>(null);
 
   const {
     notesBrowserWidth,
@@ -77,8 +79,9 @@ export function NotesPanel({ workingDir, isOpen, onClose, width, onWidthChange }
   // Clear selected note when working directory changes
   useEffect(() => {
     setSelectedNote(null);
-    setIsEditing(false);
-    setEditContent('');
+    setIsDirty(false);
+    setShowSource(false);
+    setSourceContent('');
   }, [workingDir]);
 
   // Group notes by folder
@@ -114,8 +117,9 @@ export function NotesPanel({ workingDir, isOpen, onClose, width, onWidthChange }
       const response = await notesApi.get(note.id);
       if (response.data) {
         setSelectedNote(response.data);
-        setEditContent(response.data.content);
-        setIsEditing(false);
+        setIsDirty(false);
+        setShowSource(false);
+        setSourceContent(response.data.content);
       }
     } catch {
       // Error toast shown by API layer
@@ -125,9 +129,16 @@ export function NotesPanel({ workingDir, isOpen, onClose, width, onWidthChange }
   const handleSave = async () => {
     if (!selectedNote) return;
     try {
-      await notesApi.update(selectedNote.id, { content: editContent });
-      setSelectedNote({ ...selectedNote, content: editContent, isDirty: false });
-      setIsEditing(false);
+      // Get content from editor or source mode
+      const content = showSource
+        ? sourceContent
+        : (editorRef.current?.getMarkdown() || selectedNote.content);
+
+      await notesApi.update(selectedNote.id, { content });
+      setSelectedNote({ ...selectedNote, content, isDirty: false });
+      setIsDirty(false);
+      setSourceContent(content);
+      toast.success('Note saved');
       fetchNotes(); // Refresh the list
     } catch {
       // Error toast shown by API layer
@@ -140,8 +151,12 @@ export function NotesPanel({ workingDir, isOpen, onClose, width, onWidthChange }
       const response = await notesApi.get(selectedNote.id);
       if (response.data) {
         setSelectedNote(response.data);
-        setEditContent(response.data.content);
-        setIsEditing(false);
+        setSourceContent(response.data.content);
+        setIsDirty(false);
+        // Update editor content if in WYSIWYG mode
+        if (!showSource && editorRef.current) {
+          editorRef.current.setMarkdown(response.data.content);
+        }
         clearChange(selectedNoteChange.fileId);
       }
     } catch {
@@ -383,40 +398,45 @@ export function NotesPanel({ workingDir, isOpen, onClose, width, onWidthChange }
             />
           )}
 
-          {/* Editor/Preview */}
+          {/* Editor */}
           <div className="flex-1 flex flex-col overflow-hidden">
             {selectedNote ? (
               <>
                 {/* Editor toolbar */}
                 <div className="flex items-center justify-between px-3 py-2 border-b border-surface-600 flex-shrink-0">
-                  <span className="text-sm text-theme-primary font-medium">{selectedNote.name}</span>
                   <div className="flex items-center gap-2">
-                    {isEditing ? (
-                      <>
-                        <button
-                          onClick={() => {
-                            setEditContent(selectedNote.content);
-                            setIsEditing(false);
-                          }}
-                          className="px-2 py-1 text-xs rounded bg-surface-700 text-theme-muted hover:text-theme-primary transition-colors"
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          onClick={handleSave}
-                          className="px-2 py-1 text-xs rounded bg-accent text-surface-900 hover:bg-accent-bright transition-colors"
-                        >
-                          Save
-                        </button>
-                      </>
-                    ) : (
+                    <span className="text-sm text-theme-primary font-medium">{selectedNote.name}</span>
+                    {isDirty && <span className="w-2 h-2 rounded-full bg-accent" title="Unsaved changes" />}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => {
+                        if (showSource) {
+                          // Switching from source to WYSIWYG
+                          setShowSource(false);
+                        } else {
+                          // Switching from WYSIWYG to source
+                          const content = editorRef.current?.getMarkdown() || selectedNote.content;
+                          setSourceContent(content);
+                          setShowSource(true);
+                        }
+                      }}
+                      className={`flex items-center gap-1.5 px-2 py-1 text-xs rounded transition-colors ${
+                        showSource
+                          ? 'bg-accent/20 text-accent'
+                          : 'bg-surface-700 text-theme-muted hover:text-theme-primary'
+                      }`}
+                      title={showSource ? 'Switch to WYSIWYG' : 'View source'}
+                    >
+                      <Icons.code />
+                      {showSource ? 'WYSIWYG' : 'Source'}
+                    </button>
+                    {isDirty && (
                       <button
-                        onClick={() => setIsEditing(true)}
-                        className="flex items-center gap-1.5 px-2 py-1 text-xs rounded bg-surface-700 text-theme-muted hover:text-theme-primary transition-colors"
-                        title="Edit source"
+                        onClick={handleSave}
+                        className="px-2 py-1 text-xs rounded bg-accent text-surface-900 hover:bg-accent-bright transition-colors"
                       >
-                        <Icons.code />
-                        Edit
+                        Save
                       </button>
                     )}
                   </div>
@@ -429,7 +449,7 @@ export function NotesPanel({ workingDir, isOpen, onClose, width, onWidthChange }
                     <span className="text-xs text-amber-400 flex-1">
                       {selectedNoteChange.changeType === 'deleted'
                         ? 'This file was deleted externally.'
-                        : isEditing
+                        : isDirty
                         ? 'This file was modified externally. Your unsaved changes may conflict.'
                         : 'This file was modified externally.'}
                     </span>
@@ -453,16 +473,24 @@ export function NotesPanel({ workingDir, isOpen, onClose, width, onWidthChange }
                 )}
 
                 {/* Content area */}
-                <div className="flex-1 overflow-auto p-4">
-                  {isEditing ? (
+                <div className="flex-1 overflow-hidden">
+                  {showSource ? (
                     <textarea
-                      value={editContent}
-                      onChange={(e) => setEditContent(e.target.value)}
-                      className="w-full h-full bg-surface-900 border border-surface-600 rounded-lg p-3 text-sm font-mono text-theme-primary resize-none focus:outline-none focus:ring-2 focus:ring-accent/50"
+                      value={sourceContent}
+                      onChange={(e) => {
+                        setSourceContent(e.target.value);
+                        setIsDirty(true);
+                      }}
+                      className="w-full h-full bg-surface-900 border-0 p-4 text-sm font-mono text-theme-primary resize-none focus:outline-none"
                       spellCheck={false}
                     />
                   ) : (
-                    <MarkdownRenderer content={selectedNote.content} />
+                    <MDXNoteEditor
+                      ref={editorRef}
+                      markdown={selectedNote.content}
+                      onChange={() => setIsDirty(true)}
+                      placeholder="Start writing..."
+                    />
                   )}
                 </div>
               </>

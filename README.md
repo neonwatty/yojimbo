@@ -9,7 +9,8 @@ A local web application for managing multiple Claude Code terminal instances wit
 - **Status Tracking** - Real-time Claude status via hooks (working, awaiting, idle)
 - **Session History** - Automatically imports sessions from `~/.claude/projects/`
 - **Plans Panel** - Browse and edit markdown files in `{workingDir}/plans/`
-- **Keyboard Shortcuts** - Quick navigation and panel toggles
+- **Notes Panel** - Browse and edit markdown/MDX files in `{workingDir}/notes/`
+- **Keyboard Shortcuts** - Quick navigation, panel toggles, and vim-like sequences
 - **Theme Support** - Dark and light themes
 
 ## Quick Start
@@ -86,14 +87,44 @@ make hooks-check      # Verify hook installation
 
 ## Keyboard Shortcuts
 
+### Quick Actions
+
 | Shortcut | Action |
 |----------|--------|
-| `Cmd+B` | Toggle left sidebar |
-| `Cmd+E` | Toggle plans panel |
-| `Cmd+\`` | Toggle terminal panel |
+| `Cmd+K` | Open command palette |
+| `Cmd+N` | Create new instance |
 | `Cmd+/` | Show keyboard shortcuts |
 | `Cmd+,` | Open settings |
-| `Escape` | Back to instances overview |
+
+### Navigation
+
+| Shortcut | Action |
+|----------|--------|
+| `G H` | Go to Home |
+| `G I` | Go to Instances |
+| `G S` | Go to History |
+| `Cmd+1-9` | Switch to instance by position |
+| `Cmd+[` | Previous instance |
+| `Cmd+]` | Next instance |
+| `Escape` | Return to overview / Close modal |
+
+### Instance Actions
+
+| Shortcut | Action |
+|----------|--------|
+| `Cmd+W` | Close current instance |
+| `Cmd+P` | Toggle pin |
+| `F2` | Rename instance |
+
+### Panels
+
+| Shortcut | Action |
+|----------|--------|
+| `Cmd+B` | Toggle sessions sidebar |
+| `Cmd+E` | Toggle plans panel |
+| `Cmd+Shift+N` | Toggle notes panel |
+| `Cmd+\`` | Toggle terminal panel |
+| `Cmd+S` | Save current file (in editor panels) |
 
 ## Architecture
 
@@ -149,6 +180,14 @@ cc-hard-core/
 - `GET /api/plans/:path` - Read plan file
 - `PUT /api/plans/:path` - Update plan file
 - `POST /api/plans` - Create plan file
+
+### Notes
+- `GET /api/notes?workingDir=` - List notes
+- `GET /api/notes/:id` - Read note file
+- `PUT /api/notes/:id` - Update note file
+- `POST /api/notes` - Create note file
+- `POST /api/notes/init` - Initialize notes directory
+- `DELETE /api/notes/:id` - Delete note file
 
 ### Settings
 - `GET /api/settings` - Get settings

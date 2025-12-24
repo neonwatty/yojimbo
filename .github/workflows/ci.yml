@@ -7,53 +7,77 @@ on:
     branches: [main]
 
 jobs:
-  build-and-test:
+  # Fast checks run in parallel
+  lint:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
-
+    timeout-minutes: 5
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
+      - run: npm ci
+      - run: npm run lint
 
-      - name: Install dependencies
-        run: npm ci
+  knip:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run knip
 
-      - name: Lint
-        run: npm run lint
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run build
 
-      - name: Check for unused dependencies and files (Knip)
-        run: npm run knip
-
-      - name: Build all packages (type check)
-        run: npm run build
-
+  # E2E tests sharded across 3 runners
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
       - name: Install Playwright browsers
         run: npx playwright install chromium --with-deps
         working-directory: client
-
-      - name: Run E2E tests
-        run: npm run test:e2e
+      - name: Run E2E tests (shard ${{ matrix.shard }}/3)
+        run: npx playwright test --shard=${{ matrix.shard }}/3
+        working-directory: client
         env:
           CI: true
-
       - name: Upload Playwright report
         uses: actions/upload-artifact@v4
         if: failure()
         with:
-          name: playwright-report
+          name: playwright-report-${{ matrix.shard }}
           path: client/playwright-report/
           retention-days: 7
-
       - name: Upload test screenshots
         uses: actions/upload-artifact@v4
         if: failure()
         with:
-          name: test-screenshots
+          name: test-screenshots-${{ matrix.shard }}
           path: client/e2e/screenshots/
           retention-days: 7

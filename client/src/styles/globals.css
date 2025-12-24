@@ -195,3 +195,200 @@ body {
 .animate-toast-out {
   animation: toast-out 0.2s ease-in forwards;
 }
+
+/* MDX Editor Styling */
+.mdx-editor-wrapper {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.mdx-editor-wrapper .mdxeditor {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: transparent;
+  border: none;
+}
+
+.mdx-editor-wrapper .mdxeditor-root-contenteditable {
+  flex: 1;
+  overflow: auto;
+}
+
+/* Dark theme overrides */
+.mdx-editor-wrapper.dark-theme .mdxeditor {
+  --accentColor: #f59e0b;
+  --accentColorLight: rgba(245, 158, 11, 0.2);
+  --basePageBg: var(--surface-900);
+  --baseBgColor: var(--surface-800);
+  --baseTextColor: var(--text-primary);
+  --baseTextColorSecondary: var(--text-secondary);
+  --borderColor: var(--border-color);
+}
+
+.mdx-editor-wrapper.dark-theme .mdxeditor-toolbar {
+  background: var(--surface-700);
+  border-bottom: 1px solid var(--surface-600);
+}
+
+.mdx-editor-wrapper.dark-theme .mdxeditor-toolbar button {
+  color: var(--text-secondary);
+}
+
+.mdx-editor-wrapper.dark-theme .mdxeditor-toolbar button:hover {
+  background: var(--surface-600);
+  color: var(--text-primary);
+}
+
+.mdx-editor-wrapper.dark-theme .mdxeditor-toolbar button[data-state="on"] {
+  background: rgba(245, 158, 11, 0.2);
+  color: #f59e0b;
+}
+
+.mdx-editor-wrapper.dark-theme .mdxeditor-popup-container {
+  background: var(--surface-700);
+  border: 1px solid var(--surface-600);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.mdx-editor-wrapper.dark-theme .mdxeditor-select-content {
+  background: var(--surface-700);
+  border: 1px solid var(--surface-600);
+}
+
+.mdx-editor-wrapper.dark-theme .mdxeditor-select-item {
+  color: var(--text-secondary);
+}
+
+.mdx-editor-wrapper.dark-theme .mdxeditor-select-item:hover,
+.mdx-editor-wrapper.dark-theme .mdxeditor-select-item[data-highlighted] {
+  background: var(--surface-600);
+  color: var(--text-primary);
+}
+
+/* Light theme overrides */
+.mdx-editor-wrapper.light-theme .mdxeditor {
+  --accentColor: #d97706;
+  --accentColorLight: rgba(217, 119, 6, 0.15);
+  --basePageBg: var(--surface-900);
+  --baseBgColor: var(--surface-800);
+  --baseTextColor: var(--text-primary);
+  --baseTextColorSecondary: var(--text-secondary);
+  --borderColor: var(--border-color);
+}
+
+.mdx-editor-wrapper.light-theme .mdxeditor-toolbar {
+  background: var(--surface-700);
+  border-bottom: 1px solid var(--surface-600);
+}
+
+.mdx-editor-wrapper.light-theme .mdxeditor-toolbar button[data-state="on"] {
+  background: rgba(217, 119, 6, 0.15);
+  color: #d97706;
+}
+
+/* Editor content styling */
+.mdx-editor-content {
+  padding: 1rem;
+  font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  min-height: 100%;
+}
+
+.mdx-editor-content h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 1.5rem 0 0.75rem 0;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--surface-600);
+}
+
+.mdx-editor-content h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 1.25rem 0 0.5rem 0;
+}
+
+.mdx-editor-content h3 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin: 1rem 0 0.5rem 0;
+}
+
+.mdx-editor-content p {
+  margin: 0.75rem 0;
+}
+
+.mdx-editor-content a {
+  color: #f59e0b;
+  text-decoration: underline;
+}
+
+.mdx-editor-content a:hover {
+  color: #fbbf24;
+}
+
+.mdx-editor-content code {
+  background: var(--surface-700);
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.25rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8125rem;
+}
+
+.mdx-editor-content pre {
+  background: var(--surface-700);
+  padding: 1rem;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+  margin: 1rem 0;
+}
+
+.mdx-editor-content pre code {
+  background: transparent;
+  padding: 0;
+}
+
+.mdx-editor-content blockquote {
+  border-left: 3px solid #f59e0b;
+  padding-left: 1rem;
+  margin: 1rem 0;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.mdx-editor-content ul,
+.mdx-editor-content ol {
+  margin: 0.75rem 0;
+  padding-left: 1.5rem;
+}
+
+.mdx-editor-content li {
+  margin: 0.25rem 0;
+}
+
+.mdx-editor-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+}
+
+.mdx-editor-content th,
+.mdx-editor-content td {
+  border: 1px solid var(--surface-600);
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+}
+
+.mdx-editor-content th {
+  background: var(--surface-700);
+  font-weight: 600;
+}
+
+.mdx-editor-content hr {
+  border: none;
+  border-top: 1px solid var(--surface-600);
+  margin: 1.5rem 0;
+}

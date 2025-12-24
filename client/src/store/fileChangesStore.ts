@@ -8,6 +8,8 @@ export interface FileChangeInfo extends FileChangeEvent {
 interface FileChangesState {
   // Map of fileId -> change info
   changes: Map<string, FileChangeInfo>;
+  // Set of file paths that were recently saved (to ignore file watcher events)
+  recentlySaved: Set<string>;
 
   // Actions
   addChange: (event: FileChangeEvent) => void;
@@ -16,12 +18,18 @@ interface FileChangesState {
   clearChangesForWorkingDir: (workingDir: string) => void;
   hasChange: (fileId: string) => boolean;
   getChange: (fileId: string) => FileChangeInfo | undefined;
+  markAsSaved: (filePath: string) => void;
 }
 
 export const useFileChangesStore = create<FileChangesState>((set, get) => ({
   changes: new Map(),
+  recentlySaved: new Set(),
 
   addChange: (event: FileChangeEvent) => {
+    // Ignore file change events for files we just saved
+    if (get().recentlySaved.has(event.filePath)) {
+      return;
+    }
     set((state) => {
       const newChanges = new Map(state.changes);
       newChanges.set(event.fileId, { ...event, dismissed: false });
@@ -68,5 +76,21 @@ export const useFileChangesStore = create<FileChangesState>((set, get) => ({
 
   getChange: (fileId: string) => {
     return get().changes.get(fileId);
+  },
+
+  markAsSaved: (filePath: string) => {
+    set((state) => {
+      const newRecentlySaved = new Set(state.recentlySaved);
+      newRecentlySaved.add(filePath);
+      return { recentlySaved: newRecentlySaved };
+    });
+    // Remove from recentlySaved after 3 seconds (file watcher debounce is 500ms)
+    setTimeout(() => {
+      set((state) => {
+        const newRecentlySaved = new Set(state.recentlySaved);
+        newRecentlySaved.delete(filePath);
+        return { recentlySaved: newRecentlySaved };
+      });
+    }, 3000);
   },
 }));

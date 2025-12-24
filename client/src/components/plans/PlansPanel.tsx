@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { plansApi } from '../../api/client';
 import { useUIStore } from '../../store/uiStore';
 import { toast } from '../../store/toastStore';
@@ -6,7 +6,7 @@ import { useFileChangesStore } from '../../store/fileChangesStore';
 import { useFileWatcher } from '../../hooks/useFileWatcher';
 import { Icons } from '../common/Icons';
 import { Spinner } from '../common/Spinner';
-import { MarkdownRenderer } from '../common/MarkdownRenderer';
+import { MDXPlanEditor, type MDXPlanEditorRef } from './MDXPlanEditor';
 import type { Plan } from '@cc-orchestrator/shared';
 
 interface PlansPanelProps {
@@ -25,10 +25,10 @@ export function PlansPanel({ workingDir, isOpen, onClose, width, onWidthChange }
   const [hasPlansDir, setHasPlansDir] = useState(true);
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const [editContent, setEditContent] = useState('');
-  const [isEditing, setIsEditing] = useState(false);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const editorRef = useRef<MDXPlanEditorRef>(null);
 
   const {
     plansBrowserWidth,
@@ -77,14 +77,13 @@ export function PlansPanel({ workingDir, isOpen, onClose, width, onWidthChange }
   // Clear selected plan when working directory changes
   useEffect(() => {
     setSelectedPlan(null);
-    setIsEditing(false);
     setEditContent('');
   }, [workingDir]);
 
   // Keyboard shortcut: Cmd+S to save
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 's' && isEditing && selectedPlan) {
+      if ((e.metaKey || e.ctrlKey) && e.key === 's' && selectedPlan) {
         e.preventDefault();
         handleSave();
       }
@@ -93,7 +92,7 @@ export function PlansPanel({ workingDir, isOpen, onClose, width, onWidthChange }
       window.addEventListener('keydown', handleKeyDown);
       return () => window.removeEventListener('keydown', handleKeyDown);
     }
-  }, [isOpen, isEditing, selectedPlan]);
+  }, [isOpen, selectedPlan]);
 
   // Group plans by folder
   const groupedPlans = plans.reduce(
@@ -129,7 +128,6 @@ export function PlansPanel({ workingDir, isOpen, onClose, width, onWidthChange }
       if (response.data) {
         setSelectedPlan(response.data);
         setEditContent(response.data.content);
-        setIsEditing(false);
       }
     } catch {
       // Error toast shown by API layer
@@ -139,11 +137,13 @@ export function PlansPanel({ workingDir, isOpen, onClose, width, onWidthChange }
   const handleSave = async () => {
     if (!selectedPlan) return;
     try {
+      // Get content from editor ref if available, otherwise use editContent state
+      const contentToSave = editorRef.current?.getMarkdown() || editContent;
       // Mark file as saved to prevent file watcher from showing external change notification
       markAsSaved(selectedPlan.path);
-      await plansApi.update(selectedPlan.path, { content: editContent });
-      setSelectedPlan({ ...selectedPlan, content: editContent, isDirty: false });
-      setIsEditing(false);
+      await plansApi.update(selectedPlan.path, { content: contentToSave });
+      setSelectedPlan({ ...selectedPlan, content: contentToSave, isDirty: false });
+      setEditContent(contentToSave);
       fetchPlans(); // Refresh the list
     } catch {
       // Error toast shown by API layer
@@ -157,7 +157,6 @@ export function PlansPanel({ workingDir, isOpen, onClose, width, onWidthChange }
       if (response.data) {
         setSelectedPlan(response.data);
         setEditContent(response.data.content);
-        setIsEditing(false);
         clearChange(selectedPlanChange.fileId);
       }
     } catch {
@@ -407,34 +406,14 @@ export function PlansPanel({ workingDir, isOpen, onClose, width, onWidthChange }
                 <div className="flex items-center justify-between px-3 py-2 border-b border-surface-600 flex-shrink-0">
                   <span className="text-sm text-theme-primary font-medium">{selectedPlan.name}</span>
                   <div className="flex items-center gap-2">
-                    {isEditing ? (
-                      <>
-                        <button
-                          onClick={() => {
-                            setEditContent(selectedPlan.content);
-                            setIsEditing(false);
-                          }}
-                          className="px-2 py-1 text-xs rounded bg-surface-700 text-theme-muted hover:text-theme-primary transition-colors"
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          onClick={handleSave}
-                          className="px-2 py-1 text-xs rounded bg-accent text-surface-900 hover:bg-accent-bright transition-colors"
-                        >
-                          Save
-                        </button>
-                      </>
-                    ) : (
-                      <button
-                        onClick={() => setIsEditing(true)}
-                        className="flex items-center gap-1.5 px-2 py-1 text-xs rounded bg-surface-700 text-theme-muted hover:text-theme-primary transition-colors"
-                        title="Edit source"
-                      >
-                        <Icons.code />
-                        Edit
-                      </button>
-                    )}
+                    <button
+                      onClick={handleSave}
+                      className="flex items-center gap-1.5 px-2 py-1 text-xs rounded bg-accent text-surface-900 hover:bg-accent-bright transition-colors"
+                      title="Save (Cmd+S)"
+                    >
+                      <Icons.save />
+                      Save
+                    </button>
                   </div>
                 </div>
 
@@ -445,9 +424,7 @@ export function PlansPanel({ workingDir, isOpen, onClose, width, onWidthChange }
                     <span className="text-xs text-amber-400 flex-1">
                       {selectedPlanChange.changeType === 'deleted'
                         ? 'This file was deleted externally.'
-                        : isEditing
-                        ? 'This file was modified externally. Your unsaved changes may conflict.'
-                        : 'This file was modified externally.'}
+                        : 'This file was modified externally. Your unsaved changes may conflict.'}
                     </span>
                     {selectedPlanChange.changeType !== 'deleted' && (
                       <button
@@ -469,17 +446,13 @@ export function PlansPanel({ workingDir, isOpen, onClose, width, onWidthChange }
                 )}
 
                 {/* Content area */}
-                <div className="flex-1 overflow-auto p-4">
-                  {isEditing ? (
-                    <textarea
-                      value={editContent}
-                      onChange={(e) => setEditContent(e.target.value)}
-                      className="w-full h-full bg-surface-900 border border-surface-600 rounded-lg p-3 text-sm font-mono text-theme-primary resize-none focus:outline-none focus:ring-2 focus:ring-accent/50"
-                      spellCheck={false}
-                    />
-                  ) : (
-                    <MarkdownRenderer content={selectedPlan.content} />
-                  )}
+                <div className="flex-1 overflow-hidden">
+                  <MDXPlanEditor
+                    ref={editorRef}
+                    markdown={editContent}
+                    onChange={setEditContent}
+                    placeholder="Start writing your plan..."
+                  />
                 </div>
               </>
             ) : (

@@ -130,6 +130,7 @@ export function PlansPanel({ workingDir, isOpen, onClose, width, onWidthChange }
       await plansApi.update(selectedPlan.id, { content: contentToSave });
       setSelectedPlan({ ...selectedPlan, content: contentToSave, isDirty: false });
       setEditContent(contentToSave);
+      toast.success('Plan saved');
       fetchPlans(); // Refresh the list
     } catch {
       // Error toast shown by API layer

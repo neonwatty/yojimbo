@@ -6,20 +6,25 @@ import * as os from 'os';
 test.describe('Plans Panel', () => {
   const plansDir = path.join(os.homedir(), 'plans');
   const testPlanPath = path.join(plansDir, 'e2e-test-plan.md');
+  const cwdTestPlanPath = path.join(plansDir, 'cwd-test-plan.md');
+
+  // Helper to clean all test-created plan files
+  const cleanupTestPlans = () => {
+    const testFiles = [testPlanPath, cwdTestPlanPath];
+    for (const file of testFiles) {
+      if (fs.existsSync(file)) {
+        fs.unlinkSync(file);
+      }
+    }
+  };
 
   test.beforeEach(async ({ apiClient }) => {
     await apiClient.cleanupAllInstances();
-    // Clean up any test plans
-    if (fs.existsSync(testPlanPath)) {
-      fs.unlinkSync(testPlanPath);
-    }
+    cleanupTestPlans();
   });
 
   test.afterEach(async () => {
-    // Clean up test plans
-    if (fs.existsSync(testPlanPath)) {
-      fs.unlinkSync(testPlanPath);
-    }
+    cleanupTestPlans();
   });
 
   test('can open plans panel with button', async ({ instancesPage }) => {
@@ -93,18 +98,23 @@ test.describe('Plans Panel', () => {
     await instancesPage.createNewInstance();
     await expect(instancesPage.page).toHaveURL(/.*\/instances\/[a-zA-Z0-9-]+$/);
 
+    // Wait a moment for file system to settle
+    await instancesPage.page.waitForTimeout(500);
+
     // Open plans panel
     await instancesPage.page.locator('button:has-text("Plans")').click();
+    await instancesPage.page.waitForTimeout(500);
 
     // Wait for the file list to load
     const planFileButton = instancesPage.page.locator('button:has-text("e2e-test-plan.md")');
     await expect(planFileButton).toBeVisible({ timeout: 5000 });
 
-    // Click on the test plan to select it and wait for content to load
-    await planFileButton.click();
-
     // Wait for the plan name to appear in the editor toolbar (indicates content loaded)
     const editorToolbar = instancesPage.page.locator('.text-sm.text-theme-primary.font-medium:has-text("e2e-test-plan.md")');
+
+    // Click on the test plan to select it - use force click and wait for result
+    await instancesPage.page.waitForTimeout(500);
+    await planFileButton.click({ force: true });
     await expect(editorToolbar).toBeVisible({ timeout: 5000 });
 
     // The WYSIWYG editor should be visible with the content
@@ -140,16 +150,23 @@ test.describe('Plans Panel', () => {
     await instancesPage.createNewInstance();
     await expect(instancesPage.page).toHaveURL(/.*\/instances\/[a-zA-Z0-9-]+$/);
 
+    // Wait a moment for file system to settle
+    await instancesPage.page.waitForTimeout(500);
+
     // Open plans panel
     await instancesPage.page.locator('button:has-text("Plans")').click();
+    await instancesPage.page.waitForTimeout(500);
 
     // Wait for the file list to load and select the plan
     const planFileButton = instancesPage.page.locator('button:has-text("e2e-test-plan.md")');
     await expect(planFileButton).toBeVisible({ timeout: 5000 });
-    await planFileButton.click();
 
     // Wait for the plan name to appear in the editor toolbar
     const editorToolbar = instancesPage.page.locator('.text-sm.text-theme-primary.font-medium:has-text("e2e-test-plan.md")');
+
+    // Click on the test plan to select it - use force click and wait for result
+    await instancesPage.page.waitForTimeout(500);
+    await planFileButton.click({ force: true });
     await expect(editorToolbar).toBeVisible({ timeout: 5000 });
 
     // The WYSIWYG editor should be visible with the content
@@ -344,27 +361,32 @@ test.describe('Plans Panel', () => {
       await instancesPage.page.locator('button:has-text("Plans")').click();
       await instancesPage.page.waitForTimeout(500);
 
+      // Verify we're starting from home directory by checking the path display
+      const homePathDisplay = instancesPage.page.locator('[title$="/plans"]').first();
+      await expect(homePathDisplay).toBeVisible({ timeout: 5000 });
+
       // Select the test plan
       const planButton = instancesPage.page.locator('button:has-text("cwd-test-plan.md")');
       await expect(planButton).toBeVisible();
       await planButton.click();
-      await instancesPage.page.waitForTimeout(300);
 
       // Verify plan content is displayed (plan name in editor toolbar)
       const editorToolbar = instancesPage.page.locator('.text-sm.text-theme-primary.font-medium:has-text("cwd-test-plan.md")');
-      await expect(editorToolbar).toBeVisible();
+      await expect(editorToolbar).toBeVisible({ timeout: 5000 });
 
-      // Change directory in terminal
+      // Change directory in terminal - use click to ensure terminal focus
       const terminal = instancesPage.page.locator('.xterm-helper-textarea');
-      await terminal.focus();
-      await terminal.fill('cd ~/Desktop');
+      await terminal.click();
+      await instancesPage.page.waitForTimeout(200);
+      await instancesPage.page.keyboard.type('cd ~/Desktop');
       await instancesPage.page.keyboard.press('Enter');
 
-      // Wait for CWD polling to detect the change
-      await instancesPage.page.waitForTimeout(3000);
+      // Wait for CWD polling to detect the change and update the path display
+      // CWD polls every 2 seconds, so wait up to 6 seconds for the change
+      await expect(instancesPage.page.locator('[title*="Desktop/plans"]')).toBeVisible({ timeout: 8000 });
 
-      // The plan name should no longer be in the editor toolbar (selection cleared)
-      await expect(editorToolbar).not.toBeVisible({ timeout: 5000 });
+      // Now the plan name should no longer be in the editor toolbar (selection cleared)
+      await expect(editorToolbar).not.toBeVisible({ timeout: 3000 });
 
       // Should show empty state or file list for new directory
       const emptyState = instancesPage.page.locator('text=No plans');

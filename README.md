@@ -9,7 +9,6 @@ A local web application for managing multiple Claude Code terminal instances wit
 - **Status Tracking** - Real-time Claude status via hooks (working, awaiting, idle)
 - **Session History** - Automatically imports sessions from `~/.claude/projects/`
 - **Plans Panel** - Browse and edit markdown files in `{workingDir}/plans/`
-- **Notes Panel** - Browse and edit markdown/MDX files in `{workingDir}/notes/`
 - **Keyboard Shortcuts** - Quick navigation, panel toggles, and vim-like sequences
 - **Theme Support** - Dark and light themes
 
@@ -122,9 +121,8 @@ make hooks-check      # Verify hook installation
 |----------|--------|
 | `Cmd+B` | Toggle sessions sidebar |
 | `Cmd+E` | Toggle plans panel |
-| `Cmd+Shift+N` | Toggle notes panel |
 | `Cmd+\`` | Toggle terminal panel |
-| `Cmd+S` | Save current file (in editor panels) |
+| `Cmd+S` | Save current file (in editor panel) |
 
 ## Architecture
 
@@ -180,14 +178,6 @@ cc-hard-core/
 - `GET /api/plans/:path` - Read plan file
 - `PUT /api/plans/:path` - Update plan file
 - `POST /api/plans` - Create plan file
-
-### Notes
-- `GET /api/notes?workingDir=` - List notes
-- `GET /api/notes/:id` - Read note file
-- `PUT /api/notes/:id` - Update note file
-- `POST /api/notes` - Create note file
-- `POST /api/notes/init` - Initialize notes directory
-- `DELETE /api/notes/:id` - Delete note file
 
 ### Settings
 - `GET /api/settings` - Get settings

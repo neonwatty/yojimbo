@@ -41,7 +41,6 @@ const shortcuts = [
     items: [
       { keys: ['⌘', 'B'], description: 'Toggle sessions sidebar' },
       { keys: ['⌘', 'E'], description: 'Toggle plans panel' },
-      { keys: ['⌘', '⇧', 'N'], description: 'Toggle notes panel' },
       { keys: ['⌘', '`'], description: 'Toggle terminal panel' },
     ],
   },

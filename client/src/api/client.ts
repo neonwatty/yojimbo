@@ -8,9 +8,6 @@ import type {
   Plan,
   CreatePlanRequest,
   UpdatePlanRequest,
-  Note,
-  CreateNoteRequest,
-  UpdateNoteRequest,
   ApiResponse,
   PaginatedResponse,
   Settings,
@@ -124,38 +121,6 @@ export const plansApi = {
 
   init: (workingDir: string) =>
     request<ApiResponse<{ created: boolean }>>('/plans/init', {
-      method: 'POST',
-      body: JSON.stringify({ workingDir }),
-    }),
-};
-
-// Notes API
-export const notesApi = {
-  list: (workingDir: string) =>
-    request<ApiResponse<Note[]>>(`/notes?workingDir=${encodeURIComponent(workingDir)}`),
-
-  get: (path: string) =>
-    request<ApiResponse<Note>>(`/notes/${encodeURIComponent(path)}`),
-
-  create: (data: CreateNoteRequest) =>
-    request<ApiResponse<Note>>('/notes', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }),
-
-  update: (path: string, data: UpdateNoteRequest) =>
-    request<ApiResponse<Note>>(`/notes/${encodeURIComponent(path)}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    }),
-
-  delete: (path: string) =>
-    request<ApiResponse<void>>(`/notes/${encodeURIComponent(path)}`, {
-      method: 'DELETE',
-    }),
-
-  init: (workingDir: string) =>
-    request<ApiResponse<{ created: boolean }>>('/notes/init', {
       method: 'POST',
       body: JSON.stringify({ workingDir }),
     }),

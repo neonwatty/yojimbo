@@ -30,7 +30,6 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
   const {
     toggleLeftSidebar,
     toggleEditorPanel,
-    toggleNotesPanel,
     toggleTerminalPanel,
     setShowSettingsModal,
     setShowShortcutsModal,
@@ -101,14 +100,6 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
         keywords: ['editor', 'markdown'],
       },
       {
-        id: 'toggle-notes',
-        label: 'Toggle Notes Panel',
-        shortcut: ['Cmd', 'Shift', 'N'],
-        category: 'panels',
-        action: toggleNotesPanel,
-        keywords: ['markdown', 'documentation'],
-      },
-      {
         id: 'toggle-terminal',
         label: 'Toggle Terminal',
         shortcut: ['Cmd', '`'],
@@ -147,7 +138,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
     }));
 
     return [...baseActions, ...instanceActions];
-  }, [instances, navigate, toggleLeftSidebar, toggleEditorPanel, toggleNotesPanel, toggleTerminalPanel, setShowSettingsModal, setShowShortcutsModal]);
+  }, [instances, navigate, toggleLeftSidebar, toggleEditorPanel, toggleTerminalPanel, setShowSettingsModal, setShowShortcutsModal]);
 
   // Filter actions based on query
   const filteredActions = useMemo(() => {

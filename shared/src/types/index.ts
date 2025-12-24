@@ -72,26 +72,6 @@ export interface UpdatePlanRequest {
   content: string;
 }
 
-// Note types
-export interface Note {
-  id: string;
-  name: string;
-  path: string;
-  folder: string | null;
-  content: string;
-  isDirty: boolean;
-}
-
-export interface CreateNoteRequest {
-  workingDir: string;
-  name: string;
-  content?: string;
-}
-
-export interface UpdateNoteRequest {
-  content: string;
-}
-
 // Hook event types
 export interface HookStatusEvent {
   event: 'working' | 'idle';
@@ -139,7 +119,7 @@ export type WSServerMessageType =
   | 'error';
 
 export interface FileChangeEvent {
-  fileType: 'note' | 'plan';
+  fileType: 'plan';
   fileId: string;
   filePath: string;
   workingDir: string;

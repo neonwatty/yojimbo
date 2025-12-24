@@ -99,8 +99,8 @@ export const plansApi = {
   list: (workingDir: string) =>
     request<ApiResponse<Plan[]>>(`/plans?workingDir=${encodeURIComponent(workingDir)}`),
 
-  get: (path: string) =>
-    request<ApiResponse<Plan>>(`/plans/${encodeURIComponent(path)}`),
+  get: (id: string) =>
+    request<ApiResponse<Plan>>(`/plans/${encodeURIComponent(id)}`),
 
   create: (data: CreatePlanRequest) =>
     request<ApiResponse<Plan>>('/plans', {
@@ -108,14 +108,14 @@ export const plansApi = {
       body: JSON.stringify(data),
     }),
 
-  update: (path: string, data: UpdatePlanRequest) =>
-    request<ApiResponse<Plan>>(`/plans/${encodeURIComponent(path)}`, {
+  update: (id: string, data: UpdatePlanRequest) =>
+    request<ApiResponse<Plan>>(`/plans/${encodeURIComponent(id)}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     }),
 
-  delete: (path: string) =>
-    request<ApiResponse<void>>(`/plans/${encodeURIComponent(path)}`, {
+  delete: (id: string) =>
+    request<ApiResponse<void>>(`/plans/${encodeURIComponent(id)}`, {
       method: 'DELETE',
     }),
 

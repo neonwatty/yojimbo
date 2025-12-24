@@ -124,7 +124,7 @@ export function PlansPanel({ workingDir, isOpen, onClose, width, onWidthChange }
 
   const handleSelectPlan = async (plan: Plan) => {
     try {
-      const response = await plansApi.get(plan.path);
+      const response = await plansApi.get(plan.id);
       if (response.data) {
         setSelectedPlan(response.data);
         setEditContent(response.data.content);
@@ -141,7 +141,7 @@ export function PlansPanel({ workingDir, isOpen, onClose, width, onWidthChange }
       const contentToSave = editorRef.current?.getMarkdown() || editContent;
       // Mark file as saved to prevent file watcher from showing external change notification
       markAsSaved(selectedPlan.path);
-      await plansApi.update(selectedPlan.path, { content: contentToSave });
+      await plansApi.update(selectedPlan.id, { content: contentToSave });
       setSelectedPlan({ ...selectedPlan, content: contentToSave, isDirty: false });
       setEditContent(contentToSave);
       fetchPlans(); // Refresh the list
@@ -153,7 +153,7 @@ export function PlansPanel({ workingDir, isOpen, onClose, width, onWidthChange }
   const handleReloadPlan = async () => {
     if (!selectedPlan || !selectedPlanChange) return;
     try {
-      const response = await plansApi.get(selectedPlan.path);
+      const response = await plansApi.get(selectedPlan.id);
       if (response.data) {
         setSelectedPlan(response.data);
         setEditContent(response.data.content);

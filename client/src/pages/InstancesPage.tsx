@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useInstancesStore } from '../store/instancesStore';
 import { useUIStore } from '../store/uiStore';
@@ -19,7 +19,16 @@ export default function InstancesPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { instances, setActiveInstanceId, updateInstance, removeInstance, reorderInstances, currentCwds } = useInstancesStore();
-  const { layout, editorPanelOpen, toggleEditorPanel, setEditorPanelOpen, notesPanelOpen, toggleNotesPanel, setNotesPanelOpen, notesPanelWidth, setNotesPanelWidth, terminalPanelOpen, toggleTerminalPanel, panelWidth, setPanelWidth } = useUIStore();
+  const { layout, editorPanelOpen, toggleEditorPanel, setEditorPanelOpen, notesPanelOpen, toggleNotesPanel, setNotesPanelOpen, notesPanelWidth, setNotesPanelWidth, terminalPanelOpen, toggleTerminalPanel, setTerminalPanelOpen, panelWidth, setPanelWidth } = useUIStore();
+
+  // Reset panels to terminal-only when navigating to an instance
+  useEffect(() => {
+    if (id) {
+      setEditorPanelOpen(false);
+      setNotesPanelOpen(false);
+      setTerminalPanelOpen(true);
+    }
+  }, [id, setEditorPanelOpen, setNotesPanelOpen, setTerminalPanelOpen]);
   const { theme } = useSettingsStore();
 
   // Editing state

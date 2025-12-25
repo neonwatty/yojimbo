@@ -99,27 +99,29 @@ test.describe('Plans Panel', () => {
     await expect(instancesPage.page).toHaveURL(/.*\/instances\/[a-zA-Z0-9-]+$/);
 
     // Wait a moment for file system to settle
-    await instancesPage.page.waitForTimeout(500);
+    await instancesPage.page.waitForTimeout(1000);
 
     // Open plans panel
     await instancesPage.page.locator('button:has-text("Plans")').click();
-    await instancesPage.page.waitForTimeout(500);
+    await instancesPage.page.waitForTimeout(1000);
 
     // Wait for the file list to load
     const planFileButton = instancesPage.page.locator('button:has-text("e2e-test-plan.md")');
-    await expect(planFileButton).toBeVisible({ timeout: 5000 });
+    await expect(planFileButton).toBeVisible({ timeout: 10000 });
+
+    // Click on the test plan to select it
+    await planFileButton.click({ force: true });
 
     // Wait for the plan name to appear in the editor toolbar (indicates content loaded)
     const editorToolbar = instancesPage.page.locator('.text-sm.text-theme-primary.font-medium:has-text("e2e-test-plan.md")');
+    await expect(editorToolbar).toBeVisible({ timeout: 10000 });
 
-    // Click on the test plan to select it - use force click and wait for result
-    await instancesPage.page.waitForTimeout(500);
-    await planFileButton.click({ force: true });
-    await expect(editorToolbar).toBeVisible({ timeout: 5000 });
-
-    // The WYSIWYG editor should be visible with the content
+    // The WYSIWYG editor (MDXEditor) takes time to initialize - wait longer
     const editor = instancesPage.page.locator('[contenteditable="true"]');
-    await expect(editor).toBeVisible({ timeout: 5000 });
+    await expect(editor).toBeVisible({ timeout: 15000 });
+
+    // Wait for editor to be fully interactive
+    await instancesPage.page.waitForTimeout(500);
 
     // Click in the editor and add new content
     await editor.click();

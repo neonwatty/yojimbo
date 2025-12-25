@@ -1,54 +1,34 @@
-# Yojimbo 用心棒
+# Yojimbo
 
-A local web application for managing multiple Claude Code terminal instances with real-time status tracking, session history, and plans management.
+Yojimbo is a minimalist IDE for Claude Code power users — status-aware terminals, inline plan editing, and live mockup previews in a unified workspace.
 
-*The lone samurai who handles everything.*
+As usage scales, managing multiple terminals, tabs, tmux splits, markdown plans, and mockups becomes a serious productivity bottleneck. Yojimbo unblocks this by providing one place to:
 
-## Features
+- **Manage terminal instances** — with hooks into Claude Code so you always know which are churning, idle, or awaiting input
+- **View markdown plans** — keep your roadmaps and specs visible alongside active work
+- **Preview mockups** — render HTML files without leaving the environment
 
-- **Real Terminal Instances** - Full xterm.js terminals via node-pty with WebSocket I/O
-- **Instance Management** - Card/list views with drag-drop reordering, pin favorites
-- **Status Tracking** - Real-time Claude status via hooks (working, awaiting, idle)
-- **Session History** - Automatically imports sessions from `~/.claude/projects/`
-- **Plans Panel** - Browse and edit markdown files in `{workingDir}/plans/`
-- **Keyboard Shortcuts** - Quick navigation, panel toggles, and vim-like sequences
-- **Theme Support** - Dark and light themes
+## Getting Started
 
-## Quick Start
+**Prerequisites:** Node.js 18+ and npm 9+
 
 ```bash
-# Install dependencies
-npm install
-
-# Start development servers
-make dev
-
-# Visit http://localhost:5173
-```
-
-## Installation
-
-### Prerequisites
-
-- Node.js 18+
-- npm 9+
-
-### Setup
-
-```bash
-# Clone the repository
-git clone https://github.com/neonwatty/cc-hard-core.git
-cd cc-hard-core
-
-# Install dependencies
+# Clone and install
+git clone https://github.com/neonwatty/yojimbo.git
+cd yojimbo
 npm install
 
 # Initialize the database
 make db-migrate
 
-# Install Claude Code hooks (optional, enables status tracking)
+# Install Claude Code hooks (this is what lights up the status indicators)
 make hooks-install
+
+# Start it up
+make dev
 ```
+
+Open http://localhost:5173 and you're in.
 
 ## Usage
 

@@ -28,6 +28,7 @@ function App() {
     setShowCommandPalette,
     toggleLeftSidebar,
     toggleEditorPanel,
+    toggleMockupsPanel,
     toggleTerminalPanel,
   } = useUIStore();
 
@@ -121,6 +122,13 @@ function App() {
         return;
       }
 
+      // Cmd/Ctrl + M: Toggle mockups panel
+      if (isMod && e.key === 'm') {
+        e.preventDefault();
+        toggleMockupsPanel();
+        return;
+      }
+
       // Cmd/Ctrl + `: Toggle terminal panel
       if (isMod && e.key === '`') {
         e.preventDefault();
@@ -173,6 +181,7 @@ function App() {
     showCommandPalette,
     toggleLeftSidebar,
     toggleEditorPanel,
+    toggleMockupsPanel,
     toggleTerminalPanel,
     setShowShortcutsModal,
     setShowSettingsModal,

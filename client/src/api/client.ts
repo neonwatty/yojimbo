@@ -8,6 +8,7 @@ import type {
   Plan,
   CreatePlanRequest,
   UpdatePlanRequest,
+  Mockup,
   ApiResponse,
   PaginatedResponse,
   Settings,
@@ -121,6 +122,21 @@ export const plansApi = {
 
   init: (workingDir: string) =>
     request<ApiResponse<{ created: boolean }>>('/plans/init', {
+      method: 'POST',
+      body: JSON.stringify({ workingDir }),
+    }),
+};
+
+// Mockups API
+export const mockupsApi = {
+  list: (workingDir: string) =>
+    request<ApiResponse<Mockup[]>>(`/mockups?workingDir=${encodeURIComponent(workingDir)}`),
+
+  get: (id: string) =>
+    request<ApiResponse<Mockup>>(`/mockups/${encodeURIComponent(id)}`),
+
+  init: (workingDir: string) =>
+    request<ApiResponse<{ created: boolean }>>('/mockups/init', {
       method: 'POST',
       body: JSON.stringify({ workingDir }),
     }),

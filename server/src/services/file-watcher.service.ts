@@ -4,10 +4,12 @@ import * as crypto from 'crypto';
 import { broadcast } from '../websocket/server.js';
 import type { FileChangeEvent, WSServerMessage } from '@cc-orchestrator/shared';
 
+type FileType = 'plan' | 'mockup';
+
 interface WatchedDirectory {
   watcher: FSWatcher;
   workingDir: string;
-  fileType: 'plan';
+  fileType: FileType;
 }
 
 // Track active watchers by working directory + type
@@ -17,7 +19,7 @@ const watchers = new Map<string, WatchedDirectory>();
 const debounceTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
 // Get a unique key for a watcher
-function getWatcherKey(workingDir: string, fileType: 'plan'): string {
+function getWatcherKey(workingDir: string, fileType: FileType): string {
   return `${workingDir}:${fileType}`;
 }
 
@@ -41,8 +43,18 @@ function debounceFileChange(filePath: string, callback: () => void, delay = 100)
   debounceTimers.set(filePath, timer);
 }
 
-// Start watching a directory for plans
-export function startWatching(workingDir: string, fileType: 'plan'): void {
+// Get the subdirectory and glob pattern for a file type
+function getWatchConfig(fileType: FileType): { subdir: string; pattern: string } {
+  switch (fileType) {
+    case 'plan':
+      return { subdir: 'plans', pattern: '**/*.md' };
+    case 'mockup':
+      return { subdir: 'mockups', pattern: '**/*.{html,htm}' };
+  }
+}
+
+// Start watching a directory for plans or mockups
+export function startWatching(workingDir: string, fileType: FileType): void {
   const key = getWatcherKey(workingDir, fileType);
 
   // Already watching this directory
@@ -50,11 +62,12 @@ export function startWatching(workingDir: string, fileType: 'plan'): void {
     return;
   }
 
-  const watchPath = path.join(workingDir, 'plans');
+  const config = getWatchConfig(fileType);
+  const watchPath = path.join(workingDir, config.subdir);
 
   console.log(`👁️ Starting file watcher for ${watchPath}`);
 
-  const watcher = chokidar.watch(`${watchPath}/**/*.md`, {
+  const watcher = chokidar.watch(`${watchPath}/${config.pattern}`, {
     ignoreInitial: true,
     persistent: true,
     awaitWriteFinish: {
@@ -113,12 +126,13 @@ export function startWatching(workingDir: string, fileType: 'plan'): void {
 }
 
 // Stop watching a specific directory
-export function stopWatching(workingDir: string, fileType: 'plan'): void {
+export function stopWatching(workingDir: string, fileType: FileType): void {
   const key = getWatcherKey(workingDir, fileType);
   const watchedDir = watchers.get(key);
 
   if (watchedDir) {
-    console.log(`👁️ Stopping file watcher for ${workingDir}/plans`);
+    const config = getWatchConfig(fileType);
+    console.log(`👁️ Stopping file watcher for ${workingDir}/${config.subdir}`);
     watchedDir.watcher.close();
     watchers.delete(key);
   }
@@ -140,6 +154,6 @@ export function stopAllWatchers(): void {
 }
 
 // Check if a directory is being watched
-export function isWatching(workingDir: string, fileType: 'plan'): boolean {
+export function isWatching(workingDir: string, fileType: FileType): boolean {
   return watchers.has(getWatcherKey(workingDir, fileType));
 }

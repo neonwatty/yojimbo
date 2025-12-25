@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 import instancesRouter from './routes/instances.js';
 import sessionsRouter from './routes/sessions.js';
 import plansRouter from './routes/plans.js';
+import mockupsRouter from './routes/mockups.js';
 import hooksRouter from './routes/hooks.js';
 import settingsRouter from './routes/settings.js';
 import CONFIG from './config/index.js';
@@ -36,6 +37,7 @@ app.get('/api/config', (_req, res) => {
 app.use('/api/instances', instancesRouter);
 app.use('/api/sessions', sessionsRouter);
 app.use('/api/plans', plansRouter);
+app.use('/api/mockups', mockupsRouter);
 app.use('/api/hooks', hooksRouter);
 app.use('/api/settings', settingsRouter);
 

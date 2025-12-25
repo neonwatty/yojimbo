@@ -142,7 +142,7 @@ export function useTerminal(options: UseTerminalOptions = {}) {
   useEffect(() => {
     if (terminalRef.current && isInitializedRef.current) {
       terminalRef.current.options.theme = theme === 'dark' ? darkTheme : lightTheme;
-      terminalRef.current.refresh();
+      terminalRef.current.refresh(0, terminalRef.current.rows - 1);
     }
   }, [theme]);
 

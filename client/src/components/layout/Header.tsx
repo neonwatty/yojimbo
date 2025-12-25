@@ -26,7 +26,7 @@ export default function Header() {
           onClick={() => navigate('/')}
           title="Go to Home"
         >
-          <span className="text-accent font-extrabold">Y</span><span className="text-accent font-extrabold">o</span>jimb<span className="text-accent font-extrabold">o</span>
+          <span className="text-accent font-extrabold">Yo</span>jimbo
         </h1>
         <div className="flex items-center gap-3">
           <div className="text-xs text-theme-muted font-mono">

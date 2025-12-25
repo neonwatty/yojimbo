@@ -269,14 +269,21 @@ export default function InstancesPage() {
 
         {/* Terminal + Plans Panel */}
         <div className="flex-1 flex overflow-hidden">
-          {/* Terminal */}
+          {/* Terminals - render ALL but hide inactive ones to preserve history */}
           {terminalPanelOpen && (
-            <div className="flex-1 overflow-hidden">
-              <Terminal
-                key={instance.id}
-                instanceId={instance.id}
-                theme={theme === 'dark' ? 'dark' : 'light'}
-              />
+            <div className="flex-1 overflow-hidden relative">
+              {instances.map((inst) => (
+                <div
+                  key={inst.id}
+                  className="absolute inset-0"
+                  style={{ display: inst.id === instance.id ? 'block' : 'none' }}
+                >
+                  <Terminal
+                    instanceId={inst.id}
+                    theme={theme === 'dark' ? 'dark' : 'light'}
+                  />
+                </div>
+              ))}
             </div>
           )}
 

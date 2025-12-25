@@ -55,6 +55,10 @@ export function useInstances() {
       setCurrentCwd(instanceId, cwd);
     });
 
+    // Re-fetch instances after WebSocket connects to catch any status updates
+    // that occurred before we subscribed (fixes race condition)
+    fetchInstances();
+
     return () => {
       unsubscribeCreated();
       unsubscribeUpdated();
@@ -62,7 +66,7 @@ export function useInstances() {
       unsubscribeStatus();
       unsubscribeCwd();
     };
-  }, [isConnected, subscribe, addInstance, updateInstance, removeInstance, setCurrentCwd]);
+  }, [isConnected, subscribe, addInstance, updateInstance, removeInstance, setCurrentCwd, fetchInstances]);
 
   // Fetch instances on mount
   useEffect(() => {

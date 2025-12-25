@@ -72,8 +72,8 @@ test.describe('Terminal', () => {
     await instancesPage.page.goto(`/instances/${instance1.id}`);
     await instancesPage.page.waitForTimeout(2000);
 
-    // Type unique command in first instance
-    const terminal1 = instancesPage.page.locator('.xterm-screen');
+    // Type unique command in first instance (use :visible to get only the displayed terminal)
+    const terminal1 = instancesPage.page.locator('.xterm-screen:visible').first();
     await terminal1.click();
     await instancesPage.page.keyboard.type('echo "UNIQUE-OUTPUT-INSTANCE-1"');
     await instancesPage.page.keyboard.press('Enter');
@@ -84,7 +84,7 @@ test.describe('Terminal', () => {
     await instancesPage.page.waitForTimeout(2000);
 
     // Type unique command in second instance
-    const terminal2 = instancesPage.page.locator('.xterm-screen');
+    const terminal2 = instancesPage.page.locator('.xterm-screen:visible').first();
     await terminal2.click();
     await instancesPage.page.keyboard.type('echo "UNIQUE-OUTPUT-INSTANCE-2"');
     await instancesPage.page.keyboard.press('Enter');
@@ -95,8 +95,8 @@ test.describe('Terminal', () => {
     await instancesPage.page.waitForTimeout(2000);
 
     // Verify first instance still shows its output (history persisted)
-    // Get terminal text content
-    const terminalContent = await instancesPage.page.locator('.xterm-screen').textContent();
+    // Get terminal text content from the visible terminal
+    const terminalContent = await instancesPage.page.locator('.xterm-screen:visible').first().textContent();
     expect(terminalContent).toContain('UNIQUE-OUTPUT-INSTANCE-1');
   });
 
@@ -111,7 +111,7 @@ test.describe('Terminal', () => {
     await instancesPage.page.goto(`/instances/${instance1.id}`);
     await instancesPage.page.waitForTimeout(2000);
 
-    const terminal1 = instancesPage.page.locator('.xterm-screen');
+    const terminal1 = instancesPage.page.locator('.xterm-screen:visible').first();
     await terminal1.click();
     await instancesPage.page.keyboard.type('echo "ISOLATION-TEST-ONLY-IN-1"');
     await instancesPage.page.keyboard.press('Enter');
@@ -121,8 +121,8 @@ test.describe('Terminal', () => {
     await instancesPage.page.locator(`text=isolation-test-2`).click();
     await instancesPage.page.waitForTimeout(2000);
 
-    // Second instance should NOT contain first instance's output
-    const terminal2Content = await instancesPage.page.locator('.xterm-screen').textContent();
+    // Second instance should NOT contain first instance's output (check visible terminal only)
+    const terminal2Content = await instancesPage.page.locator('.xterm-screen:visible').first().textContent();
     expect(terminal2Content).not.toContain('ISOLATION-TEST-ONLY-IN-1');
   });
 });

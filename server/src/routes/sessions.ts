@@ -4,8 +4,35 @@ import type { Session, SessionMessage } from '@cc-orchestrator/shared';
 
 const router = Router();
 
+// Database row types
+interface SessionRow {
+  id: string;
+  instance_id: string;
+  project_path: string;
+  jsonl_path: string;
+  started_at: string;
+  ended_at: string | null;
+  message_count: number;
+  token_count: number;
+  summary: string | null;
+}
+
+interface SessionMessageRow {
+  id: number;
+  session_id: string;
+  message_type: 'user' | 'assistant' | 'tool';
+  preview: string | null;
+  token_count: number | null;
+  tool_name: string | null;
+  timestamp: string;
+}
+
+interface CountResult {
+  count: number;
+}
+
 // Helper to convert DB row to Session
-function rowToSession(row: any): Session {
+function rowToSession(row: SessionRow): Session {
   return {
     id: row.id,
     instanceId: row.instance_id,
@@ -20,7 +47,7 @@ function rowToSession(row: any): Session {
 }
 
 // Helper to convert DB row to SessionMessage
-function rowToMessage(row: any): SessionMessage {
+function rowToMessage(row: SessionMessageRow): SessionMessage {
   return {
     id: row.id,
     sessionId: row.session_id,
@@ -42,9 +69,9 @@ router.get('/', (req, res) => {
 
     const rows = db
       .prepare('SELECT * FROM sessions ORDER BY started_at DESC LIMIT ? OFFSET ?')
-      .all(pageSize, offset);
+      .all(pageSize, offset) as SessionRow[];
 
-    const total = db.prepare('SELECT COUNT(*) as count FROM sessions').get() as any;
+    const total = db.prepare('SELECT COUNT(*) as count FROM sessions').get() as CountResult;
 
     res.json({
       success: true,
@@ -79,7 +106,7 @@ router.get('/search', (req, res) => {
         ORDER BY started_at DESC
         LIMIT 50
       `)
-      .all(`%${query}%`, `%${query}%`);
+      .all(`%${query}%`, `%${query}%`) as SessionRow[];
 
     res.json({ success: true, data: rows.map(rowToSession) });
   } catch (error) {
@@ -92,7 +119,7 @@ router.get('/search', (req, res) => {
 router.get('/:id', (req, res) => {
   try {
     const db = getDatabase();
-    const row = db.prepare('SELECT * FROM sessions WHERE id = ?').get(req.params.id);
+    const row = db.prepare('SELECT * FROM sessions WHERE id = ?').get(req.params.id) as SessionRow | undefined;
 
     if (!row) {
       return res.status(404).json({ success: false, error: 'Session not found' });
@@ -126,11 +153,11 @@ router.get('/:id/messages', (req, res) => {
         ORDER BY timestamp ASC
         LIMIT ? OFFSET ?
       `)
-      .all(req.params.id, pageSize, offset);
+      .all(req.params.id, pageSize, offset) as SessionMessageRow[];
 
     const total = db
       .prepare('SELECT COUNT(*) as count FROM session_messages WHERE session_id = ?')
-      .get(req.params.id) as any;
+      .get(req.params.id) as CountResult;
 
     res.json({
       success: true,

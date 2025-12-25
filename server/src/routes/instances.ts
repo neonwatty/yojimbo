@@ -3,12 +3,27 @@ import { v4 as uuidv4 } from 'uuid';
 import { getDatabase } from '../db/connection.js';
 import { ptyService } from '../services/pty.service.js';
 import { broadcast } from '../websocket/server.js';
-import type { Instance, CreateInstanceRequest, UpdateInstanceRequest } from '@cc-orchestrator/shared';
+import type { Instance, CreateInstanceRequest, UpdateInstanceRequest, InstanceStatus } from '@cc-orchestrator/shared';
 
 const router = Router();
 
+// Database row type for instances table
+interface InstanceRow {
+  id: string;
+  name: string;
+  working_dir: string;
+  status: InstanceStatus;
+  is_pinned: number;
+  display_order: number;
+  pid: number | null;
+  created_at: string;
+  updated_at: string;
+  closed_at: string | null;
+  last_cwd: string | null;
+}
+
 // Helper to convert DB row to Instance
-function rowToInstance(row: any): Instance {
+function rowToInstance(row: InstanceRow): Instance {
   return {
     id: row.id,
     name: row.name,
@@ -29,7 +44,7 @@ router.get('/', (_req, res) => {
     const db = getDatabase();
     const rows = db
       .prepare('SELECT * FROM instances WHERE closed_at IS NULL ORDER BY display_order, created_at DESC')
-      .all();
+      .all() as InstanceRow[];
 
     const instances = rows.map(rowToInstance);
     res.json({ success: true, data: instances });
@@ -52,7 +67,7 @@ router.post('/', (req, res) => {
     const id = uuidv4();
 
     // Get max display order
-    const maxOrder = db.prepare('SELECT MAX(display_order) as max FROM instances WHERE closed_at IS NULL').get() as any;
+    const maxOrder = db.prepare('SELECT MAX(display_order) as max FROM instances WHERE closed_at IS NULL').get() as { max: number | null } | undefined;
     const displayOrder = (maxOrder?.max || 0) + 1;
 
     // Spawn PTY
@@ -65,7 +80,7 @@ router.post('/', (req, res) => {
       VALUES (?, ?, ?, 'idle', ?, ?)
     `).run(id, name, workingDir, displayOrder, pid);
 
-    const row = db.prepare('SELECT * FROM instances WHERE id = ?').get(id);
+    const row = db.prepare('SELECT * FROM instances WHERE id = ?').get(id) as InstanceRow;
     const instance = rowToInstance(row);
 
     // Broadcast creation
@@ -82,7 +97,7 @@ router.post('/', (req, res) => {
 router.get('/:id', (req, res) => {
   try {
     const db = getDatabase();
-    const row = db.prepare('SELECT * FROM instances WHERE id = ?').get(req.params.id);
+    const row = db.prepare('SELECT * FROM instances WHERE id = ?').get(req.params.id) as InstanceRow | undefined;
 
     if (!row) {
       return res.status(404).json({ success: false, error: 'Instance not found' });
@@ -103,14 +118,14 @@ router.patch('/:id', (req, res) => {
     const { id } = req.params;
 
     // Check if instance exists
-    const existing = db.prepare('SELECT * FROM instances WHERE id = ?').get(id);
+    const existing = db.prepare('SELECT * FROM instances WHERE id = ?').get(id) as InstanceRow | undefined;
     if (!existing) {
       return res.status(404).json({ success: false, error: 'Instance not found' });
     }
 
     // Build update query
     const updates: string[] = [];
-    const values: any[] = [];
+    const values: (string | number)[] = [];
 
     if (name !== undefined) {
       updates.push('name = ?');
@@ -132,7 +147,7 @@ router.patch('/:id', (req, res) => {
       db.prepare(`UPDATE instances SET ${updates.join(', ')} WHERE id = ?`).run(...values);
     }
 
-    const row = db.prepare('SELECT * FROM instances WHERE id = ?').get(id);
+    const row = db.prepare('SELECT * FROM instances WHERE id = ?').get(id) as InstanceRow;
     const instance = rowToInstance(row);
 
     // Broadcast update
@@ -152,7 +167,7 @@ router.delete('/:id', (req, res) => {
     const { id } = req.params;
 
     // Check if instance exists
-    const existing = db.prepare('SELECT * FROM instances WHERE id = ?').get(id);
+    const existing = db.prepare('SELECT * FROM instances WHERE id = ?').get(id) as InstanceRow | undefined;
     if (!existing) {
       return res.status(404).json({ success: false, error: 'Instance not found' });
     }

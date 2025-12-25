@@ -3,6 +3,7 @@ import * as path from 'path';
 import * as crypto from 'crypto';
 import { broadcast } from '../websocket/server.js';
 import type { FileChangeEvent, WSServerMessage } from '@cc-orchestrator/shared';
+import { CONFIG } from '../config/index.js';
 
 type FileType = 'plan' | 'mockup';
 
@@ -29,7 +30,7 @@ function generateFileId(filePath: string): string {
 }
 
 // Debounce file change events
-function debounceFileChange(filePath: string, callback: () => void, delay = 100): void {
+function debounceFileChange(filePath: string, callback: () => void, delay = CONFIG.runtime.fileWatcherDebounceMs): void {
   const existingTimer = debounceTimers.get(filePath);
   if (existingTimer) {
     clearTimeout(existingTimer);

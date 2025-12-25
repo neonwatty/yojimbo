@@ -3,6 +3,7 @@ import { EventEmitter } from 'events';
 import os from 'os';
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import { CONFIG } from '../config/index.js';
 
 const execAsync = promisify(exec);
 
@@ -12,8 +13,8 @@ interface PTYInstance {
   workingDir: string;
 }
 
-// Terminal history buffer configuration
-const MAX_HISTORY_SIZE = 100000; // ~100KB per instance
+// Terminal history buffer configuration (configurable via env var)
+const MAX_HISTORY_SIZE = CONFIG.runtime.terminalMaxHistoryBytes;
 
 class PTYService extends EventEmitter {
   private instances: Map<string, PTYInstance> = new Map();

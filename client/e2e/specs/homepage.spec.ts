@@ -1,0 +1,116 @@
+import { test, expect } from '../fixtures/test-fixtures';
+
+test.describe('HomePage', () => {
+  test.beforeEach(async ({ apiClient }) => {
+    await apiClient.cleanupAllInstances();
+  });
+
+  test('can create new instance from HomePage button', async ({ basePage, apiClient }) => {
+    // Navigate to home page
+    await basePage.goto('/');
+
+    // Click the "New Instance" button
+    const newInstanceButton = basePage.page.locator('button:has-text("New Instance")');
+    await expect(newInstanceButton).toBeVisible();
+    await newInstanceButton.click();
+
+    // Should navigate to the new instance's expanded view
+    await basePage.page.waitForURL(/.*\/instances\/[a-f0-9-]+/);
+    await expect(basePage.page).toHaveURL(/.*\/instances\/[a-f0-9-]+/);
+
+    // Terminal should be visible (instance was created and PTY spawned)
+    const terminal = basePage.page.locator('.xterm-screen');
+    await expect(terminal).toBeVisible({ timeout: 10000 });
+  });
+
+  test('new instance appears in sidebar after creation from HomePage', async ({ basePage }) => {
+    // Navigate to home page
+    await basePage.goto('/');
+
+    // Click the "New Instance" button
+    const newInstanceButton = basePage.page.locator('button:has-text("New Instance")');
+    await newInstanceButton.click();
+
+    // Wait for navigation to instance
+    await basePage.page.waitForURL(/.*\/instances\/[a-f0-9-]+/);
+
+    // The new instance should appear in the sidebar
+    const sidebarInstance = basePage.page.locator('.group').filter({ hasText: 'instance-' }).first();
+    await expect(sidebarInstance).toBeVisible({ timeout: 5000 });
+  });
+
+  test('displays stats cards on HomePage', async ({ basePage, apiClient }) => {
+    // Create a test instance first
+    await apiClient.createInstance({ name: 'stats-test', workingDir: '~' });
+
+    // Navigate to home page
+    await basePage.goto('/');
+
+    // Should show stats cards (use exact text match to avoid duplicates)
+    const mainContent = basePage.page.locator('.flex-1.overflow-auto');
+    await expect(mainContent.getByText('Total', { exact: true })).toBeVisible();
+    await expect(mainContent.getByText('Working', { exact: true })).toBeVisible();
+    await expect(mainContent.getByText('Awaiting', { exact: true })).toBeVisible();
+    await expect(mainContent.getByText('Errors', { exact: true })).toBeVisible();
+  });
+
+  test('View All button navigates to instances page', async ({ basePage }) => {
+    await basePage.goto('/');
+
+    // Click "View All" button
+    const viewAllButton = basePage.page.locator('button:has-text("View All")');
+    await expect(viewAllButton).toBeVisible();
+    await viewAllButton.click();
+
+    // Should navigate to instances page
+    await expect(basePage.page).toHaveURL(/.*\/instances$/);
+  });
+
+  test('pinned instances appear in Pinned section', async ({ basePage, apiClient }) => {
+    // Create a pinned instance
+    const instance = await apiClient.createInstance({ name: 'pinned-test', workingDir: '~' });
+    await apiClient.updateInstance(instance.id, { isPinned: true });
+
+    // Navigate to home page
+    await basePage.goto('/');
+
+    // Should show pinned section with the instance (in main content area, not sidebar)
+    const mainContent = basePage.page.locator('.flex-1.overflow-auto');
+    await expect(mainContent.getByText('Pinned Instances')).toBeVisible();
+    await expect(mainContent.getByText('pinned-test')).toBeVisible();
+  });
+
+  test('clicking pinned instance navigates to it', async ({ basePage, apiClient }) => {
+    // Create a pinned instance
+    const instance = await apiClient.createInstance({ name: 'pinned-nav-test', workingDir: '~' });
+    await apiClient.updateInstance(instance.id, { isPinned: true });
+
+    // Navigate to home page
+    await basePage.goto('/');
+
+    // Click on the pinned instance in the main content area (not sidebar)
+    const mainContent = basePage.page.locator('.flex-1.overflow-auto');
+    await mainContent.getByText('pinned-nav-test').click();
+
+    // Should navigate to that instance
+    await expect(basePage.page).toHaveURL(new RegExp(`/instances/${instance.id}`));
+  });
+
+  test('recent instances appear on HomePage', async ({ basePage, apiClient }) => {
+    // Create some instances (not pinned)
+    await apiClient.createInstance({ name: 'recent-1', workingDir: '~' });
+    await apiClient.createInstance({ name: 'recent-2', workingDir: '~' });
+
+    // Navigate to home page
+    await basePage.goto('/');
+
+    // Should show recent instances section heading
+    const mainContent = basePage.page.locator('.flex-1.overflow-auto');
+    await expect(mainContent.getByText('Recent Instances')).toBeVisible();
+
+    // Check that both instances appear in the recent section (use the specific container)
+    const recentSection = mainContent.locator('div').filter({ hasText: 'Recent Instances' }).locator('..').locator('.bg-surface-700');
+    await expect(recentSection.getByText('recent-1')).toBeVisible();
+    await expect(recentSection.getByText('recent-2')).toBeVisible();
+  });
+});

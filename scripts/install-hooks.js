@@ -22,7 +22,7 @@ const ORCHESTRATOR_HOOKS = {
   ],
   PreToolUse: [
     {
-      matcher: 'Bash|Write|Edit|Read|Glob|Grep',
+      matcher: '',
       hooks: [
         {
           type: 'command',
@@ -38,7 +38,7 @@ const ORCHESTRATOR_HOOKS = {
       hooks: [
         {
           type: 'command',
-          command: `curl -sX POST ${SERVER_URL}/api/hooks/status -H 'Content-Type: application/json' -d '{"event":"idle","projectDir":"'"$CLAUDE_PROJECT_DIR"'","instanceId":"'"$CC_INSTANCE_ID"'"}' > /dev/null 2>&1 || true`,
+          command: `curl -sX POST ${SERVER_URL}/api/hooks/status -H 'Content-Type: application/json' -d '{"event":"working","projectDir":"'"$CLAUDE_PROJECT_DIR"'","instanceId":"'"$CC_INSTANCE_ID"'"}' > /dev/null 2>&1 || true`,
           timeout: 5,
         },
       ],
@@ -134,8 +134,8 @@ function installHooks() {
   console.log('✅ Hooks installed successfully!\n');
   console.log('The following hooks have been added:');
   console.log('  - UserPromptSubmit: Detects when user submits a prompt (working status)');
-  console.log('  - PreToolUse: Detects when Claude starts using tools (working status)');
-  console.log('  - PostToolUse: Detects when Claude finishes tool use (idle status)');
+  console.log('  - PreToolUse: Detects when Claude starts using any tool (working status)');
+  console.log('  - PostToolUse: Detects when Claude finishes tool use (working status)');
   console.log('  - Notification: Detects when Claude awaits input');
   console.log('  - Stop: Detects when Claude stops\n');
   console.log(`Hooks will send status updates to: ${SERVER_URL}\n`);

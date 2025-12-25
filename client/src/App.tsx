@@ -12,6 +12,7 @@ import HistoryPage from './pages/HistoryPage';
 import { ShortcutsModal, SettingsModal } from './components/modals';
 import { CommandPalette } from './components/common/CommandPalette';
 import { ToastContainer } from './components/common/Toast';
+import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { instancesApi } from './api/client';
 
 function App() {
@@ -192,14 +193,16 @@ function App() {
 
   return (
     <>
-      <MainLayout>
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/instances" element={<InstancesPage />} />
-          <Route path="/instances/:id" element={<InstancesPage />} />
-          <Route path="/history" element={<HistoryPage />} />
-        </Routes>
-      </MainLayout>
+      <ErrorBoundary>
+        <MainLayout>
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/instances" element={<InstancesPage />} />
+            <Route path="/instances/:id" element={<InstancesPage />} />
+            <Route path="/history" element={<HistoryPage />} />
+          </Routes>
+        </MainLayout>
+      </ErrorBoundary>
 
       {/* Global Modals */}
       <CommandPalette isOpen={showCommandPalette} onClose={() => setShowCommandPalette(false)} />

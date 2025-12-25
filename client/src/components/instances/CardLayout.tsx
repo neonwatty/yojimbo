@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import type { Instance } from '@cc-orchestrator/shared';
 import { StatusDot, StatusBadge } from '../common/Status';
 import { EditableName } from '../common/EditableName';
 import { Icons } from '../common/Icons';
+import { Spinner } from '../common/Spinner';
 
 interface CardLayoutProps {
   instances: Instance[];
@@ -13,6 +14,7 @@ interface CardLayoutProps {
   onExpand: (id: string) => void;
   onReorder: (draggedId: string, targetId: string) => void;
   onNewInstance: () => void;
+  isCreating?: boolean;
   editingId: string | null;
   editingName: string;
   onStartEditing: (id: string, name: string) => void;
@@ -21,7 +23,7 @@ interface CardLayoutProps {
   onCancelEditing: () => void;
 }
 
-export function CardLayout({
+export const CardLayout = memo(function CardLayout({
   instances,
   activeId,
   onSelect,
@@ -30,6 +32,7 @@ export function CardLayout({
   onExpand,
   onReorder,
   onNewInstance,
+  isCreating = false,
   editingId,
   editingName,
   onStartEditing,
@@ -111,6 +114,7 @@ export function CardLayout({
               }}
               className="p-1 rounded transition-all text-gray-500 hover:text-accent hover:bg-accent/10"
               title="Expand"
+              aria-label={`Expand ${instance.name}`}
             >
               <Icons.expand />
             </button>
@@ -121,6 +125,7 @@ export function CardLayout({
               }}
               className="p-1 rounded transition-all text-gray-500 hover:text-red-400 hover:bg-red-400/10"
               title="Close"
+              aria-label={`Close ${instance.name}`}
             >
               <Icons.close />
             </button>
@@ -148,6 +153,8 @@ export function CardLayout({
               className={`p-1 rounded transition-all transform hover:scale-110 active:scale-95
                 ${instance.isPinned ? 'text-accent hover:text-accent-bright' : 'text-gray-500 hover:text-gray-300'}`}
               title={instance.isPinned ? 'Unpin' : 'Pin'}
+              aria-label={instance.isPinned ? `Unpin ${instance.name}` : `Pin ${instance.name}`}
+              aria-pressed={instance.isPinned}
             >
               {Icons.star(instance.isPinned)}
             </button>
@@ -167,16 +174,18 @@ export function CardLayout({
 
       {/* New Instance Card */}
       <div
-        onClick={onNewInstance}
-        className="bg-surface-800 rounded-xl p-4 border-2 border-dashed border-surface-600 flex items-center justify-center cursor-pointer hover:border-surface-500 transition-colors min-h-[200px]"
+        onClick={isCreating ? undefined : onNewInstance}
+        className={`bg-surface-800 rounded-xl p-4 border-2 border-dashed border-surface-600 flex items-center justify-center transition-colors min-h-[200px] ${
+          isCreating ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:border-surface-500'
+        }`}
       >
         <div className="text-center text-gray-500">
-          <div className="w-8 h-8 mx-auto mb-2">
-            <Icons.plus />
+          <div className="w-8 h-8 mx-auto mb-2 flex items-center justify-center">
+            {isCreating ? <Spinner size="md" /> : <Icons.plus />}
           </div>
-          <span className="text-sm">New Instance</span>
+          <span className="text-sm">{isCreating ? 'Creating...' : 'New Instance'}</span>
         </div>
       </div>
     </div>
   );
-}
+});

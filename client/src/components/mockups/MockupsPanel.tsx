@@ -242,7 +242,12 @@ export function MockupsPanel({ workingDir, isOpen, onClose, width, onWidthChange
                     <Icons.code />
                   </div>
                   {!mockupsBrowserCollapsed && (
-                    <p className="text-xs">No mockups yet</p>
+                    <>
+                      <p className="text-xs font-medium mb-1">No mockups yet</p>
+                      <p className="text-xs opacity-75">
+                        Add .html files to your mockups/ folder to preview them here
+                      </p>
+                    </>
                   )}
                 </div>
               ) : (

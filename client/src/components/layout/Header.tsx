@@ -9,9 +9,15 @@ import { ConnectionStatus } from '../common/ConnectionStatus';
 export default function Header() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { layout, setLayout, setShowShortcutsModal, setShowSettingsModal } = useUIStore();
-  const { instances } = useInstancesStore();
-  const { theme, setTheme } = useSettingsStore();
+
+  // Use selectors for better performance
+  const layout = useUIStore((state) => state.layout);
+  const setLayout = useUIStore((state) => state.setLayout);
+  const setShowShortcutsModal = useUIStore((state) => state.setShowShortcutsModal);
+  const setShowSettingsModal = useUIStore((state) => state.setShowSettingsModal);
+  const instances = useInstancesStore((state) => state.instances);
+  const theme = useSettingsStore((state) => state.theme);
+  const setTheme = useSettingsStore((state) => state.setTheme);
 
   const pinnedCount = instances.filter((i) => i.isPinned).length;
   const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
@@ -55,7 +61,7 @@ export default function Header() {
         </Tooltip>
 
         {/* Layout Switcher */}
-        <div className="flex items-center gap-1 bg-surface-700 rounded-lg p-1">
+        <div className="flex items-center gap-1 bg-surface-700 rounded-lg p-1" role="group" aria-label="View layout">
           <button
             onClick={() => {
               setLayout('cards');
@@ -64,6 +70,8 @@ export default function Header() {
             className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors
               ${layout === 'cards' ? 'bg-surface-500 text-theme-primary' : 'text-theme-muted hover:text-theme-primary'}`}
             title="Cards"
+            aria-label="Card layout"
+            aria-pressed={layout === 'cards'}
           >
             ⊟
           </button>
@@ -75,6 +83,8 @@ export default function Header() {
             className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors
               ${layout === 'list' ? 'bg-surface-500 text-theme-primary' : 'text-theme-muted hover:text-theme-primary'}`}
             title="List"
+            aria-label="List layout"
+            aria-pressed={layout === 'list'}
           >
             ☰
           </button>
@@ -85,6 +95,7 @@ export default function Header() {
           <button
             onClick={() => setTheme(isDark ? 'light' : 'dark')}
             className="p-2 rounded-lg text-theme-muted hover:text-theme-primary hover:bg-surface-600 transition-colors"
+            aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
           >
             {isDark ? <Icons.sun /> : <Icons.moon />}
           </button>
@@ -95,6 +106,7 @@ export default function Header() {
           <button
             onClick={() => setShowSettingsModal(true)}
             className="p-2 rounded-lg text-theme-muted hover:text-theme-primary hover:bg-surface-700 transition-colors"
+            aria-label="Open settings"
           >
             <Icons.settings />
           </button>
@@ -105,6 +117,7 @@ export default function Header() {
           <button
             onClick={() => setShowShortcutsModal(true)}
             className="p-2 rounded-lg text-theme-muted hover:text-theme-primary hover:bg-surface-700 transition-colors"
+            aria-label="View keyboard shortcuts"
           >
             <Icons.help />
           </button>

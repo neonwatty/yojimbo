@@ -292,13 +292,24 @@ export function PlansPanel({ workingDir, isOpen, onClose, width, onWidthChange }
               {!plansBrowserCollapsed && (
                 <span className="text-xs text-theme-muted font-medium truncate">Files</span>
               )}
-              <button
-                onClick={togglePlansBrowserCollapsed}
-                className="p-1 rounded hover:bg-surface-700 text-theme-muted hover:text-theme-primary transition-colors ml-auto"
-                title={plansBrowserCollapsed ? 'Expand file browser' : 'Collapse file browser'}
-              >
-                {plansBrowserCollapsed ? <Icons.panelLeftOpen /> : <Icons.panelLeftClose />}
-              </button>
+              <div className="flex items-center gap-1 ml-auto">
+                <button
+                  onClick={handleCreatePlan}
+                  className="p-1 rounded hover:bg-surface-700 text-theme-muted hover:text-accent transition-colors"
+                  title="Create plan file"
+                  aria-label="Create new plan file"
+                >
+                  <Icons.plus />
+                </button>
+                <button
+                  onClick={togglePlansBrowserCollapsed}
+                  className="p-1 rounded hover:bg-surface-700 text-theme-muted hover:text-theme-primary transition-colors"
+                  title={plansBrowserCollapsed ? 'Expand file browser' : 'Collapse file browser'}
+                  aria-label={plansBrowserCollapsed ? 'Expand file browser' : 'Collapse file browser'}
+                >
+                  {plansBrowserCollapsed ? <Icons.panelLeftOpen /> : <Icons.panelLeftClose />}
+                </button>
+              </div>
             </div>
 
             {/* Browser content */}
@@ -332,7 +343,12 @@ export function PlansPanel({ workingDir, isOpen, onClose, width, onWidthChange }
                     <Icons.file />
                   </div>
                   {!plansBrowserCollapsed && (
-                    <p className="text-xs">No plans yet</p>
+                    <>
+                      <p className="text-xs font-medium mb-1">No plans yet</p>
+                      <p className="text-xs opacity-75">
+                        Add .md files to your plans/ folder to see them here
+                      </p>
+                    </>
                   )}
                 </div>
               ) : (

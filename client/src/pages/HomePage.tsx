@@ -1,13 +1,19 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useInstancesStore } from '../store/instancesStore';
 import { useSettingsStore } from '../store/settingsStore';
 import { instancesApi } from '../api/client';
 import { Icons } from '../components/common/Icons';
+import { Spinner } from '../components/common/Spinner';
 
 export default function HomePage() {
   const navigate = useNavigate();
-  const { instances } = useInstancesStore();
-  const { showWelcomeBanner, setShowWelcomeBanner } = useSettingsStore();
+  const [isCreating, setIsCreating] = useState(false);
+
+  // Use selectors for better performance
+  const instances = useInstancesStore((state) => state.instances);
+  const showWelcomeBanner = useSettingsStore((state) => state.showWelcomeBanner);
+  const setShowWelcomeBanner = useSettingsStore((state) => state.setShowWelcomeBanner);
 
   const stats = [
     { label: 'Total', value: instances.length, colorClass: 'text-accent border-accent/30' },
@@ -20,6 +26,8 @@ export default function HomePage() {
   const recentInstances = instances.filter((i) => !i.isPinned).slice(0, 5);
 
   const handleNewInstance = async () => {
+    if (isCreating) return;
+    setIsCreating(true);
     try {
       const response = await instancesApi.create({
         name: `instance-${instances.length + 1}`,
@@ -30,6 +38,8 @@ export default function HomePage() {
       }
     } catch {
       // Error toast shown by API layer
+    } finally {
+      setIsCreating(false);
     }
   };
 
@@ -48,7 +58,7 @@ export default function HomePage() {
                 <Icons.close />
               </button>
             </div>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
               {[
                 { num: 1, title: 'Create an instance', desc: 'Click + to start a new terminal' },
                 { num: 2, title: 'Navigate to project', desc: 'cd into your project directory' },
@@ -64,6 +74,12 @@ export default function HomePage() {
                 </div>
               ))}
             </div>
+            <p className="text-sm text-theme-muted">
+              <kbd className="px-1.5 py-0.5 rounded bg-surface-700 text-theme-secondary font-mono text-xs">⌘K</kbd>
+              {' '}to open command palette &middot;{' '}
+              <kbd className="px-1.5 py-0.5 rounded bg-surface-700 text-theme-secondary font-mono text-xs">⌘/</kbd>
+              {' '}to view all shortcuts
+            </p>
           </div>
         )}
 
@@ -87,10 +103,11 @@ export default function HomePage() {
         <div className="flex gap-3 mb-6">
           <button
             onClick={handleNewInstance}
-            className="flex items-center gap-2 px-4 py-2 bg-accent text-surface-900 font-medium rounded-lg hover:bg-accent-bright transition-colors hover-lift press-effect"
+            disabled={isCreating}
+            className="flex items-center gap-2 px-4 py-2 bg-accent text-surface-900 font-medium rounded-lg hover:bg-accent-bright transition-colors hover-lift press-effect disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-accent"
           >
-            <Icons.plus />
-            New Instance
+            {isCreating ? <Spinner size="sm" /> : <Icons.plus />}
+            {isCreating ? 'Creating...' : 'New Instance'}
           </button>
           <button
             onClick={() => navigate('/instances')}
@@ -154,10 +171,11 @@ export default function HomePage() {
             <p className="text-theme-muted mb-4">Create your first Claude Code instance to get started.</p>
             <button
               onClick={handleNewInstance}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-accent text-surface-900 font-medium rounded-lg hover:bg-accent-bright transition-colors"
+              disabled={isCreating}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-accent text-surface-900 font-medium rounded-lg hover:bg-accent-bright transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <Icons.plus />
-              Create Instance
+              {isCreating ? <Spinner size="sm" /> : <Icons.plus />}
+              {isCreating ? 'Creating...' : 'Create Instance'}
             </button>
           </div>
         )}

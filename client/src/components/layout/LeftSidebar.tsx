@@ -12,8 +12,18 @@ import type { Instance } from '@cc-orchestrator/shared';
 export function LeftSidebar() {
   const navigate = useNavigate();
   const { id: expandedId } = useParams();
-  const { instances, activeInstanceId, setActiveInstanceId, removeInstance, updateInstance, currentCwds } = useInstancesStore();
-  const { leftSidebarOpen, leftSidebarWidth, setLeftSidebarWidth, toggleLeftSidebar } = useUIStore();
+
+  // Use selectors for better performance
+  const instances = useInstancesStore((state) => state.instances);
+  const activeInstanceId = useInstancesStore((state) => state.activeInstanceId);
+  const setActiveInstanceId = useInstancesStore((state) => state.setActiveInstanceId);
+  const removeInstance = useInstancesStore((state) => state.removeInstance);
+  const updateInstance = useInstancesStore((state) => state.updateInstance);
+  const currentCwds = useInstancesStore((state) => state.currentCwds);
+  const leftSidebarOpen = useUIStore((state) => state.leftSidebarOpen);
+  const leftSidebarWidth = useUIStore((state) => state.leftSidebarWidth);
+  const setLeftSidebarWidth = useUIStore((state) => state.setLeftSidebarWidth);
+  const toggleLeftSidebar = useUIStore((state) => state.toggleLeftSidebar);
 
   // Resize handler for draggable sidebar edge
   const handleResizeStart = (e: React.MouseEvent) => {
@@ -124,6 +134,7 @@ export function LeftSidebar() {
           <button
             onClick={toggleLeftSidebar}
             className="p-2 rounded-lg text-theme-muted hover:text-theme-primary hover:bg-surface-700 transition-colors"
+            aria-label="Expand sidebar"
           >
             <Icons.panelLeft />
           </button>
@@ -159,6 +170,7 @@ export function LeftSidebar() {
           <button
             onClick={handleNewInstance}
             className="p-2 rounded-lg text-theme-muted hover:text-accent hover:bg-surface-700 transition-colors"
+            aria-label="Create new instance"
           >
             <Icons.plus />
           </button>
@@ -184,6 +196,7 @@ export function LeftSidebar() {
             <button
               onClick={handleNewInstance}
               className="p-1.5 rounded hover:bg-surface-700 text-theme-muted hover:text-accent transition-colors"
+              aria-label="Create new instance"
             >
               <Icons.plus />
             </button>
@@ -192,6 +205,7 @@ export function LeftSidebar() {
             <button
               onClick={toggleLeftSidebar}
               className="p-1.5 rounded hover:bg-surface-700 text-theme-muted hover:text-theme-primary transition-colors"
+              aria-label="Collapse sidebar"
             >
               <Icons.panelLeft />
             </button>

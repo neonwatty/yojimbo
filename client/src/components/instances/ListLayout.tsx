@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import type { Instance } from '@cc-orchestrator/shared';
 import { StatusDot, StatusBadge } from '../common/Status';
 import { EditableName } from '../common/EditableName';
@@ -20,7 +20,7 @@ interface ListLayoutProps {
   onCancelEditing: () => void;
 }
 
-export function ListLayout({
+export const ListLayout = memo(function ListLayout({
   instances,
   activeId,
   onSelect,
@@ -114,6 +114,8 @@ export function ListLayout({
             className={`p-1 rounded transition-all transform hover:scale-110 active:scale-95
               ${instance.isPinned ? 'text-accent hover:text-accent-bright' : 'text-gray-500 hover:text-gray-300'}`}
             title={instance.isPinned ? 'Unpin' : 'Pin'}
+            aria-label={instance.isPinned ? `Unpin ${instance.name}` : `Pin ${instance.name}`}
+            aria-pressed={instance.isPinned}
           >
             {Icons.star(instance.isPinned)}
           </button>
@@ -146,6 +148,7 @@ export function ListLayout({
             }}
             className="p-1 rounded transition-all text-gray-500 hover:text-accent hover:bg-accent/10 opacity-0 group-hover:opacity-100"
             title="Expand"
+            aria-label={`Expand ${instance.name}`}
           >
             <Icons.expand />
           </button>
@@ -156,6 +159,7 @@ export function ListLayout({
             }}
             className="p-1 rounded transition-all text-gray-500 hover:text-red-400 hover:bg-red-400/10 opacity-0 group-hover:opacity-100"
             title="Close"
+            aria-label={`Close ${instance.name}`}
           >
             <Icons.close />
           </button>
@@ -163,4 +167,4 @@ export function ListLayout({
       ))}
     </div>
   );
-}
+});

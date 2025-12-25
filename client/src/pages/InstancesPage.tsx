@@ -4,7 +4,7 @@ import { useInstancesStore } from '../store/instancesStore';
 import { useUIStore } from '../store/uiStore';
 import { useSettingsStore } from '../store/settingsStore';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
-import { Terminal } from '../components/terminal';
+import { Terminal, type TerminalRef } from '../components/terminal';
 import { CardLayout } from '../components/instances/CardLayout';
 import { ListLayout } from '../components/instances/ListLayout';
 import { PlansPanel } from '../components/plans';
@@ -31,6 +31,9 @@ export default function InstancesPage() {
   // Track previous instance ID to detect navigation between different instances
   const prevInstanceIdRef = useRef<string | undefined>(undefined);
 
+  // Terminal refs for auto-focus on instance switch
+  const terminalRefs = useRef<Map<string, TerminalRef>>(new Map());
+
   // Reset panels to terminal-only when navigating to a DIFFERENT instance
   // (not on page refresh of the same instance)
   useEffect(() => {
@@ -38,9 +41,44 @@ export default function InstancesPage() {
       setEditorPanelOpen(false);
       setMockupsPanelOpen(false);
       setTerminalPanelOpen(true);
+
+      // Auto-focus terminal after instance switch
+      requestAnimationFrame(() => {
+        const terminalRef = terminalRefs.current.get(id);
+        if (terminalRef) {
+          terminalRef.focus();
+        }
+      });
     }
     prevInstanceIdRef.current = id;
   }, [id, setEditorPanelOpen, setMockupsPanelOpen, setTerminalPanelOpen]);
+
+  // Auto-close panels when window is too narrow to maintain 300px minimum terminal width
+  useEffect(() => {
+    if (!id || !terminalPanelOpen) return;
+
+    const checkWidth = () => {
+      const containerWidth = window.innerWidth;
+      const editorWidth = editorPanelOpen ? panelWidth : 0;
+      const mockupsWidth = mockupsPanelOpen ? mockupsPanelWidth : 0;
+      const terminalWidth = containerWidth - editorWidth - mockupsWidth;
+
+      if (terminalWidth < 300) {
+        // Auto-close mockups panel first
+        if (mockupsPanelOpen) {
+          setMockupsPanelOpen(false);
+        }
+        // If still too narrow, close editor panel
+        else if (editorPanelOpen) {
+          setEditorPanelOpen(false);
+        }
+      }
+    };
+
+    checkWidth();
+    window.addEventListener('resize', checkWidth);
+    return () => window.removeEventListener('resize', checkWidth);
+  }, [id, terminalPanelOpen, editorPanelOpen, mockupsPanelOpen, panelWidth, mockupsPanelWidth, setEditorPanelOpen, setMockupsPanelOpen]);
 
   // Editing state
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -271,7 +309,7 @@ export default function InstancesPage() {
         <div className="flex-1 flex overflow-hidden">
           {/* Terminals - render ALL but hide inactive ones to preserve history */}
           {terminalPanelOpen && (
-            <div className="flex-1 overflow-hidden relative">
+            <div className="flex-1 overflow-hidden relative min-w-[300px]">
               {instances.map((inst) => (
                 <div
                   key={inst.id}
@@ -282,6 +320,13 @@ export default function InstancesPage() {
                   }}
                 >
                   <Terminal
+                    ref={(ref) => {
+                      if (ref) {
+                        terminalRefs.current.set(inst.id, ref);
+                      } else {
+                        terminalRefs.current.delete(inst.id);
+                      }
+                    }}
                     instanceId={inst.id}
                     theme={theme === 'dark' ? 'dark' : 'light'}
                   />

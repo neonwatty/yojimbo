@@ -64,6 +64,7 @@ export function useTerminal(options: UseTerminalOptions = {}) {
   const fitAddonRef = useRef<FitAddon | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
+  const isInitializedRef = useRef(false);
 
   const initTerminal = useCallback(
     (container: HTMLDivElement) => {
@@ -108,6 +109,8 @@ export function useTerminal(options: UseTerminalOptions = {}) {
         }
       });
       resizeObserverRef.current.observe(container);
+
+      isInitializedRef.current = true;
     },
     [onData, onResize, theme]
   );
@@ -137,8 +140,9 @@ export function useTerminal(options: UseTerminalOptions = {}) {
 
   // Update theme when it changes
   useEffect(() => {
-    if (terminalRef.current) {
+    if (terminalRef.current && isInitializedRef.current) {
       terminalRef.current.options.theme = theme === 'dark' ? darkTheme : lightTheme;
+      terminalRef.current.refresh(0, terminalRef.current.rows - 1);
     }
   }, [theme]);
 

@@ -1,8 +1,13 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, forwardRef, useImperativeHandle } from 'react';
 import { useTerminal } from '../../hooks/useTerminal';
 import { useWebSocket } from '../../hooks/useWebSocket';
 import { getWsUrl } from '../../config';
 import '@xterm/xterm/css/xterm.css';
+
+export interface TerminalRef {
+  focus: () => void;
+  fit: () => void;
+}
 
 interface TerminalProps {
   instanceId: string;
@@ -10,38 +15,45 @@ interface TerminalProps {
   onStatusChange?: (status: string) => void;
 }
 
-export function Terminal({ instanceId, theme = 'dark', onStatusChange }: TerminalProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const isSubscribedRef = useRef(false);
+export const Terminal = forwardRef<TerminalRef, TerminalProps>(
+  ({ instanceId, theme = 'dark', onStatusChange }, ref) => {
+    const containerRef = useRef<HTMLDivElement>(null);
+    const isSubscribedRef = useRef(false);
 
-  const { send, subscribe, isConnected } = useWebSocket(getWsUrl(), {
-    onOpen: () => {
-      console.log('WebSocket connected');
-    },
-    onClose: () => {
-      console.log('WebSocket disconnected');
-    },
-  });
+    const { send, subscribe, isConnected } = useWebSocket(getWsUrl(), {
+      onOpen: () => {
+        console.log('WebSocket connected');
+      },
+      onClose: () => {
+        console.log('WebSocket disconnected');
+      },
+    });
 
-  const handleData = useCallback(
-    (data: string) => {
-      send('terminal:input', { instanceId, data });
-    },
-    [instanceId, send]
-  );
+    const handleData = useCallback(
+      (data: string) => {
+        send('terminal:input', { instanceId, data });
+      },
+      [instanceId, send]
+    );
 
-  const handleResize = useCallback(
-    (cols: number, rows: number) => {
-      send('terminal:resize', { instanceId, cols, rows });
-    },
-    [instanceId, send]
-  );
+    const handleResize = useCallback(
+      (cols: number, rows: number) => {
+        send('terminal:resize', { instanceId, cols, rows });
+      },
+      [instanceId, send]
+    );
 
-  const { initTerminal, write, fit, focus } = useTerminal({
-    onData: handleData,
-    onResize: handleResize,
-    theme,
-  });
+    const { initTerminal, write, fit, focus } = useTerminal({
+      onData: handleData,
+      onResize: handleResize,
+      theme,
+    });
+
+    // Expose focus and fit methods to parent via ref
+    useImperativeHandle(ref, () => ({
+      focus,
+      fit,
+    }), [focus, fit]);
 
   // Initialize terminal when container is ready
   useEffect(() => {
@@ -50,6 +62,14 @@ export function Terminal({ instanceId, theme = 'dark', onStatusChange }: Termina
       focus();
     }
   }, [initTerminal, focus]);
+
+  // Refit terminal when theme changes
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fit();
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [theme, fit]);
 
   // Subscribe to terminal output
   useEffect(() => {
@@ -102,11 +122,14 @@ export function Terminal({ instanceId, theme = 'dark', onStatusChange }: Termina
     };
   }, [fit]);
 
-  return (
-    <div
-      ref={containerRef}
-      className="h-full w-full overflow-hidden"
-      style={{ backgroundColor: theme === 'dark' ? '#1a1b26' : '#ffffff' }}
-    />
-  );
-}
+    return (
+      <div
+        ref={containerRef}
+        className="h-full w-full overflow-hidden"
+        style={{ backgroundColor: theme === 'dark' ? '#1a1b26' : '#ffffff' }}
+      />
+    );
+  }
+);
+
+Terminal.displayName = 'Terminal';

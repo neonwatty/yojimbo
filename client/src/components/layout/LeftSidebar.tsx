@@ -6,12 +6,13 @@ import { StatusDot } from '../common/Status';
 import Tooltip from '../common/Tooltip';
 import { Icons } from '../common/Icons';
 import { instancesApi } from '../../api/client';
+import { EditableName } from '../common/EditableName';
 import type { Instance } from '@cc-orchestrator/shared';
 
 export function LeftSidebar() {
   const navigate = useNavigate();
   const { id: expandedId } = useParams();
-  const { instances, activeInstanceId, setActiveInstanceId, removeInstance } = useInstancesStore();
+  const { instances, activeInstanceId, setActiveInstanceId, removeInstance, updateInstance, currentCwds } = useInstancesStore();
   const { leftSidebarOpen, leftSidebarWidth, setLeftSidebarWidth, toggleLeftSidebar } = useUIStore();
 
   // Resize handler for draggable sidebar edge
@@ -44,8 +45,47 @@ export function LeftSidebar() {
     return idx >= 0 && idx < 9 ? idx + 1 : null;
   };
 
+  // Helper function to display working directory with ~ shortening
+  const getWorkingDirDisplay = (inst: Instance): string => {
+    const cwd = currentCwds[inst.id] || inst.workingDir;
+    if (!cwd) return 'No working directory';
+    // Shorten /Users/username/... to ~/...
+    const homeDir = '/Users/' + cwd.split('/')[2]; // Extract username
+    if (cwd.startsWith(homeDir)) {
+      return cwd.replace(homeDir, '~');
+    }
+    return cwd;
+  };
+
   // Confirmation dialog state
   const [confirmInstance, setConfirmInstance] = useState<Instance | null>(null);
+
+  // Inline rename state
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState<string>('');
+
+  const handleStartEditing = useCallback((inst: Instance) => {
+    setEditingId(inst.id);
+    setEditingName(inst.name);
+  }, []);
+
+  const handleConfirmRename = useCallback(async () => {
+    if (editingId && editingName.trim() && editingName !== instances.find(i => i.id === editingId)?.name) {
+      try {
+        await instancesApi.update(editingId, { name: editingName.trim() });
+        updateInstance(editingId, { name: editingName.trim() });
+      } catch {
+        // Error toast already shown by API layer
+      }
+    }
+    setEditingId(null);
+    setEditingName('');
+  }, [editingId, editingName, instances, updateInstance]);
+
+  const handleCancelEditing = useCallback(() => {
+    setEditingId(null);
+    setEditingName('');
+  }, []);
 
   const handleSelectInstance = (instanceId: string) => {
     setActiveInstanceId(instanceId);
@@ -168,8 +208,59 @@ export function LeftSidebar() {
           {pinnedInstances.map((inst) => {
             const shortcutNum = getInstanceIndex(inst.id);
             return (
+              <Tooltip key={inst.id} text={getWorkingDirDisplay(inst)} position="right">
+                <div
+                  onClick={() => handleSelectInstance(inst.id)}
+                  className={`group w-full flex items-center gap-2 px-2 py-2 rounded-lg text-left transition-colors mb-1 cursor-pointer
+                    ${expandedId === inst.id
+                      ? 'bg-accent/20 text-theme-primary ring-1 ring-accent'
+                      : activeInstanceId === inst.id
+                      ? 'bg-surface-700 text-theme-primary'
+                      : 'text-theme-secondary hover:bg-surface-700'}`}
+                >
+                  {shortcutNum && (
+                    <span className="w-5 h-5 rounded bg-surface-600 text-[10px] flex items-center justify-center text-theme-muted font-mono flex-shrink-0">
+                      {shortcutNum}
+                    </span>
+                  )}
+                  <StatusDot status={inst.status} size="sm" />
+                  <EditableName
+                    name={inst.name}
+                    isEditing={editingId === inst.id}
+                    editingValue={editingName}
+                    onStartEdit={() => handleStartEditing(inst)}
+                    onValueChange={setEditingName}
+                    onConfirm={handleConfirmRename}
+                    onCancel={handleCancelEditing}
+                    className="flex-1 truncate text-sm"
+                  />
+                  {inst.status === 'awaiting' && (
+                    <span className="w-2 h-2 rounded-full bg-state-awaiting animate-pulse group-hover:hidden" />
+                  )}
+                  <button
+                    onClick={(e) => handleCloseInstance(e, inst)}
+                    className="hidden group-hover:block p-0.5 rounded hover:bg-surface-600 text-theme-muted hover:text-red-400 transition-colors"
+                    title="Close instance"
+                  >
+                    <Icons.close />
+                  </button>
+                </div>
+              </Tooltip>
+            );
+          })}
+        </div>
+      )}
+
+      {/* All instances section */}
+      <div className="flex-1 overflow-auto px-2 py-2">
+        <div className="text-xs font-medium text-theme-muted uppercase tracking-wider px-2 mb-2">
+          All Sessions
+        </div>
+        {unpinnedInstances.map((inst) => {
+          const shortcutNum = getInstanceIndex(inst.id);
+          return (
+            <Tooltip key={inst.id} text={getWorkingDirDisplay(inst)} position="right">
               <div
-                key={inst.id}
                 onClick={() => handleSelectInstance(inst.id)}
                 className={`group w-full flex items-center gap-2 px-2 py-2 rounded-lg text-left transition-colors mb-1 cursor-pointer
                   ${expandedId === inst.id
@@ -184,7 +275,16 @@ export function LeftSidebar() {
                   </span>
                 )}
                 <StatusDot status={inst.status} size="sm" />
-                <span className="flex-1 truncate text-sm">{inst.name}</span>
+                <EditableName
+                  name={inst.name}
+                  isEditing={editingId === inst.id}
+                  editingValue={editingName}
+                  onStartEdit={() => handleStartEditing(inst)}
+                  onValueChange={setEditingName}
+                  onConfirm={handleConfirmRename}
+                  onCancel={handleCancelEditing}
+                  className="flex-1 truncate text-sm"
+                />
                 {inst.status === 'awaiting' && (
                   <span className="w-2 h-2 rounded-full bg-state-awaiting animate-pulse group-hover:hidden" />
                 )}
@@ -196,47 +296,7 @@ export function LeftSidebar() {
                   <Icons.close />
                 </button>
               </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* All instances section */}
-      <div className="flex-1 overflow-auto px-2 py-2">
-        <div className="text-xs font-medium text-theme-muted uppercase tracking-wider px-2 mb-2">
-          All Sessions
-        </div>
-        {unpinnedInstances.map((inst) => {
-          const shortcutNum = getInstanceIndex(inst.id);
-          return (
-            <div
-              key={inst.id}
-              onClick={() => handleSelectInstance(inst.id)}
-              className={`group w-full flex items-center gap-2 px-2 py-2 rounded-lg text-left transition-colors mb-1 cursor-pointer
-                ${expandedId === inst.id
-                  ? 'bg-accent/20 text-theme-primary ring-1 ring-accent'
-                  : activeInstanceId === inst.id
-                  ? 'bg-surface-700 text-theme-primary'
-                  : 'text-theme-secondary hover:bg-surface-700'}`}
-            >
-              {shortcutNum && (
-                <span className="w-5 h-5 rounded bg-surface-600 text-[10px] flex items-center justify-center text-theme-muted font-mono flex-shrink-0">
-                  {shortcutNum}
-                </span>
-              )}
-              <StatusDot status={inst.status} size="sm" />
-              <span className="flex-1 truncate text-sm">{inst.name}</span>
-              {inst.status === 'awaiting' && (
-                <span className="w-2 h-2 rounded-full bg-state-awaiting animate-pulse group-hover:hidden" />
-              )}
-              <button
-                onClick={(e) => handleCloseInstance(e, inst)}
-                className="hidden group-hover:block p-0.5 rounded hover:bg-surface-600 text-theme-muted hover:text-red-400 transition-colors"
-                title="Close instance"
-              >
-                <Icons.close />
-              </button>
-            </div>
+            </Tooltip>
           );
         })}
 

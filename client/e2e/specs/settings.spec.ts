@@ -70,4 +70,61 @@ test.describe('Settings Modal', () => {
     // Modal should be closed
     await expect(basePage.page.locator('h2:has-text("Settings")')).not.toBeVisible();
   });
+
+  test('shows version number in footer', async ({ basePage }) => {
+    await basePage.goto('/instances');
+    await basePage.openSettings();
+
+    // Check version is displayed (format: v0.x.x)
+    await expect(basePage.page.locator('text=/v\\d+\\.\\d+\\.\\d+/')).toBeVisible();
+  });
+
+  test('shows danger zone with database reset option', async ({ basePage }) => {
+    await basePage.goto('/instances');
+    await basePage.openSettings();
+
+    // Check danger zone section exists
+    await expect(basePage.page.locator('text=Danger Zone')).toBeVisible();
+
+    // Check reset button exists but is disabled
+    const resetButton = basePage.page.locator('button:has-text("Reset")');
+    await expect(resetButton).toBeVisible();
+    await expect(resetButton).toBeDisabled();
+  });
+
+  test('reset button is disabled until RESET is typed', async ({ basePage }) => {
+    await basePage.goto('/instances');
+    await basePage.openSettings();
+
+    const resetInput = basePage.page.locator('input[placeholder*="RESET"]');
+    const resetButton = basePage.page.locator('button:has-text("Reset")');
+
+    // Button should be disabled initially
+    await expect(resetButton).toBeDisabled();
+
+    // Type partial text - button still disabled
+    await resetInput.fill('RES');
+    await expect(resetButton).toBeDisabled();
+
+    // Type full RESET - button becomes enabled
+    await resetInput.fill('RESET');
+    await expect(resetButton).toBeEnabled();
+  });
+
+  test('database reset API clears all instances', async ({ apiClient }) => {
+    // Create an instance first
+    await apiClient.createInstance({ name: 'test-reset', workingDir: '~' });
+
+    // Verify instance exists
+    const instancesBefore = await apiClient.listInstances();
+    expect(instancesBefore.length).toBeGreaterThan(0);
+
+    // Perform reset via API
+    const result = await apiClient.resetDatabase();
+    expect(result.reset).toBe(true);
+
+    // Verify instances are cleared
+    const instancesAfter = await apiClient.listInstances();
+    expect(instancesAfter.length).toBe(0);
+  });
 });

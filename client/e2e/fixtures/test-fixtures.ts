@@ -9,6 +9,8 @@ interface ApiClient {
   createInstance(data: { name: string; workingDir: string }): Promise<{ id: string; name: string }>;
   closeInstance(id: string): Promise<void>;
   cleanupAllInstances(): Promise<void>;
+  getSettings(): Promise<{ theme: string; terminalFontSize: number }>;
+  resetDatabase(): Promise<{ reset: boolean }>;
 }
 
 function createApiClient(): ApiClient {
@@ -40,6 +42,20 @@ function createApiClient(): ApiClient {
       for (const instance of instances) {
         await this.closeInstance(instance.id);
       }
+    },
+
+    async getSettings() {
+      const response = await fetch(`${API_BASE}/settings`);
+      const data = await response.json();
+      return data.data;
+    },
+
+    async resetDatabase() {
+      const response = await fetch(`${API_BASE}/settings/reset-database`, {
+        method: 'POST',
+      });
+      const data = await response.json();
+      return data.data;
     },
   };
 }

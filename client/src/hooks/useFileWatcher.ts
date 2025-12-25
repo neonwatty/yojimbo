@@ -1,14 +1,13 @@
 import { useEffect } from 'react';
 import { useFileChangesStore } from '../store/fileChangesStore';
 import { useWebSocket } from './useWebSocket';
+import { getWsUrl } from '../config';
 import type { FileChangeEvent } from '@cc-orchestrator/shared';
-
-const WS_URL = `ws://${window.location.hostname}:3456/ws`;
 
 export function useFileWatcher() {
   const { addChange, dismissChange, clearChange, hasChange, getChange } = useFileChangesStore();
 
-  const { subscribe, isConnected } = useWebSocket(WS_URL, {
+  const { subscribe, isConnected } = useWebSocket(getWsUrl(), {
     onOpen: () => {
       console.log('File watcher connected');
     },

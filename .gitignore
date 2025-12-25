@@ -15,6 +15,10 @@ out/
 .env.local
 .env.*.local
 
+# Config files (use config.example.yaml as template)
+config.yaml
+.config.yaml
+
 # Logs
 logs/
 *.log

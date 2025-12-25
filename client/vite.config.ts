@@ -1,6 +1,39 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
+import fs from 'fs';
+import { parse as parseYaml } from 'yaml';
+
+// Load YAML config for dev server proxy
+interface AppConfig {
+  host?: string;
+  serverPort?: number;
+  clientPort?: number;
+}
+
+function loadConfig(): AppConfig {
+  const configPaths = [
+    path.resolve(__dirname, '../config.yaml'),
+    path.resolve(__dirname, '../.config.yaml'),
+  ];
+
+  for (const configPath of configPaths) {
+    if (fs.existsSync(configPath)) {
+      try {
+        const content = fs.readFileSync(configPath, 'utf-8');
+        return parseYaml(content) || {};
+      } catch {
+        // Ignore parse errors, use defaults
+      }
+    }
+  }
+  return {};
+}
+
+const config = loadConfig();
+const serverHost = config.host || '127.0.0.1';
+const serverPort = config.serverPort || 3456;
+const clientPort = config.clientPort || 5173;
 
 export default defineConfig({
   plugins: [react()],
@@ -10,14 +43,14 @@ export default defineConfig({
     },
   },
   server: {
-    port: 5173,
+    port: clientPort,
     proxy: {
       '/api': {
-        target: 'http://localhost:3456',
+        target: `http://${serverHost}:${serverPort}`,
         changeOrigin: true,
       },
       '/ws': {
-        target: 'ws://localhost:3456',
+        target: `ws://${serverHost}:${serverPort}`,
         ws: true,
       },
     },

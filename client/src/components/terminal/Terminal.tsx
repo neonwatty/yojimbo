@@ -1,6 +1,7 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useTerminal } from '../../hooks/useTerminal';
 import { useWebSocket } from '../../hooks/useWebSocket';
+import { getWsUrl } from '../../config';
 import '@xterm/xterm/css/xterm.css';
 
 interface TerminalProps {
@@ -9,13 +10,11 @@ interface TerminalProps {
   onStatusChange?: (status: string) => void;
 }
 
-const WS_URL = `ws://${window.location.hostname}:3456/ws`;
-
 export function Terminal({ instanceId, theme = 'dark', onStatusChange }: TerminalProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const isSubscribedRef = useRef(false);
 
-  const { send, subscribe, isConnected } = useWebSocket(WS_URL, {
+  const { send, subscribe, isConnected } = useWebSocket(getWsUrl(), {
     onOpen: () => {
       console.log('WebSocket connected');
     },

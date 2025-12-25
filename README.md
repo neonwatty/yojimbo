@@ -195,12 +195,21 @@ The server communicates with clients via WebSocket at `ws://localhost:3456/ws`:
 
 ## Configuration
 
-Environment variables (`.env`):
+Create a `config.yaml` file in the project root (see `config.example.yaml`):
+
+```yaml
+host: "127.0.0.1"      # Server bind address
+serverPort: 3456       # API server port
+clientPort: 5173       # Vite dev server port
+```
+
+Environment variables override the config file:
 
 ```bash
-PORT=3456              # Server port
-HOST=127.0.0.1         # Server host
-NODE_ENV=development   # Environment
+PORT=3456              # Overrides serverPort
+HOST=127.0.0.1         # Overrides host
+CLIENT_PORT=5173       # Overrides clientPort
+NODE_ENV=development
 ```
 
 ## Troubleshooting

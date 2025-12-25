@@ -276,7 +276,10 @@ export default function InstancesPage() {
                 <div
                   key={inst.id}
                   className="absolute inset-0"
-                  style={{ display: inst.id === instance.id ? 'block' : 'none' }}
+                  style={{
+                    visibility: inst.id === instance.id ? 'visible' : 'hidden',
+                    pointerEvents: inst.id === instance.id ? 'auto' : 'none',
+                  }}
                 >
                   <Terminal
                     instanceId={inst.id}

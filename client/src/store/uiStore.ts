@@ -9,6 +9,7 @@ const DEFAULT_UI_STATE = {
   currentView: 'home' as ViewType,
   layout: 'cards' as LayoutType,
   leftSidebarOpen: true,
+  leftSidebarWidth: 224, // w-56 equivalent
   editorPanelOpen: false,
   mockupsPanelOpen: false,
   terminalPanelOpen: true,
@@ -26,6 +27,7 @@ interface UIState {
   currentView: ViewType;
   layout: LayoutType;
   leftSidebarOpen: boolean;
+  leftSidebarWidth: number;
   editorPanelOpen: boolean;
   mockupsPanelOpen: boolean;
   terminalPanelOpen: boolean;
@@ -52,6 +54,7 @@ interface UIState {
   setLayout: (layout: LayoutType) => void;
   toggleLeftSidebar: () => void;
   setLeftSidebarOpen: (open: boolean) => void;
+  setLeftSidebarWidth: (width: number) => void;
   toggleEditorPanel: () => void;
   setEditorPanelOpen: (open: boolean) => void;
   toggleMockupsPanel: () => void;
@@ -98,6 +101,7 @@ export const useUIStore = create<UIState>()(
       setLayout: (layout) => set({ layout }),
       toggleLeftSidebar: () => set((state) => ({ leftSidebarOpen: !state.leftSidebarOpen })),
       setLeftSidebarOpen: (leftSidebarOpen) => set({ leftSidebarOpen }),
+      setLeftSidebarWidth: (leftSidebarWidth) => set({ leftSidebarWidth }),
       toggleEditorPanel: () => set((state) => ({ editorPanelOpen: !state.editorPanelOpen })),
       setEditorPanelOpen: (editorPanelOpen) => set({ editorPanelOpen }),
       toggleMockupsPanel: () => set((state) => ({ mockupsPanelOpen: !state.mockupsPanelOpen })),
@@ -127,6 +131,7 @@ export const useUIStore = create<UIState>()(
         currentView: state.currentView,
         layout: state.layout,
         leftSidebarOpen: state.leftSidebarOpen,
+        leftSidebarWidth: state.leftSidebarWidth,
         editorPanelOpen: state.editorPanelOpen,
         mockupsPanelOpen: state.mockupsPanelOpen,
         terminalPanelOpen: state.terminalPanelOpen,

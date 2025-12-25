@@ -10,6 +10,7 @@ import { MDXPlanEditor, type MDXPlanEditorRef } from './MDXPlanEditor';
 import type { Plan } from '@cc-orchestrator/shared';
 
 interface PlansPanelProps {
+  instanceId: string;
   workingDir: string;
   isOpen: boolean;
   onClose: () => void;
@@ -20,21 +21,25 @@ interface PlansPanelProps {
 const MIN_BROWSER_WIDTH = 48;
 const MAX_BROWSER_WIDTH = 300;
 
-export function PlansPanel({ workingDir, isOpen, onClose, width, onWidthChange }: PlansPanelProps) {
+export function PlansPanel({ instanceId, workingDir, isOpen, onClose, width, onWidthChange }: PlansPanelProps) {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [hasPlansDir, setHasPlansDir] = useState(true);
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const [editContent, setEditContent] = useState('');
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const editorRef = useRef<MDXPlanEditorRef>(null);
+  const prevWorkingDirRef = useRef<string>(workingDir);
 
   const {
     plansBrowserWidth,
     plansBrowserCollapsed,
     setPlansBrowserWidth,
     togglePlansBrowserCollapsed,
+    selectedPlanByInstance,
+    setSelectedPlanForInstance,
   } = useUIStore();
 
   // File watcher for external changes
@@ -47,6 +52,16 @@ export function PlansPanel({ workingDir, isOpen, onClose, width, onWidthChange }
         (c) => c.filePath === selectedPlan.path && c.fileType === 'plan' && !c.dismissed
       )
     : null;
+
+  // Clear selected plan when working directory changes (within same instance)
+  useEffect(() => {
+    if (workingDir !== prevWorkingDirRef.current) {
+      prevWorkingDirRef.current = workingDir;
+      setSelectedPlan(null);
+      setEditContent('');
+      setSelectedPlanForInstance(instanceId, null);
+    }
+  }, [workingDir, instanceId, setSelectedPlanForInstance]);
 
   // Fetch plans when working directory changes
   const fetchPlans = useCallback(async () => {
@@ -74,11 +89,29 @@ export function PlansPanel({ workingDir, isOpen, onClose, width, onWidthChange }
     }
   }, [isOpen, fetchPlans]);
 
-  // Clear selected plan when working directory changes
+  // Restore selected plan when instance changes, or clear if none saved
   useEffect(() => {
-    setSelectedPlan(null);
-    setEditContent('');
-  }, [workingDir]);
+    const savedPlanId = selectedPlanByInstance[instanceId];
+    if (savedPlanId && plans.length > 0) {
+      // Find and restore the saved plan
+      const savedPlan = plans.find(p => p.id === savedPlanId);
+      if (savedPlan && (!selectedPlan || selectedPlan.id !== savedPlanId)) {
+        // Fetch full plan content
+        plansApi.get(savedPlanId).then(response => {
+          if (response.data) {
+            setSelectedPlan(response.data);
+            setEditContent(response.data.content);
+          }
+        }).catch(() => {
+          // Plan no longer exists, clear the saved reference
+          setSelectedPlanForInstance(instanceId, null);
+        });
+      }
+    } else if (!savedPlanId) {
+      setSelectedPlan(null);
+      setEditContent('');
+    }
+  }, [instanceId, plans, selectedPlanByInstance, setSelectedPlanForInstance]);
 
   // Group plans by folder
   const groupedPlans = plans.reduce(
@@ -114,6 +147,8 @@ export function PlansPanel({ workingDir, isOpen, onClose, width, onWidthChange }
       if (response.data) {
         setSelectedPlan(response.data);
         setEditContent(response.data.content);
+        // Save selection to store for persistence
+        setSelectedPlanForInstance(instanceId, plan.id);
       }
     } catch {
       // Error toast shown by API layer
@@ -121,7 +156,8 @@ export function PlansPanel({ workingDir, isOpen, onClose, width, onWidthChange }
   };
 
   const handleSave = useCallback(async () => {
-    if (!selectedPlan) return;
+    if (!selectedPlan || isSaving) return;
+    setIsSaving(true);
     try {
       // Get content from editor ref if available, otherwise use editContent state
       const contentToSave = editorRef.current?.getMarkdown() || editContent;
@@ -134,8 +170,10 @@ export function PlansPanel({ workingDir, isOpen, onClose, width, onWidthChange }
       fetchPlans(); // Refresh the list
     } catch {
       // Error toast shown by API layer
+    } finally {
+      setIsSaving(false);
     }
-  }, [selectedPlan, editContent, markAsSaved, fetchPlans]);
+  }, [selectedPlan, editContent, markAsSaved, fetchPlans, isSaving]);
 
   // Keyboard shortcut: Cmd+S to save
   useEffect(() => {
@@ -425,11 +463,12 @@ export function PlansPanel({ workingDir, isOpen, onClose, width, onWidthChange }
                   <div className="flex items-center gap-2">
                     <button
                       onClick={handleSave}
-                      className="flex items-center gap-1.5 px-2 py-1 text-xs rounded bg-accent text-surface-900 hover:bg-accent-bright transition-colors"
+                      disabled={isSaving}
+                      className="flex items-center gap-1.5 px-2 py-1 text-xs rounded bg-accent text-surface-900 hover:bg-accent-bright transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       title="Save (Cmd+S)"
                     >
-                      <Icons.save />
-                      Save
+                      {isSaving ? <Spinner size="sm" /> : <Icons.save />}
+                      {isSaving ? 'Saving...' : 'Save'}
                     </button>
                   </div>
                 </div>

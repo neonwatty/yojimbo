@@ -21,6 +21,8 @@ const DEFAULT_UI_STATE = {
   plansBrowserCollapsed: false,
   mockupsBrowserWidth: 192,
   mockupsBrowserCollapsed: false,
+  // Selected plan per instance (plan ID keyed by instance ID)
+  selectedPlanByInstance: {} as Record<string, string>,
 };
 
 interface UIState {
@@ -43,6 +45,8 @@ interface UIState {
   // File browser state for Mockups panel
   mockupsBrowserWidth: number;
   mockupsBrowserCollapsed: boolean;
+  // Selected plan per instance
+  selectedPlanByInstance: Record<string, string>;
   // Command palette state (not persisted)
   showCommandPalette: boolean;
   pendingKeySequence: string | null;
@@ -72,6 +76,8 @@ interface UIState {
   togglePlansBrowserCollapsed: () => void;
   setMockupsBrowserWidth: (width: number) => void;
   toggleMockupsBrowserCollapsed: () => void;
+  // Selected plan per instance
+  setSelectedPlanForInstance: (instanceId: string, planId: string | null) => void;
   // Command palette actions
   setShowCommandPalette: (show: boolean) => void;
   setPendingKeySequence: (key: string | null) => void;
@@ -118,9 +124,18 @@ export const useUIStore = create<UIState>()(
       togglePlansBrowserCollapsed: () => set((state) => ({ plansBrowserCollapsed: !state.plansBrowserCollapsed })),
       setMockupsBrowserWidth: (mockupsBrowserWidth) => set({ mockupsBrowserWidth }),
       toggleMockupsBrowserCollapsed: () => set((state) => ({ mockupsBrowserCollapsed: !state.mockupsBrowserCollapsed })),
-      setShowCommandPalette: (showCommandPalette) => set({ showCommandPalette }),
-      setPendingKeySequence: (pendingKeySequence) => set({ pendingKeySequence }),
-      setConnectionState: (isConnected, reconnectAttempts = 0) => set({ isConnected, reconnectAttempts }),
+      setSelectedPlanForInstance: (instanceId: string, planId: string | null) => set((state) => {
+        const updated = { ...state.selectedPlanByInstance };
+        if (planId === null) {
+          delete updated[instanceId];
+        } else {
+          updated[instanceId] = planId;
+        }
+        return { selectedPlanByInstance: updated };
+      }),
+      setShowCommandPalette: (showCommandPalette: boolean) => set({ showCommandPalette }),
+      setPendingKeySequence: (pendingKeySequence: string | null) => set({ pendingKeySequence }),
+      setConnectionState: (isConnected: boolean, reconnectAttempts = 0) => set({ isConnected, reconnectAttempts }),
       resetToDefaults: () => set(DEFAULT_UI_STATE),
     }),
     {
@@ -143,6 +158,7 @@ export const useUIStore = create<UIState>()(
         plansBrowserCollapsed: state.plansBrowserCollapsed,
         mockupsBrowserWidth: state.mockupsBrowserWidth,
         mockupsBrowserCollapsed: state.mockupsBrowserCollapsed,
+        selectedPlanByInstance: state.selectedPlanByInstance,
       }),
       // Migration for future state shape changes
       migrate: (persistedState, version) => {

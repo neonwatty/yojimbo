@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useInstancesStore } from '../../store/instancesStore';
 import { useUIStore } from '../../store/uiStore';
@@ -46,8 +46,8 @@ export function LeftSidebar() {
     document.addEventListener('mouseup', handleMouseUp);
   };
 
-  const pinnedInstances = instances.filter((i) => i.isPinned);
-  const unpinnedInstances = instances.filter((i) => !i.isPinned);
+  const pinnedInstances = useMemo(() => instances.filter((i) => i.isPinned), [instances]);
+  const unpinnedInstances = useMemo(() => instances.filter((i) => !i.isPinned), [instances]);
 
   // Get the index for keyboard shortcut badge (1-9)
   const getInstanceIndex = (instId: string): number | null => {

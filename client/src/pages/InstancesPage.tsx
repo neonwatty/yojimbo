@@ -15,6 +15,7 @@ import { ErrorBoundary } from '../components/common/ErrorBoundary';
 import { Icons } from '../components/common/Icons';
 import { Spinner } from '../components/common/Spinner';
 import { instancesApi } from '../api/client';
+import { toast } from '../store/toastStore';
 import type { Instance } from '@cc-orchestrator/shared';
 
 export default function InstancesPage() {
@@ -201,6 +202,7 @@ export default function InstancesPage() {
         workingDir: '~',
       });
       if (response.data) {
+        toast.success('Instance created');
         navigate(`/instances/${response.data.id}`);
       }
     } catch {
@@ -359,6 +361,7 @@ export default function InstancesPage() {
 
           {/* Plans Panel */}
           <PlansPanel
+            instanceId={instance.id}
             workingDir={currentCwds[instance.id] || instance.workingDir}
             isOpen={editorPanelOpen}
             onClose={() => setEditorPanelOpen(false)}

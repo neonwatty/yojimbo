@@ -76,8 +76,12 @@ test.describe('Mockups Panel', () => {
     // Click on the test mockup to select it
     await mockupFileButton.click();
 
-    // The mockup name should appear in the viewer header
-    await expect(instancesPage.page.locator('text=e2e-test-mockup.html')).toBeVisible({ timeout: 5000 });
+    // Wait for the mockup to load - the name should appear in the viewer header
+    await instancesPage.page.waitForTimeout(500);
+
+    // The viewer header with mockup name and open button should appear
+    const mockupHeader = instancesPage.page.locator('text=e2e-test-mockup.html').last();
+    await expect(mockupHeader).toBeVisible({ timeout: 5000 });
 
     // An iframe should be visible for rendering the mockup
     const iframe = instancesPage.page.locator('iframe');

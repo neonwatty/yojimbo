@@ -21,7 +21,8 @@ test.describe('Instance Management', () => {
     await expect(instancesPage.page).toHaveURL(/.*\/instances\/[a-zA-Z0-9-]+$/);
 
     // Should see the instance name in header (use title attribute for the editable name)
-    await expect(instancesPage.page.locator('[title="Double-click to rename"]')).toBeVisible({ timeout: 5000 });
+    // Use .first() since EditableName appears in both sidebar and header
+    await expect(instancesPage.page.locator('[title="Double-click to rename"]').first()).toBeVisible({ timeout: 5000 });
   });
 
   test('can return to overview from expanded view', async ({ instancesPage }) => {

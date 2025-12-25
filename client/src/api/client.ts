@@ -156,4 +156,9 @@ export const settingsApi = {
     request<ApiResponse<{ reset: boolean }>>('/settings/reset-database', {
       method: 'POST',
     }),
+
+  resetInstanceStatus: () =>
+    request<ApiResponse<{ reset: boolean; count: number }>>('/settings/reset-instance-status', {
+      method: 'POST',
+    }),
 };

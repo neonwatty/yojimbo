@@ -86,10 +86,10 @@ test.describe('Settings Modal', () => {
     // Check danger zone section exists
     await expect(basePage.page.locator('text=Danger Zone')).toBeVisible();
 
-    // Check reset button exists but is disabled
-    const resetButton = basePage.page.locator('button:has-text("Reset")');
-    await expect(resetButton).toBeVisible();
-    await expect(resetButton).toBeDisabled();
+    // Check database reset button exists but is disabled (the red one in danger zone)
+    const dangerZoneResetButton = basePage.page.locator('.bg-red-500\\/10 button:has-text("Reset")');
+    await expect(dangerZoneResetButton).toBeVisible();
+    await expect(dangerZoneResetButton).toBeDisabled();
   });
 
   test('reset button is disabled until RESET is typed', async ({ basePage }) => {
@@ -97,18 +97,33 @@ test.describe('Settings Modal', () => {
     await basePage.openSettings();
 
     const resetInput = basePage.page.locator('input[placeholder*="RESET"]');
-    const resetButton = basePage.page.locator('button:has-text("Reset")');
+    // Target the danger zone reset button specifically (the red one)
+    const dangerZoneResetButton = basePage.page.locator('.bg-red-500\\/10 button:has-text("Reset")');
 
     // Button should be disabled initially
-    await expect(resetButton).toBeDisabled();
+    await expect(dangerZoneResetButton).toBeDisabled();
 
     // Type partial text - button still disabled
     await resetInput.fill('RES');
-    await expect(resetButton).toBeDisabled();
+    await expect(dangerZoneResetButton).toBeDisabled();
 
     // Type full RESET - button becomes enabled
     await resetInput.fill('RESET');
-    await expect(resetButton).toBeEnabled();
+    await expect(dangerZoneResetButton).toBeEnabled();
+  });
+
+  test('shows maintenance section with reset instance status button', async ({ basePage }) => {
+    await basePage.goto('/instances');
+    await basePage.openSettings();
+
+    // Check maintenance section exists
+    await expect(basePage.page.locator('text=Maintenance')).toBeVisible();
+    await expect(basePage.page.locator('text=Reset Instance Status')).toBeVisible();
+
+    // Check the reset instance status button is enabled (no confirmation required)
+    const maintenanceResetButton = basePage.page.locator('button:has-text("Reset")').first();
+    await expect(maintenanceResetButton).toBeVisible();
+    await expect(maintenanceResetButton).toBeEnabled();
   });
 
   test('database reset API clears all instances', async ({ apiClient }) => {

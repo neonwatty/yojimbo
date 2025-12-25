@@ -79,6 +79,34 @@ router.patch('/', (req: Request, res: Response) => {
   }
 });
 
+// POST /api/settings/reset-instance-status - Reset all instance statuses to idle
+router.post('/reset-instance-status', (_req: Request, res: Response) => {
+  try {
+    const db = getDatabase();
+
+    // Reset all instance statuses to idle
+    const result = db.prepare(`
+      UPDATE instances
+      SET status = 'idle', updated_at = datetime('now')
+      WHERE closed_at IS NULL
+    `).run();
+
+    console.log(`🔄 Reset ${result.changes} instance(s) to idle status`);
+    const response: ApiResponse<{ reset: boolean; count: number }> = {
+      success: true,
+      data: { reset: true, count: result.changes },
+    };
+    res.json(response);
+  } catch (error) {
+    console.error('Failed to reset instance status:', error);
+    const response: ApiResponse<{ reset: boolean }> = {
+      success: false,
+      error: 'Failed to reset instance status',
+    };
+    res.status(500).json(response);
+  }
+});
+
 // POST /api/settings/reset-database - Reset entire database
 router.post('/reset-database', (_req: Request, res: Response) => {
   try {

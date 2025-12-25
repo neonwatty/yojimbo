@@ -14,6 +14,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     useSettingsStore();
   const [resetConfirmation, setResetConfirmation] = useState('');
   const [isResetting, setIsResetting] = useState(false);
+  const [isResettingStatus, setIsResettingStatus] = useState(false);
 
   // Reset confirmation state when modal closes
   useEffect(() => {
@@ -21,6 +22,20 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
       setResetConfirmation('');
     }
   }, [isOpen]);
+
+  const handleResetInstanceStatus = async () => {
+    setIsResettingStatus(true);
+    try {
+      const response = await settingsApi.resetInstanceStatus();
+      if (response.data) {
+        toast.success(`Reset ${response.data.count} instance(s) to idle`);
+      }
+    } catch {
+      toast.error('Failed to reset instance status');
+    } finally {
+      setIsResettingStatus(false);
+    }
+  };
 
   const handleResetDatabase = async () => {
     if (resetConfirmation !== 'RESET') return;
@@ -124,6 +139,24 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
               <option value="Monaco">Monaco</option>
               <option value="Menlo">Menlo</option>
             </select>
+          </div>
+
+          {/* Maintenance */}
+          <div className="pt-4 mt-4 border-t border-surface-600">
+            <h3 className="text-xs font-semibold text-theme-muted uppercase tracking-wider mb-3">Maintenance</h3>
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-theme-primary">Reset Instance Status</span>
+                <p className="text-xs text-theme-muted mt-0.5">Clear stale hook data by resetting all instances to idle</p>
+              </div>
+              <button
+                onClick={handleResetInstanceStatus}
+                disabled={isResettingStatus}
+                className="px-3 py-1.5 bg-surface-600 text-theme-primary rounded-lg text-sm font-medium hover:bg-surface-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isResettingStatus ? 'Resetting...' : 'Reset'}
+              </button>
+            </div>
           </div>
 
           {/* Danger Zone */}

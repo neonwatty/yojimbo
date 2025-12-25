@@ -15,10 +15,22 @@ const app = express();
 
 // Middleware
 app.use(cors({
-  origin: CONFIG.isDev ? ['http://localhost:5173', 'http://127.0.0.1:5173'] : false,
+  origin: CONFIG.isDev ? [
+    `http://localhost:${CONFIG.clientPort}`,
+    `http://127.0.0.1:${CONFIG.clientPort}`,
+  ] : false,
   credentials: true,
 }));
 app.use(express.json());
+
+// Config endpoint - provides runtime config to client
+app.get('/api/config', (_req, res) => {
+  res.json({
+    host: CONFIG.host,
+    serverPort: CONFIG.port,
+    wsUrl: `ws://${CONFIG.host}:${CONFIG.port}/ws`,
+  });
+});
 
 // API routes
 app.use('/api/instances', instancesRouter);

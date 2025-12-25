@@ -2,14 +2,13 @@ import { useEffect, useCallback } from 'react';
 import { useInstancesStore } from '../store/instancesStore';
 import { instancesApi } from '../api/client';
 import { useWebSocket } from './useWebSocket';
+import { getWsUrl } from '../config';
 import type { Instance } from '@cc-orchestrator/shared';
-
-const WS_URL = `ws://${window.location.hostname}:3456/ws`;
 
 export function useInstances() {
   const { instances, setInstances, addInstance, updateInstance, removeInstance, setCurrentCwd } = useInstancesStore();
 
-  const { subscribe, isConnected } = useWebSocket(WS_URL, {
+  const { subscribe, isConnected } = useWebSocket(getWsUrl(), {
     onOpen: () => {
       console.log('WebSocket connected for instance updates');
     },

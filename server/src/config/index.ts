@@ -1,14 +1,51 @@
 import { config } from 'dotenv';
 import path from 'path';
 import os from 'os';
+import fs from 'fs';
+import { parse as parseYaml } from 'yaml';
+import { fileURLToPath } from 'url';
 
 // Load environment variables
 config();
 
+// ESM-compatible __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Load YAML config if it exists
+interface YamlConfig {
+  host?: string;
+  serverPort?: number;
+  clientPort?: number;
+}
+
+function loadYamlConfig(): YamlConfig {
+  const projectRoot = path.resolve(__dirname, '../../..');
+  const configPaths = [
+    path.join(projectRoot, 'config.yaml'),
+    path.join(projectRoot, '.config.yaml'),
+  ];
+
+  for (const configPath of configPaths) {
+    if (fs.existsSync(configPath)) {
+      try {
+        const content = fs.readFileSync(configPath, 'utf-8');
+        return parseYaml(content) || {};
+      } catch (err) {
+        console.warn(`Failed to parse config at ${configPath}:`, err);
+      }
+    }
+  }
+  return {};
+}
+
+const yamlConfig = loadYamlConfig();
+
 export const CONFIG = {
-  // Server
-  port: parseInt(process.env.PORT || '3456', 10),
-  host: process.env.HOST || '127.0.0.1',
+  // Server (env vars override YAML, YAML overrides defaults)
+  port: parseInt(process.env.PORT || String(yamlConfig.serverPort || 3456), 10),
+  host: process.env.HOST || yamlConfig.host || '127.0.0.1',
+  clientPort: parseInt(process.env.CLIENT_PORT || String(yamlConfig.clientPort || 5173), 10),
   nodeEnv: process.env.NODE_ENV || 'development',
 
   // Database

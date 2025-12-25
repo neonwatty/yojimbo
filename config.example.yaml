@@ -1,0 +1,12 @@
+# CC Orchestrator Configuration
+# Copy this file to config.yaml to customize settings
+# Environment variables override these values
+
+# Host to bind the server to
+host: "127.0.0.1"
+
+# Server API port
+serverPort: 3456
+
+# Client dev server port
+clientPort: 5173

@@ -3,6 +3,7 @@ import { Server } from 'http';
 import type { WSClientMessage, WSServerMessage } from '@cc-orchestrator/shared';
 import { ptyService } from '../services/pty.service.js';
 import { getDatabase } from '../db/connection.js';
+import { CONFIG } from '../config/index.js';
 
 let wss: WebSocketServer;
 
@@ -62,6 +63,8 @@ export function initWebSocketServer(server: Server): WebSocketServer {
       for (const clients of subscriptions.values()) {
         clients.delete(ws);
       }
+      // Stop polling if no active subscribers remain
+      updatePollingState();
     });
 
     ws.on('error', (error) => {
@@ -88,10 +91,18 @@ export function initWebSocketServer(server: Server): WebSocketServer {
     lastKnownCwds.delete(instanceId);
   });
 
-  // Start CWD polling
-  startCwdPolling();
+  // Don't start polling immediately - wait for first subscriber
+  console.log('📂 CWD polling will start when first client subscribes');
 
   return wss;
+}
+
+// Check if any instance has active subscribers
+function hasActiveSubscribers(): boolean {
+  for (const clients of subscriptions.values()) {
+    if (clients.size > 0) return true;
+  }
+  return false;
 }
 
 // Poll CWD for instances with active subscriptions
@@ -127,9 +138,8 @@ async function pollCwds(): Promise<void> {
 
 function startCwdPolling(): void {
   if (cwdPollingInterval) return;
-  // Poll every 2 seconds
-  cwdPollingInterval = setInterval(pollCwds, 2000);
-  console.log('📂 CWD polling started');
+  cwdPollingInterval = setInterval(pollCwds, CONFIG.runtime.cwdPollIntervalMs);
+  console.log(`📂 CWD polling started (interval: ${CONFIG.runtime.cwdPollIntervalMs}ms)`);
 }
 
 export function stopCwdPolling(): void {
@@ -137,6 +147,15 @@ export function stopCwdPolling(): void {
     clearInterval(cwdPollingInterval);
     cwdPollingInterval = null;
     console.log('📂 CWD polling stopped');
+  }
+}
+
+// Start/stop polling based on subscriber count
+function updatePollingState(): void {
+  if (hasActiveSubscribers()) {
+    startCwdPolling();
+  } else {
+    stopCwdPolling();
   }
 }
 
@@ -180,6 +199,9 @@ function handleMessage(ws: WebSocket, message: WSClientMessage): void {
         subscriptions.get(message.instanceId)!.add(ws);
         console.log(`Client subscribed to instance ${message.instanceId}`);
 
+        // Start polling if this is the first subscriber
+        updatePollingState();
+
         // Send terminal history to newly subscribed client
         const history = ptyService.getHistory(message.instanceId);
         if (history) {
@@ -197,6 +219,8 @@ function handleMessage(ws: WebSocket, message: WSClientMessage): void {
       if (message.instanceId && subscriptions.has(message.instanceId)) {
         subscriptions.get(message.instanceId)!.delete(ws);
         console.log(`Client unsubscribed from instance ${message.instanceId}`);
+        // Stop polling if no active subscribers remain
+        updatePollingState();
       }
       break;
 

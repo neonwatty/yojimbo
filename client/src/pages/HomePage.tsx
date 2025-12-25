@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useInstancesStore } from '../store/instancesStore';
 import { useSettingsStore } from '../store/settingsStore';
+import { instancesApi } from '../api/client';
 import { Icons } from '../components/common/Icons';
 
 export default function HomePage() {
@@ -17,6 +18,20 @@ export default function HomePage() {
 
   const pinnedInstances = instances.filter((i) => i.isPinned);
   const recentInstances = instances.filter((i) => !i.isPinned).slice(0, 5);
+
+  const handleNewInstance = async () => {
+    try {
+      const response = await instancesApi.create({
+        name: `instance-${instances.length + 1}`,
+        workingDir: '~',
+      });
+      if (response.data) {
+        navigate(`/instances/${response.data.id}`);
+      }
+    } catch {
+      // Error toast shown by API layer
+    }
+  };
 
   return (
     <div className="flex-1 overflow-auto bg-surface-800 p-6">
@@ -71,10 +86,7 @@ export default function HomePage() {
         {/* Quick Actions */}
         <div className="flex gap-3 mb-6">
           <button
-            onClick={() => {
-              // TODO: Create new instance
-              navigate('/instances');
-            }}
+            onClick={handleNewInstance}
             className="flex items-center gap-2 px-4 py-2 bg-accent text-surface-900 font-medium rounded-lg hover:bg-accent-bright transition-colors hover-lift press-effect"
           >
             <Icons.plus />
@@ -141,7 +153,7 @@ export default function HomePage() {
             <h3 className="text-xl font-semibold text-theme-primary mb-2">No instances yet</h3>
             <p className="text-theme-muted mb-4">Create your first Claude Code instance to get started.</p>
             <button
-              onClick={() => navigate('/instances')}
+              onClick={handleNewInstance}
               className="inline-flex items-center gap-2 px-4 py-2 bg-accent text-surface-900 font-medium rounded-lg hover:bg-accent-bright transition-colors"
             >
               <Icons.plus />

@@ -68,6 +68,13 @@ export const CONFIG = {
 
   // Development
   isDev: process.env.NODE_ENV !== 'production',
+
+  // Runtime constants (can be overridden via env vars)
+  runtime: {
+    cwdPollIntervalMs: parseInt(process.env.CWD_POLL_INTERVAL || '2000', 10),
+    fileWatcherDebounceMs: parseInt(process.env.FILE_WATCHER_DEBOUNCE || '100', 10),
+    terminalMaxHistoryBytes: parseInt(process.env.TERMINAL_MAX_HISTORY || '102400', 10),
+  },
 };
 
 export default CONFIG;

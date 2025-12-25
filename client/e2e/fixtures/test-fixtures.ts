@@ -7,6 +7,7 @@ const API_BASE = 'http://localhost:3456/api';
 interface ApiClient {
   listInstances(): Promise<{ id: string; name: string }[]>;
   createInstance(data: { name: string; workingDir: string }): Promise<{ id: string; name: string }>;
+  updateInstance(id: string, data: { name?: string; isPinned?: boolean }): Promise<{ id: string; name: string }>;
   closeInstance(id: string): Promise<void>;
   cleanupAllInstances(): Promise<void>;
   getSettings(): Promise<{ theme: string; terminalFontSize: number }>;
@@ -24,6 +25,16 @@ function createApiClient(): ApiClient {
     async createInstance(data: { name: string; workingDir: string }) {
       const response = await fetch(`${API_BASE}/instances`, {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      const result = await response.json();
+      return result.data;
+    },
+
+    async updateInstance(id: string, data: { name?: string; isPinned?: boolean }) {
+      const response = await fetch(`${API_BASE}/instances/${id}`, {
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });

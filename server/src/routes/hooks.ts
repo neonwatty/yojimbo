@@ -6,17 +6,24 @@ import type { HookStatusEvent, HookNotificationEvent, HookStopEvent, InstanceSta
 
 const router = Router();
 
+// Database row type for instances (subset needed by hooks)
+interface InstanceRow {
+  id: string;
+  working_dir: string;
+  status: InstanceStatus;
+}
+
 // Helper to find instance by ID
-function findInstanceById(instanceId: string): any | null {
+function findInstanceById(instanceId: string): InstanceRow | null {
   if (!instanceId) return null;
   const db = getDatabase();
-  return db
+  return (db
     .prepare('SELECT * FROM instances WHERE id = ? AND closed_at IS NULL')
-    .get(instanceId) || null;
+    .get(instanceId) as InstanceRow | undefined) || null;
 }
 
 // Helper to find instance by working directory (fallback)
-function findInstanceByWorkingDir(projectDir: string): any | null {
+function findInstanceByWorkingDir(projectDir: string): InstanceRow | null {
   const db = getDatabase();
 
   // Normalize the path (expand ~ and resolve)
@@ -25,7 +32,7 @@ function findInstanceByWorkingDir(projectDir: string): any | null {
   // Try exact match first
   let instance = db
     .prepare('SELECT * FROM instances WHERE working_dir = ? AND closed_at IS NULL')
-    .get(normalizedDir);
+    .get(normalizedDir) as InstanceRow | undefined;
 
   if (instance) return instance;
 
@@ -36,7 +43,7 @@ function findInstanceByWorkingDir(projectDir: string): any | null {
 
   instance = db
     .prepare('SELECT * FROM instances WHERE working_dir = ? AND closed_at IS NULL')
-    .get(withTilde);
+    .get(withTilde) as InstanceRow | undefined;
 
   if (instance) return instance;
 
@@ -49,7 +56,7 @@ function findInstanceByWorkingDir(projectDir: string): any | null {
       ORDER BY LENGTH(working_dir) DESC
       LIMIT 1
     `)
-    .get(normalizedDir, normalizedDir);
+    .get(normalizedDir, normalizedDir) as InstanceRow | undefined;
 
   return instance || null;
 }

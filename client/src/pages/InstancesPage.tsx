@@ -8,6 +8,7 @@ import { Terminal } from '../components/terminal';
 import { CardLayout } from '../components/instances/CardLayout';
 import { ListLayout } from '../components/instances/ListLayout';
 import { PlansPanel } from '../components/plans';
+import { MockupsPanel } from '../components/mockups/MockupsPanel';
 import { StatusDot, StatusBadge } from '../components/common/Status';
 import { EditableName } from '../components/common/EditableName';
 import { Icons } from '../components/common/Icons';
@@ -18,7 +19,13 @@ export default function InstancesPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { instances, setActiveInstanceId, updateInstance, removeInstance, reorderInstances, currentCwds } = useInstancesStore();
-  const { layout, editorPanelOpen, toggleEditorPanel, setEditorPanelOpen, terminalPanelOpen, toggleTerminalPanel, setTerminalPanelOpen, panelWidth, setPanelWidth } = useUIStore();
+  const {
+    layout,
+    editorPanelOpen, toggleEditorPanel, setEditorPanelOpen,
+    mockupsPanelOpen, setMockupsPanelOpen, mockupsPanelWidth, setMockupsPanelWidth,
+    terminalPanelOpen, toggleTerminalPanel, setTerminalPanelOpen,
+    panelWidth, setPanelWidth
+  } = useUIStore();
   const { theme } = useSettingsStore();
 
   // Track previous instance ID to detect navigation between different instances
@@ -29,10 +36,11 @@ export default function InstancesPage() {
   useEffect(() => {
     if (id && prevInstanceIdRef.current !== undefined && prevInstanceIdRef.current !== id) {
       setEditorPanelOpen(false);
+      setMockupsPanelOpen(false);
       setTerminalPanelOpen(true);
     }
     prevInstanceIdRef.current = id;
-  }, [id, setEditorPanelOpen, setTerminalPanelOpen]);
+  }, [id, setEditorPanelOpen, setMockupsPanelOpen, setTerminalPanelOpen]);
 
   // Editing state
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -236,6 +244,16 @@ export default function InstancesPage() {
               <span>Plans</span>
             </button>
             <button
+              onClick={() => setMockupsPanelOpen(!mockupsPanelOpen)}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors
+                ${mockupsPanelOpen
+                  ? 'bg-accent text-surface-900'
+                  : 'text-theme-muted hover:text-theme-primary hover:bg-surface-700'}`}
+            >
+              <Icons.code />
+              <span>Mockups</span>
+            </button>
+            <button
               onClick={toggleTerminalPanel}
               className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors
                 ${terminalPanelOpen
@@ -271,12 +289,21 @@ export default function InstancesPage() {
             onWidthChange={setPanelWidth}
           />
 
+          {/* Mockups Panel */}
+          <MockupsPanel
+            workingDir={currentCwds[instance.id] || instance.workingDir}
+            isOpen={mockupsPanelOpen}
+            onClose={() => setMockupsPanelOpen(false)}
+            width={mockupsPanelWidth}
+            onWidthChange={setMockupsPanelWidth}
+          />
+
           {/* Empty state when all panels are closed */}
-          {!terminalPanelOpen && !editorPanelOpen && (
+          {!terminalPanelOpen && !editorPanelOpen && !mockupsPanelOpen && (
             <div className="flex-1 flex items-center justify-center bg-surface-800">
               <div className="text-center text-theme-muted">
                 <Icons.terminal />
-                <p className="mt-2 text-sm">Use the buttons above to show Terminal or Plans</p>
+                <p className="mt-2 text-sm">Use the buttons above to show Terminal, Plans, or Mockups</p>
               </div>
             </div>
           )}

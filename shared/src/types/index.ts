@@ -72,6 +72,15 @@ export interface UpdatePlanRequest {
   content: string;
 }
 
+// Mockup types
+export interface Mockup {
+  id: string;
+  name: string;
+  path: string;
+  folder: string | null;
+  content: string;
+}
+
 // Hook event types
 export interface HookStatusEvent {
   event: 'working' | 'idle';
@@ -119,7 +128,7 @@ export type WSServerMessageType =
   | 'error';
 
 export interface FileChangeEvent {
-  fileType: 'plan';
+  fileType: 'plan' | 'mockup';
   fileId: string;
   filePath: string;
   workingDir: string;

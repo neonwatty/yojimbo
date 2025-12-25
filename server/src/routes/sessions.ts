@@ -140,33 +140,36 @@ router.get('/:id/messages', (req, res) => {
     const pageSize = parseInt(req.query.pageSize as string) || 50;
     const offset = (page - 1) * pageSize;
 
-    // Check if session exists
-    const session = db.prepare('SELECT id FROM sessions WHERE id = ?').get(req.params.id);
-    if (!session) {
-      return res.status(404).json({ success: false, error: 'Session not found' });
-    }
-
+    // Get messages and total count in a single query using a subquery
+    // This avoids N+1 by combining session check + messages + count
     const rows = db
       .prepare(`
-        SELECT * FROM session_messages
-        WHERE session_id = ?
-        ORDER BY timestamp ASC
+        SELECT sm.*, (SELECT COUNT(*) FROM session_messages WHERE session_id = ?) as total_count
+        FROM session_messages sm
+        WHERE sm.session_id = ?
+        ORDER BY sm.timestamp ASC
         LIMIT ? OFFSET ?
       `)
-      .all(req.params.id, pageSize, offset) as SessionMessageRow[];
+      .all(req.params.id, req.params.id, pageSize, offset) as (SessionMessageRow & { total_count: number })[];
 
-    const total = db
-      .prepare('SELECT COUNT(*) as count FROM session_messages WHERE session_id = ?')
-      .get(req.params.id) as CountResult;
+    // If no messages and page 1, check if session exists
+    if (rows.length === 0 && page === 1) {
+      const session = db.prepare('SELECT id FROM sessions WHERE id = ?').get(req.params.id);
+      if (!session) {
+        return res.status(404).json({ success: false, error: 'Session not found' });
+      }
+    }
+
+    const totalCount = rows.length > 0 ? rows[0].total_count : 0;
 
     res.json({
       success: true,
       data: {
         items: rows.map(rowToMessage),
-        total: total.count,
+        total: totalCount,
         page,
         pageSize,
-        hasMore: offset + rows.length < total.count,
+        hasMore: offset + rows.length < totalCount,
       },
     });
   } catch (error) {

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useInstancesStore } from '../store/instancesStore';
 import { useSettingsStore } from '../store/settingsStore';
 import { instancesApi } from '../api/client';
+import { toast } from '../store/toastStore';
 import { Icons } from '../components/common/Icons';
 import { Spinner } from '../components/common/Spinner';
 
@@ -34,6 +35,7 @@ export default function HomePage() {
         workingDir: '~',
       });
       if (response.data) {
+        toast.success('Instance created');
         navigate(`/instances/${response.data.id}`);
       }
     } catch {

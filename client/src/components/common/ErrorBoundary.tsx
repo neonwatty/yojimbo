@@ -5,6 +5,7 @@ interface ErrorBoundaryProps {
   children: ReactNode;
   fallback?: ReactNode;
   onError?: (error: Error, errorInfo: React.ErrorInfo) => void;
+  onRetry?: () => void;
 }
 
 interface ErrorBoundaryState {
@@ -29,6 +30,8 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
   handleRetry = (): void => {
     this.setState({ hasError: false, error: null });
+    // Call the onRetry callback to trigger re-fetch/re-render if provided
+    this.props.onRetry?.();
   };
 
   render(): ReactNode {

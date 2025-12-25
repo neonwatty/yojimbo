@@ -18,7 +18,7 @@ function App() {
   const navigate = useNavigate();
   const location = useLocation();
   const { theme } = useSettingsStore();
-  const { instances } = useInstancesStore();
+  const { instances, setActiveInstanceId } = useInstancesStore();
   const {
     showShortcutsModal,
     showSettingsModal,
@@ -38,9 +38,10 @@ function App() {
   // Instance switching handlers
   const switchToInstance = useCallback((index: number) => {
     if (instances[index]) {
+      setActiveInstanceId(instances[index].id);
       navigate(`/instances/${instances[index].id}`);
     }
-  }, [instances, navigate]);
+  }, [instances, navigate, setActiveInstanceId]);
 
   const cycleInstance = useCallback((direction: 'prev' | 'next') => {
     const match = location.pathname.match(/\/instances\/(.+)/);
@@ -53,8 +54,9 @@ function App() {
       ? (currentIndex + 1) % instances.length
       : (currentIndex - 1 + instances.length) % instances.length;
 
+    setActiveInstanceId(instances[newIndex].id);
     navigate(`/instances/${instances[newIndex].id}`);
-  }, [instances, location.pathname, navigate]);
+  }, [instances, location.pathname, navigate, setActiveInstanceId]);
 
   const handleNewInstance = useCallback(async () => {
     const response = await instancesApi.create({

@@ -12,7 +12,28 @@ export function LeftSidebar() {
   const navigate = useNavigate();
   const { id: expandedId } = useParams();
   const { instances, activeInstanceId, setActiveInstanceId, removeInstance } = useInstancesStore();
-  const { leftSidebarOpen, toggleLeftSidebar } = useUIStore();
+  const { leftSidebarOpen, leftSidebarWidth, setLeftSidebarWidth, toggleLeftSidebar } = useUIStore();
+
+  // Resize handler for draggable sidebar edge
+  const handleResizeStart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startWidth = leftSidebarWidth;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const delta = e.clientX - startX;
+      const newWidth = Math.min(Math.max(startWidth + delta, 180), 400);
+      setLeftSidebarWidth(newWidth);
+    };
+
+    const handleMouseUp = () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  };
 
   const pinnedInstances = instances.filter((i) => i.isPinned);
   const unpinnedInstances = instances.filter((i) => !i.isPinned);
@@ -108,7 +129,10 @@ export function LeftSidebar() {
 
   // Expanded sidebar
   return (
-    <div className="w-56 bg-surface-800 border-r border-surface-600 flex flex-col flex-shrink-0">
+    <div
+      style={{ width: leftSidebarWidth }}
+      className="bg-surface-800 border-r border-surface-600 flex flex-col flex-shrink-0 relative"
+    >
       {/* Header */}
       <div className="flex items-center justify-between px-3 py-3 border-b border-surface-600">
         <span className="text-sm font-semibold text-theme-primary flex items-center gap-2">
@@ -272,6 +296,12 @@ export function LeftSidebar() {
           </div>
         </div>
       )}
+
+      {/* Resize Handle */}
+      <div
+        className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-accent transition-colors"
+        onMouseDown={handleResizeStart}
+      />
     </div>
   );
 }

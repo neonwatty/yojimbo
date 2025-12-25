@@ -25,8 +25,11 @@
       ]
     },
     "server": {
-      "entry": ["src/index.ts"],
+      "entry": ["src/index.ts", "src/**/*.test.ts"],
       "project": ["src/**/*.ts"],
+      "vitest": {
+        "config": ["vitest.config.ts"]
+      },
       "ignoreDependencies": [
         "@typescript-eslint/eslint-plugin",
         "@typescript-eslint/parser"

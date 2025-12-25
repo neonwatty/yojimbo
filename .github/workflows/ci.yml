@@ -13,6 +13,7 @@ on:
       - 'README.md'
       - 'plans/**/*.md'
       - 'notes/**/*.md'
+  workflow_call:
 
 jobs:
   # Fast checks run in parallel

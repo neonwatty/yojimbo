@@ -15,6 +15,31 @@ const lastKnownCwds = new Map<string, string>();
 // CWD polling interval reference
 let cwdPollingInterval: ReturnType<typeof setInterval> | null = null;
 
+// Debounce timers for saving CWD to database
+const cwdSaveTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
+// Save last_cwd to database (debounced to avoid excessive writes)
+function saveLastCwdToDb(instanceId: string, cwd: string): void {
+  // Clear existing timer for this instance
+  const existingTimer = cwdSaveTimers.get(instanceId);
+  if (existingTimer) {
+    clearTimeout(existingTimer);
+  }
+
+  // Set new timer - save after 5 seconds of no changes
+  const timer = setTimeout(() => {
+    try {
+      const db = getDatabase();
+      db.prepare('UPDATE instances SET last_cwd = ? WHERE id = ?').run(cwd, instanceId);
+      cwdSaveTimers.delete(instanceId);
+    } catch (error) {
+      console.error(`Failed to save last_cwd for instance ${instanceId}:`, error);
+    }
+  }, 5000);
+
+  cwdSaveTimers.set(instanceId, timer);
+}
+
 export function initWebSocketServer(server: Server): WebSocketServer {
   wss = new WebSocketServer({ server, path: '/ws' });
 
@@ -83,6 +108,8 @@ async function pollCwds(): Promise<void> {
         const lastCwd = lastKnownCwds.get(instanceId);
         if (lastCwd !== cwd) {
           lastKnownCwds.set(instanceId, cwd);
+          // Save to database (debounced)
+          saveLastCwdToDb(instanceId, cwd);
           // Broadcast CWD change to ALL clients (not just subscribed)
           // This ensures the main app (useInstances) receives the update
           broadcast({
@@ -133,10 +160,12 @@ function handleMessage(ws: WebSocket, message: WSClientMessage): void {
         if (!ptyService.has(message.instanceId)) {
           try {
             const db = getDatabase();
-            const row = db.prepare('SELECT working_dir FROM instances WHERE id = ? AND closed_at IS NULL').get(message.instanceId) as { working_dir: string } | undefined;
+            const row = db.prepare('SELECT working_dir, last_cwd FROM instances WHERE id = ? AND closed_at IS NULL').get(message.instanceId) as { working_dir: string; last_cwd: string | null } | undefined;
             if (row) {
-              console.log(`🔄 Respawning PTY for instance ${message.instanceId}`);
-              const ptyInstance = ptyService.spawn(message.instanceId, row.working_dir);
+              // Use last_cwd if available, otherwise fall back to working_dir
+              const spawnDir = row.last_cwd || row.working_dir;
+              console.log(`🔄 Respawning PTY for instance ${message.instanceId} in ${spawnDir}`);
+              const ptyInstance = ptyService.spawn(message.instanceId, spawnDir);
               // Update PID in database
               db.prepare('UPDATE instances SET pid = ? WHERE id = ?').run(ptyInstance.pty.pid, message.instanceId);
             }

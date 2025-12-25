@@ -26,7 +26,7 @@ export default function Header() {
           onClick={() => navigate('/')}
           title="Go to Home"
         >
-          <span className="text-accent font-extrabold">CC</span> Orchestrator
+          <span className="text-accent font-extrabold">用</span>心棒
         </h1>
         <div className="flex items-center gap-3">
           <div className="text-xs text-theme-muted font-mono">

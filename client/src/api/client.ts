@@ -151,4 +151,9 @@ export const settingsApi = {
       method: 'PATCH',
       body: JSON.stringify(data),
     }),
+
+  resetDatabase: () =>
+    request<ApiResponse<{ reset: boolean }>>('/settings/reset-database', {
+      method: 'POST',
+    }),
 };

@@ -1,5 +1,7 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useSettingsStore } from '../../store/settingsStore';
+import { settingsApi } from '../../api/client';
+import { toast } from '../../store/toastStore';
 import { Icons } from '../common/Icons';
 
 interface SettingsModalProps {
@@ -10,6 +12,30 @@ interface SettingsModalProps {
 export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const { theme, terminalFontSize, terminalFontFamily, setTheme, setTerminalFontSize, setTerminalFontFamily } =
     useSettingsStore();
+  const [resetConfirmation, setResetConfirmation] = useState('');
+  const [isResetting, setIsResetting] = useState(false);
+
+  // Reset confirmation state when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setResetConfirmation('');
+    }
+  }, [isOpen]);
+
+  const handleResetDatabase = async () => {
+    if (resetConfirmation !== 'RESET') return;
+
+    setIsResetting(true);
+    try {
+      await settingsApi.resetDatabase();
+      toast.success('Database reset complete');
+      // Reload the page to clear all state
+      window.location.reload();
+    } catch {
+      toast.error('Failed to reset database');
+      setIsResetting(false);
+    }
+  };
 
   // Handle Escape key
   useEffect(() => {
@@ -99,10 +125,37 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
               <option value="Menlo">Menlo</option>
             </select>
           </div>
+
+          {/* Danger Zone */}
+          <div className="pt-4 mt-4 border-t border-surface-600">
+            <h3 className="text-xs font-semibold text-red-400 uppercase tracking-wider mb-3">Danger Zone</h3>
+            <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4">
+              <p className="text-sm text-theme-muted mb-3">
+                Reset the database to clear all instances, sessions, and settings. This action cannot be undone.
+              </p>
+              <div className="flex items-center gap-3">
+                <input
+                  type="text"
+                  value={resetConfirmation}
+                  onChange={(e) => setResetConfirmation(e.target.value)}
+                  placeholder='Type "RESET" to confirm'
+                  className="flex-1 bg-surface-800 border border-surface-600 rounded-lg px-3 py-1.5 text-sm text-theme-primary placeholder:text-theme-muted focus:outline-none focus:ring-2 focus:ring-red-500/50"
+                />
+                <button
+                  onClick={handleResetDatabase}
+                  disabled={resetConfirmation !== 'RESET' || isResetting}
+                  className="px-4 py-1.5 bg-red-500/20 text-red-400 rounded-lg text-sm font-medium border border-red-500/30 hover:bg-red-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isResetting ? 'Resetting...' : 'Reset'}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-3 border-t border-surface-600 text-center">
+        <div className="px-6 py-3 border-t border-surface-600 flex items-center justify-between">
+          <span className="text-xs text-theme-muted">v{__APP_VERSION__}</span>
           <span className="text-xs text-theme-muted">
             Press{' '}
             <kbd className="px-1.5 py-0.5 bg-surface-800 border border-surface-500 rounded text-xs font-mono">

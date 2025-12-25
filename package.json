@@ -1,8 +1,8 @@
 {
-  "name": "cc-hard-core",
+  "name": "yojimbo",
   "version": "0.1.0",
   "private": true,
-  "description": "Claude Code Orchestrator - Manage multiple Claude Code terminal instances",
+  "description": "Yojimbo - Manage multiple Claude Code terminal instances",
   "workspaces": [
     "client",
     "server",

@@ -25,7 +25,7 @@ export const useSettingsStore = create<SettingsState>()(
       updateSettings: (settings) => set(settings),
     }),
     {
-      name: 'cc-orchestrator-settings',
+      name: 'yojimbo-settings',
     }
   )
 );

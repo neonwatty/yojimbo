@@ -1,6 +1,8 @@
-# Claude Code Orchestrator
+# Yojimbo 用心棒
 
 A local web application for managing multiple Claude Code terminal instances with real-time status tracking, session history, and plans management.
+
+*The lone samurai who handles everything.*
 
 ## Features
 
@@ -121,13 +123,14 @@ make hooks-check      # Verify hook installation
 |----------|--------|
 | `Cmd+B` | Toggle sessions sidebar |
 | `Cmd+E` | Toggle plans panel |
+| `Cmd+M` | Toggle mockups panel |
 | `Cmd+\`` | Toggle terminal panel |
 | `Cmd+S` | Save current file (in editor panel) |
 
 ## Architecture
 
 ```
-cc-hard-core/
+yojimbo/
 ├── client/          # React + Vite frontend
 │   └── src/
 │       ├── components/

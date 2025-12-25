@@ -79,4 +79,35 @@ router.patch('/', (req: Request, res: Response) => {
   }
 });
 
+// POST /api/settings/reset-database - Reset entire database
+router.post('/reset-database', (_req: Request, res: Response) => {
+  try {
+    const db = getDatabase();
+
+    // Truncate all tables in a transaction
+    db.transaction(() => {
+      db.prepare('DELETE FROM session_messages').run();
+      db.prepare('DELETE FROM sessions').run();
+      db.prepare('DELETE FROM instances').run();
+      db.prepare('DELETE FROM settings').run();
+
+      // Re-insert default settings
+      const upsert = db.prepare(`
+        INSERT INTO settings (key, value) VALUES (?, ?)
+      `);
+      for (const [key, value] of Object.entries(DEFAULT_SETTINGS)) {
+        upsert.run(key, JSON.stringify(value));
+      }
+    })();
+
+    console.log('🗑️ Database reset complete');
+    const response: ApiResponse<{ reset: boolean }> = { success: true, data: { reset: true } };
+    res.json(response);
+  } catch (error) {
+    console.error('Failed to reset database:', error);
+    const response: ApiResponse<{ reset: boolean }> = { success: false, error: 'Failed to reset database' };
+    res.status(500).json(response);
+  }
+});
+
 export default router;

@@ -35,8 +35,14 @@ const serverHost = config.host || '127.0.0.1';
 const serverPort = config.serverPort || 3456;
 const clientPort = config.clientPort || 5173;
 
+// Load version from package.json
+const packageJson = JSON.parse(fs.readFileSync(path.resolve(__dirname, './package.json'), 'utf-8'));
+
 export default defineConfig({
   plugins: [react()],
+  define: {
+    __APP_VERSION__: JSON.stringify(packageJson.version),
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

@@ -120,7 +120,7 @@ export const useUIStore = create<UIState>()(
       resetToDefaults: () => set(DEFAULT_UI_STATE),
     }),
     {
-      name: 'cc-orchestrator-ui',
+      name: 'yojimbo-ui',
       version: UI_STORE_VERSION,
       // Only persist layout state, not modal states
       partialize: (state) => ({

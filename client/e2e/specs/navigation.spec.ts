@@ -1,5 +1,17 @@
 import { test, expect } from '../fixtures/test-fixtures';
 
+test.describe('App Branding', () => {
+  test('shows Yojimbo in header', async ({ basePage }) => {
+    await basePage.goto('/instances');
+    await expect(basePage.page.locator('h1:has-text("Yojimbo")')).toBeVisible();
+  });
+
+  test('page title is Yojimbo', async ({ basePage }) => {
+    await basePage.goto('/instances');
+    await expect(basePage.page).toHaveTitle('Yojimbo');
+  });
+});
+
 test.describe('Navigation', () => {
   test('app loads at root path', async ({ basePage }) => {
     await basePage.goto('/');

@@ -31,6 +31,7 @@ export function initDatabase(): Database.Database {
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
       working_dir TEXT NOT NULL,
+      last_cwd TEXT,
       status TEXT DEFAULT 'idle' CHECK(status IN ('working', 'awaiting', 'idle', 'error')),
       is_pinned INTEGER DEFAULT 0,
       display_order INTEGER,
@@ -81,9 +82,24 @@ export function initDatabase(): Database.Database {
   `;
 
   db.exec(schema);
+
+  // Run migrations for existing databases
+  runMigrations();
+
   console.log('✅ Database initialized');
 
   return db;
+}
+
+function runMigrations(): void {
+  // Check if last_cwd column exists, add if not
+  const tableInfo = db.prepare("PRAGMA table_info(instances)").all() as { name: string }[];
+  const hasLastCwd = tableInfo.some((col) => col.name === 'last_cwd');
+
+  if (!hasLastCwd) {
+    console.log('🔧 Running migration: adding last_cwd column to instances');
+    db.exec('ALTER TABLE instances ADD COLUMN last_cwd TEXT');
+  }
 }
 
 export function closeDatabase(): void {

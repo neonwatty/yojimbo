@@ -25,7 +25,7 @@ export default function HomePage() {
         {showWelcomeBanner && (
           <div className="bg-accent/10 border border-accent/20 rounded-xl p-6 mb-6 animate-reveal-up">
             <div className="flex justify-between items-start mb-4">
-              <h2 className="text-lg font-semibold text-theme-primary">Getting Started with CC Orchestrator</h2>
+              <h2 className="text-lg font-semibold text-theme-primary">Getting Started with Yojimbo</h2>
               <button
                 onClick={() => setShowWelcomeBanner(false)}
                 className="text-theme-muted hover:text-theme-primary transition-colors p-1"

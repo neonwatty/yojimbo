@@ -9,6 +9,7 @@ import MainLayout from './components/layout/MainLayout';
 import HomePage from './pages/HomePage';
 import InstancesPage from './pages/InstancesPage';
 import HistoryPage from './pages/HistoryPage';
+import ActivityPage from './pages/ActivityPage';
 import { ShortcutsModal, SettingsModal, NewInstanceModal } from './components/modals';
 import { CommandPalette } from './components/common/CommandPalette';
 import { ToastContainer } from './components/common/Toast';
@@ -201,6 +202,7 @@ function App() {
             <Route path="/instances" element={<InstancesPage />} />
             <Route path="/instances/:id" element={<InstancesPage />} />
             <Route path="/history" element={<HistoryPage />} />
+            <Route path="/activity" element={<ActivityPage />} />
           </Routes>
         </MainLayout>
       </ErrorBoundary>

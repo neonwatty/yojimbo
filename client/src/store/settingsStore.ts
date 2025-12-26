@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
-import type { Settings, ClaudeCodeAlias, InstanceMode } from '@cc-orchestrator/shared';
+import type { Settings, ClaudeCodeAlias, InstanceMode, ActivityEventType } from '@cc-orchestrator/shared';
 
 interface SettingsState extends Settings {
   // Existing setters
@@ -21,6 +21,12 @@ interface SettingsState extends Settings {
   // Instance creation preferences
   setLastUsedDirectory: (dir: string) => void;
   setLastInstanceMode: (mode: InstanceMode) => void;
+
+  // Activity Feed settings
+  setShowActivityInNav: (show: boolean) => void;
+  setFeedEnabledEventTypes: (types: ActivityEventType[]) => void;
+  setFeedRetentionDays: (days: number) => void;
+  toggleFeedEventType: (eventType: ActivityEventType) => void;
 }
 
 const defaultAliases: ClaudeCodeAlias[] = [
@@ -49,6 +55,10 @@ export const useSettingsStore = create<SettingsState>()(
       claudeCodeAliases: defaultAliases,
       lastUsedDirectory: '~',
       lastInstanceMode: 'claude-code',
+      // Activity Feed defaults
+      showActivityInNav: true,
+      feedEnabledEventTypes: ['completed'] as ActivityEventType[],
+      feedRetentionDays: 7,
 
       // Existing setters
       setTheme: (theme) => set({ theme }),
@@ -104,6 +114,20 @@ export const useSettingsStore = create<SettingsState>()(
       // Instance creation preferences
       setLastUsedDirectory: (lastUsedDirectory) => set({ lastUsedDirectory }),
       setLastInstanceMode: (lastInstanceMode) => set({ lastInstanceMode }),
+
+      // Activity Feed settings
+      setShowActivityInNav: (showActivityInNav) => set({ showActivityInNav }),
+      setFeedEnabledEventTypes: (feedEnabledEventTypes) => set({ feedEnabledEventTypes }),
+      setFeedRetentionDays: (feedRetentionDays) => set({ feedRetentionDays }),
+      toggleFeedEventType: (eventType) =>
+        set((state) => {
+          const types = state.feedEnabledEventTypes;
+          if (types.includes(eventType)) {
+            return { feedEnabledEventTypes: types.filter((t) => t !== eventType) };
+          } else {
+            return { feedEnabledEventTypes: [...types, eventType] };
+          }
+        }),
     }),
     {
       name: 'yojimbo-settings',

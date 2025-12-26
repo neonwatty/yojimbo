@@ -73,12 +73,26 @@ export function initDatabase(): Database.Database {
       value TEXT NOT NULL
     );
 
+    -- activity_feed table
+    CREATE TABLE IF NOT EXISTS activity_feed (
+      id TEXT PRIMARY KEY,
+      instance_id TEXT,
+      instance_name TEXT NOT NULL,
+      event_type TEXT NOT NULL CHECK(event_type IN ('completed', 'awaiting', 'error', 'started')),
+      message TEXT NOT NULL,
+      metadata TEXT,
+      created_at TEXT DEFAULT (datetime('now')),
+      read_at TEXT
+    );
+
     -- indexes
     CREATE INDEX IF NOT EXISTS idx_instances_status ON instances(status);
     CREATE INDEX IF NOT EXISTS idx_instances_pinned ON instances(is_pinned);
     CREATE INDEX IF NOT EXISTS idx_sessions_instance ON sessions(instance_id);
     CREATE INDEX IF NOT EXISTS idx_sessions_project ON sessions(project_path);
     CREATE INDEX IF NOT EXISTS idx_messages_session ON session_messages(session_id);
+    CREATE INDEX IF NOT EXISTS idx_activity_feed_created ON activity_feed(created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_activity_feed_unread ON activity_feed(read_at) WHERE read_at IS NULL;
   `;
 
   db.exec(schema);
@@ -99,6 +113,19 @@ function runMigrations(): void {
   if (!hasLastCwd) {
     console.log('🔧 Running migration: adding last_cwd column to instances');
     db.exec('ALTER TABLE instances ADD COLUMN last_cwd TEXT');
+  }
+}
+
+export function cleanupOldActivityEvents(retentionDays: number = 7): void {
+  if (!db) return;
+
+  const result = db.prepare(`
+    DELETE FROM activity_feed
+    WHERE created_at < datetime('now', '-' || ? || ' days')
+  `).run(retentionDays);
+
+  if (result.changes > 0) {
+    console.log(`🧹 Cleaned up ${result.changes} old activity events (older than ${retentionDays} days)`);
   }
 }
 

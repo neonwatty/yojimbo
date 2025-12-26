@@ -175,6 +175,25 @@ export function PlansPanel({ instanceId, workingDir, isOpen, onClose, width, onW
     }
   }, [selectedPlan, editContent, markAsSaved, fetchPlans, isSaving]);
 
+  const handleDelete = async () => {
+    if (!selectedPlan) return;
+
+    if (!window.confirm(`Delete "${selectedPlan.name}"? This cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      await plansApi.delete(selectedPlan.id);
+      toast.success('Plan deleted');
+      setSelectedPlan(null);
+      setEditContent('');
+      setSelectedPlanForInstance(instanceId, null);
+      await fetchPlans();
+    } catch {
+      // Error toast handled by API layer
+    }
+  };
+
   // Keyboard shortcut: Cmd+S to save
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -469,6 +488,13 @@ export function PlansPanel({ instanceId, workingDir, isOpen, onClose, width, onW
                     >
                       {isSaving ? <Spinner size="sm" /> : <Icons.save />}
                       {isSaving ? 'Saving...' : 'Save'}
+                    </button>
+                    <button
+                      onClick={handleDelete}
+                      className="p-1.5 rounded text-red-400 hover:bg-red-500/20 transition-colors"
+                      title="Delete plan"
+                    >
+                      <Icons.trash />
                     </button>
                   </div>
                 </div>

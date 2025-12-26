@@ -87,6 +87,54 @@ test.describe('Plans Panel', () => {
     expect(fs.existsSync(testPlanPath)).toBe(true);
   });
 
+  test('can delete a plan', async ({ instancesPage }) => {
+    // Create a test plan file first
+    if (!fs.existsSync(plansDir)) {
+      fs.mkdirSync(plansDir, { recursive: true });
+    }
+    fs.writeFileSync(testPlanPath, '# Test Plan to Delete\n\nThis will be deleted.');
+
+    await instancesPage.gotoInstances();
+    await instancesPage.createNewInstance();
+    await expect(instancesPage.page).toHaveURL(/.*\/instances\/[a-zA-Z0-9-]+$/);
+
+    // Open plans panel
+    await instancesPage.page.locator('button:has-text("Plans")').click();
+    await instancesPage.page.waitForTimeout(500);
+
+    // Wait for the file list to load
+    const planFileButton = instancesPage.page.locator('button:has-text("e2e-test-plan.md")');
+    await expect(planFileButton).toBeVisible({ timeout: 10000 });
+
+    // Click on the test plan to select it
+    await planFileButton.click({ force: true });
+
+    // Wait for the plan name to appear in the editor toolbar (indicates content loaded)
+    const editorToolbar = instancesPage.page.locator('.text-sm.text-theme-primary.font-medium:has-text("e2e-test-plan.md")');
+    await expect(editorToolbar).toBeVisible({ timeout: 10000 });
+
+    // Handle the confirmation dialog
+    instancesPage.page.once('dialog', async (dialog) => {
+      expect(dialog.message()).toContain('Delete');
+      await dialog.accept();
+    });
+
+    // Click the delete button
+    await instancesPage.page.locator('button[title="Delete plan"]').click();
+
+    // Verify toast notification appears
+    await expect(instancesPage.page.locator('text=Plan deleted')).toBeVisible({ timeout: 5000 });
+
+    // Verify plan is no longer in the list
+    await expect(planFileButton).not.toBeVisible({ timeout: 5000 });
+
+    // Verify editor toolbar no longer shows the plan name (selection cleared)
+    await expect(editorToolbar).not.toBeVisible();
+
+    // Verify file was deleted
+    expect(fs.existsSync(testPlanPath)).toBe(false);
+  });
+
   test('can edit and save a plan', async ({ instancesPage }) => {
     // Create a test plan file first
     if (!fs.existsSync(plansDir)) {

@@ -13,9 +13,7 @@ import { StatusDot, StatusBadge } from '../components/common/Status';
 import { EditableName } from '../components/common/EditableName';
 import { ErrorBoundary } from '../components/common/ErrorBoundary';
 import { Icons } from '../components/common/Icons';
-import { Spinner } from '../components/common/Spinner';
 import { instancesApi } from '../api/client';
-import { toast } from '../store/toastStore';
 import type { Instance } from '@cc-orchestrator/shared';
 
 export default function InstancesPage() {
@@ -27,7 +25,8 @@ export default function InstancesPage() {
     editorPanelOpen, toggleEditorPanel, setEditorPanelOpen,
     mockupsPanelOpen, setMockupsPanelOpen, mockupsPanelWidth, setMockupsPanelWidth,
     terminalPanelOpen, toggleTerminalPanel, setTerminalPanelOpen,
-    panelWidth, setPanelWidth
+    panelWidth, setPanelWidth,
+    setShowNewInstanceModal
   } = useUIStore();
   const { theme } = useSettingsStore();
 
@@ -91,7 +90,6 @@ export default function InstancesPage() {
   const [confirmInstance, setConfirmInstance] = useState<Instance | null>(null);
 
   // Loading state for new instance creation
-  const [isCreatingInstance, setIsCreatingInstance] = useState(false);
 
   // Get current instance for keyboard shortcuts
   const currentInstance = id ? instances.find(i => i.id === id) : null;
@@ -193,24 +191,9 @@ export default function InstancesPage() {
     }
   }, [instances, reorderInstances]);
 
-  const handleNewInstance = useCallback(async () => {
-    if (isCreatingInstance) return;
-    setIsCreatingInstance(true);
-    try {
-      const response = await instancesApi.create({
-        name: `instance-${instances.length + 1}`,
-        workingDir: '~',
-      });
-      if (response.data) {
-        toast.success('Instance created');
-        navigate(`/instances/${response.data.id}`);
-      }
-    } catch {
-      // Error toast shown by API layer
-    } finally {
-      setIsCreatingInstance(false);
-    }
-  }, [instances.length, navigate, isCreatingInstance]);
+  const handleNewInstance = useCallback(() => {
+    setShowNewInstanceModal(true);
+  }, [setShowNewInstanceModal]);
 
   const handleStartEditing = useCallback((instanceId: string, name: string) => {
     setEditingId(instanceId);
@@ -407,7 +390,6 @@ export default function InstancesPage() {
             onExpand={handleExpand}
             onReorder={handleReorder}
             onNewInstance={handleNewInstance}
-            isCreating={isCreatingInstance}
             editingId={editingId}
             editingName={editingName}
             onStartEditing={handleStartEditing}
@@ -442,11 +424,10 @@ export default function InstancesPage() {
               <p className="text-theme-muted mb-4">Create your first Claude Code instance to get started.</p>
               <button
                 onClick={handleNewInstance}
-                disabled={isCreatingInstance}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-accent text-surface-900 font-medium rounded-lg hover:bg-accent-bright transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-accent text-surface-900 font-medium rounded-lg hover:bg-accent-bright transition-colors"
               >
-                {isCreatingInstance ? <Spinner size="sm" /> : <Icons.plus />}
-                {isCreatingInstance ? 'Creating...' : 'Create Instance'}
+                <Icons.plus />
+                Create Instance
               </button>
             </div>
           </div>

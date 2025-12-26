@@ -30,6 +30,7 @@ export function LeftSidebar() {
   const leftSidebarWidth = useUIStore((state) => state.leftSidebarWidth);
   const setLeftSidebarWidth = useUIStore((state) => state.setLeftSidebarWidth);
   const toggleLeftSidebar = useUIStore((state) => state.toggleLeftSidebar);
+  const setShowNewInstanceModal = useUIStore((state) => state.setShowNewInstanceModal);
 
   // Resize handler for draggable sidebar edge
   const handleResizeStart = (e: React.MouseEvent) => {
@@ -109,8 +110,7 @@ export function LeftSidebar() {
   };
 
   const handleNewInstance = () => {
-    navigate('/instances');
-    // The new instance action will be handled by the instances page
+    setShowNewInstanceModal(true);
   };
 
   const handleCloseInstance = useCallback((e: React.MouseEvent, instance: Instance) => {

@@ -1,20 +1,17 @@
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useInstancesStore } from '../store/instancesStore';
 import { useSettingsStore } from '../store/settingsStore';
-import { instancesApi } from '../api/client';
-import { toast } from '../store/toastStore';
+import { useUIStore } from '../store/uiStore';
 import { Icons } from '../components/common/Icons';
-import { Spinner } from '../components/common/Spinner';
 
 export default function HomePage() {
   const navigate = useNavigate();
-  const [isCreating, setIsCreating] = useState(false);
 
   // Use selectors for better performance
   const instances = useInstancesStore((state) => state.instances);
   const showWelcomeBanner = useSettingsStore((state) => state.showWelcomeBanner);
   const setShowWelcomeBanner = useSettingsStore((state) => state.setShowWelcomeBanner);
+  const setShowNewInstanceModal = useUIStore((state) => state.setShowNewInstanceModal);
 
   const stats = [
     { label: 'Total', value: instances.length, colorClass: 'text-accent border-accent/30' },
@@ -26,23 +23,8 @@ export default function HomePage() {
   const pinnedInstances = instances.filter((i) => i.isPinned);
   const recentInstances = instances.filter((i) => !i.isPinned).slice(0, 5);
 
-  const handleNewInstance = async () => {
-    if (isCreating) return;
-    setIsCreating(true);
-    try {
-      const response = await instancesApi.create({
-        name: `instance-${instances.length + 1}`,
-        workingDir: '~',
-      });
-      if (response.data) {
-        toast.success('Instance created');
-        navigate(`/instances/${response.data.id}`);
-      }
-    } catch {
-      // Error toast shown by API layer
-    } finally {
-      setIsCreating(false);
-    }
+  const handleNewInstance = () => {
+    setShowNewInstanceModal(true);
   };
 
   return (
@@ -105,11 +87,10 @@ export default function HomePage() {
         <div className="flex gap-3 mb-6">
           <button
             onClick={handleNewInstance}
-            disabled={isCreating}
-            className="flex items-center gap-2 px-4 py-2 bg-accent text-surface-900 font-medium rounded-lg hover:bg-accent-bright transition-colors hover-lift press-effect disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-accent"
+            className="flex items-center gap-2 px-4 py-2 bg-accent text-surface-900 font-medium rounded-lg hover:bg-accent-bright transition-colors hover-lift press-effect"
           >
-            {isCreating ? <Spinner size="sm" /> : <Icons.plus />}
-            {isCreating ? 'Creating...' : 'New Instance'}
+            <Icons.plus />
+            New Instance
           </button>
           <button
             onClick={() => navigate('/instances')}
@@ -173,11 +154,10 @@ export default function HomePage() {
             <p className="text-theme-muted mb-4">Create your first Claude Code instance to get started.</p>
             <button
               onClick={handleNewInstance}
-              disabled={isCreating}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-accent text-surface-900 font-medium rounded-lg hover:bg-accent-bright transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-accent text-surface-900 font-medium rounded-lg hover:bg-accent-bright transition-colors"
             >
-              {isCreating ? <Spinner size="sm" /> : <Icons.plus />}
-              {isCreating ? 'Creating...' : 'Create Instance'}
+              <Icons.plus />
+              Create Instance
             </button>
           </div>
         )}

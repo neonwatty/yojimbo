@@ -12,7 +12,7 @@ const DEFAULT_SETTINGS: Settings = {
   // Client-side settings (stored in localStorage, not server DB)
   claudeCodeAliases: [],
   lastUsedDirectory: '~',
-  lastInstanceMode: 'terminal',
+  lastInstanceMode: 'claude-code',
 };
 
 function getSettingsFromDb(): Settings {

@@ -48,7 +48,7 @@ export const useSettingsStore = create<SettingsState>()(
       showWelcomeBanner: true,
       claudeCodeAliases: defaultAliases,
       lastUsedDirectory: '~',
-      lastInstanceMode: 'terminal',
+      lastInstanceMode: 'claude-code',
 
       // Existing setters
       setTheme: (theme) => set({ theme }),

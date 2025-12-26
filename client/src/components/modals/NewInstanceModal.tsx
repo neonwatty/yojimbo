@@ -25,7 +25,7 @@ export function NewInstanceModal({ isOpen, onClose }: NewInstanceModalProps) {
 
   const [name, setName] = useState('');
   const [workingDir, setWorkingDir] = useState(lastUsedDirectory || '~');
-  const [mode, setMode] = useState<InstanceMode>(lastInstanceMode || 'terminal');
+  const [mode, setMode] = useState<InstanceMode>(lastInstanceMode || 'claude-code');
   const [selectedAliasId, setSelectedAliasId] = useState<string>(() => {
     const defaultAlias = getDefaultAlias();
     return defaultAlias?.id || '';

@@ -4,6 +4,16 @@ import { InstancesPage } from '../pages/instances.page';
 
 const API_BASE = 'http://localhost:3456/api';
 
+interface ActivityEvent {
+  id: string;
+  instanceId: string | null;
+  instanceName: string;
+  eventType: 'completed' | 'awaiting' | 'error' | 'started';
+  message: string;
+  createdAt: string;
+  readAt: string | null;
+}
+
 interface ApiClient {
   listInstances(): Promise<{ id: string; name: string }[]>;
   createInstance(data: { name: string; workingDir: string }): Promise<{ id: string; name: string }>;
@@ -12,6 +22,13 @@ interface ApiClient {
   cleanupAllInstances(): Promise<void>;
   getSettings(): Promise<{ theme: string; terminalFontSize: number }>;
   resetDatabase(): Promise<{ reset: boolean }>;
+  // Feed API
+  listFeedEvents(limit?: number): Promise<ActivityEvent[]>;
+  getFeedStats(): Promise<{ total: number; unread: number }>;
+  markEventAsRead(id: string): Promise<ActivityEvent>;
+  markAllEventsAsRead(): Promise<{ count: number }>;
+  clearFeedEvents(): Promise<{ count: number }>;
+  createTestEvent(instanceId: string, instanceName: string, eventType: string, message: string): Promise<void>;
 }
 
 function createApiClient(): ApiClient {
@@ -67,6 +84,53 @@ function createApiClient(): ApiClient {
       });
       const data = await response.json();
       return data.data;
+    },
+
+    // Feed API implementations
+    async listFeedEvents(limit = 50) {
+      const response = await fetch(`${API_BASE}/feed?limit=${limit}`);
+      const data = await response.json();
+      return data.data || [];
+    },
+
+    async getFeedStats() {
+      const response = await fetch(`${API_BASE}/feed/stats`);
+      const data = await response.json();
+      return data.data;
+    },
+
+    async markEventAsRead(id: string) {
+      const response = await fetch(`${API_BASE}/feed/${id}/read`, {
+        method: 'PATCH',
+      });
+      const data = await response.json();
+      return data.data;
+    },
+
+    async markAllEventsAsRead() {
+      const response = await fetch(`${API_BASE}/feed/mark-all-read`, {
+        method: 'POST',
+      });
+      const data = await response.json();
+      return data.data;
+    },
+
+    async clearFeedEvents() {
+      const response = await fetch(`${API_BASE}/feed/clear`, {
+        method: 'DELETE',
+      });
+      const data = await response.json();
+      return data.data;
+    },
+
+    async createTestEvent(instanceId: string, instanceName: string, eventType: string, message: string) {
+      // This creates an event by directly inserting via a test endpoint
+      // For e2e tests, we'll use the hooks endpoint to trigger status changes instead
+      await fetch(`${API_BASE}/feed/test-event`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ instanceId, instanceName, eventType, message }),
+      });
     },
   };
 }

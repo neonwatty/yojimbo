@@ -6,7 +6,9 @@ import {
   markEventAsRead,
   markAllEventsAsRead,
   clearAllEvents,
+  createActivityEvent,
 } from '../services/feed.service.js';
+import type { ActivityEventType } from '@cc-orchestrator/shared';
 
 const router = Router();
 
@@ -79,6 +81,26 @@ router.delete('/clear', (_req: Request, res: Response) => {
   } catch (error) {
     console.error('Failed to clear events:', error);
     const response: ApiResponse<{ count: number }> = { success: false, error: 'Failed to clear events' };
+    res.status(500).json(response);
+  }
+});
+
+// POST /api/feed/test-event - Create a test event (for e2e testing only)
+router.post('/test-event', (req: Request, res: Response) => {
+  try {
+    const { instanceId, instanceName, eventType, message } = req.body as {
+      instanceId: string;
+      instanceName: string;
+      eventType: ActivityEventType;
+      message: string;
+    };
+
+    const event = createActivityEvent(instanceId, instanceName, eventType, message);
+    const response: ApiResponse<ActivityEvent> = { success: true, data: event };
+    res.json(response);
+  } catch (error) {
+    console.error('Failed to create test event:', error);
+    const response: ApiResponse<ActivityEvent> = { success: false, error: 'Failed to create test event' };
     res.status(500).json(response);
   }
 });

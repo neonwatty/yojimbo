@@ -3,7 +3,6 @@ import type { Instance } from '@cc-orchestrator/shared';
 import { StatusDot, StatusBadge } from '../common/Status';
 import { EditableName } from '../common/EditableName';
 import { Icons } from '../common/Icons';
-import { Spinner } from '../common/Spinner';
 
 interface CardLayoutProps {
   instances: Instance[];
@@ -14,7 +13,6 @@ interface CardLayoutProps {
   onExpand: (id: string) => void;
   onReorder: (draggedId: string, targetId: string) => void;
   onNewInstance: () => void;
-  isCreating?: boolean;
   editingId: string | null;
   editingName: string;
   onStartEditing: (id: string, name: string) => void;
@@ -32,7 +30,6 @@ export const CardLayout = memo(function CardLayout({
   onExpand,
   onReorder,
   onNewInstance,
-  isCreating = false,
   editingId,
   editingName,
   onStartEditing,
@@ -174,16 +171,14 @@ export const CardLayout = memo(function CardLayout({
 
       {/* New Instance Card */}
       <div
-        onClick={isCreating ? undefined : onNewInstance}
-        className={`bg-surface-800 rounded-xl p-4 border-2 border-dashed border-surface-600 flex items-center justify-center transition-colors min-h-[200px] ${
-          isCreating ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:border-surface-500'
-        }`}
+        onClick={onNewInstance}
+        className="bg-surface-800 rounded-xl p-4 border-2 border-dashed border-surface-600 flex items-center justify-center transition-colors min-h-[200px] cursor-pointer hover:border-surface-500"
       >
         <div className="text-center text-gray-500">
           <div className="w-8 h-8 mx-auto mb-2 flex items-center justify-center">
-            {isCreating ? <Spinner size="md" /> : <Icons.plus />}
+            <Icons.plus />
           </div>
-          <span className="text-sm">{isCreating ? 'Creating...' : 'New Instance'}</span>
+          <span className="text-sm">New Instance</span>
         </div>
       </div>
     </div>

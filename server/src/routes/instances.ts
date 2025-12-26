@@ -57,7 +57,7 @@ router.get('/', (_req, res) => {
 // POST /api/instances - Create new instance
 router.post('/', (req, res) => {
   try {
-    const { name, workingDir } = req.body as CreateInstanceRequest;
+    const { name, workingDir, startupCommand } = req.body as CreateInstanceRequest;
 
     if (!name || !workingDir) {
       return res.status(400).json({ success: false, error: 'Name and workingDir are required' });
@@ -73,6 +73,15 @@ router.post('/', (req, res) => {
     // Spawn PTY
     const ptyInstance = ptyService.spawn(id, workingDir);
     const pid = ptyInstance.pty.pid;
+
+    // Execute startup command if provided (after a small delay for shell to be ready)
+    if (startupCommand) {
+      setTimeout(() => {
+        if (ptyService.has(id)) {
+          ptyService.write(id, startupCommand + '\n');
+        }
+      }, 100);
+    }
 
     // Insert into database
     db.prepare(`

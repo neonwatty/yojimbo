@@ -1,5 +1,114 @@
 import { test, expect } from '../fixtures/test-fixtures';
 
+test.describe('New Instance Modal', () => {
+  test.beforeEach(async ({ apiClient }) => {
+    await apiClient.cleanupAllInstances();
+  });
+
+  test('opens modal when clicking New Instance button', async ({ instancesPage }) => {
+    await instancesPage.gotoInstances();
+
+    // Click the New Instance card
+    await instancesPage.newInstanceButton.click();
+
+    // Modal should appear with correct title
+    await expect(instancesPage.page.getByRole('heading', { name: 'New Instance' })).toBeVisible({ timeout: 5000 });
+
+    // Should have name input
+    await expect(instancesPage.page.locator('input[placeholder="My Project"]')).toBeVisible();
+
+    // Should have mode selector with Terminal and Claude Code buttons
+    await expect(instancesPage.page.getByRole('button', { name: 'Terminal' })).toBeVisible();
+    await expect(instancesPage.page.getByRole('button', { name: 'Claude Code' })).toBeVisible();
+
+    // Should have Cancel and Create Instance buttons in the modal
+    const modal = instancesPage.page.locator('.fixed.inset-0').filter({ has: instancesPage.page.getByRole('heading', { name: 'New Instance' }) });
+    await expect(modal.getByRole('button', { name: 'Cancel' })).toBeVisible();
+    await expect(modal.getByRole('button', { name: 'Create Instance' })).toBeVisible();
+  });
+
+  test('can close modal with Cancel button', async ({ instancesPage }) => {
+    await instancesPage.gotoInstances();
+    await instancesPage.newInstanceButton.click();
+
+    await expect(instancesPage.page.getByRole('heading', { name: 'New Instance' })).toBeVisible({ timeout: 5000 });
+
+    // Click Cancel
+    await instancesPage.page.getByRole('button', { name: 'Cancel' }).click();
+
+    // Modal should close
+    await expect(instancesPage.page.getByRole('heading', { name: 'New Instance' })).not.toBeVisible();
+  });
+
+  test('can close modal with Escape key', async ({ instancesPage }) => {
+    await instancesPage.gotoInstances();
+    await instancesPage.newInstanceButton.click();
+
+    await expect(instancesPage.page.getByRole('heading', { name: 'New Instance' })).toBeVisible({ timeout: 5000 });
+
+    // Press Escape
+    await instancesPage.page.keyboard.press('Escape');
+
+    // Modal should close
+    await expect(instancesPage.page.getByRole('heading', { name: 'New Instance' })).not.toBeVisible();
+  });
+
+  test('creates instance with custom name', async ({ instancesPage }) => {
+    await instancesPage.gotoInstances();
+
+    // Create instance with specific name
+    await instancesPage.createNewInstance('my-test-project');
+
+    // Should navigate to the new instance
+    await expect(instancesPage.page).toHaveURL(/.*\/instances\/[a-zA-Z0-9-]+$/);
+  });
+
+  test('defaults to Claude Code mode', async ({ instancesPage }) => {
+    await instancesPage.gotoInstances();
+    await instancesPage.newInstanceButton.click();
+
+    await expect(instancesPage.page.getByRole('heading', { name: 'New Instance' })).toBeVisible({ timeout: 5000 });
+
+    // Claude Code button should be selected (has bg-accent class)
+    const claudeCodeButton = instancesPage.page.getByRole('button', { name: 'Claude Code' });
+    await expect(claudeCodeButton).toHaveClass(/bg-accent/);
+
+    // Command Alias dropdown should be visible
+    await expect(instancesPage.page.locator('text=Command Alias')).toBeVisible();
+  });
+
+  test('can switch to Terminal mode', async ({ instancesPage }) => {
+    await instancesPage.gotoInstances();
+    await instancesPage.newInstanceButton.click();
+
+    await expect(instancesPage.page.getByRole('heading', { name: 'New Instance' })).toBeVisible({ timeout: 5000 });
+
+    // Click Terminal mode button
+    await instancesPage.page.getByRole('button', { name: 'Terminal' }).click();
+
+    // Terminal button should be selected
+    const terminalButton = instancesPage.page.getByRole('button', { name: 'Terminal' });
+    await expect(terminalButton).toHaveClass(/bg-accent/);
+
+    // Command Alias dropdown should NOT be visible in Terminal mode
+    await expect(instancesPage.page.locator('text=Command Alias')).not.toBeVisible();
+  });
+
+  test('shows alias selector with YOLO Mode as default', async ({ instancesPage }) => {
+    await instancesPage.gotoInstances();
+    await instancesPage.newInstanceButton.click();
+
+    await expect(instancesPage.page.getByRole('heading', { name: 'New Instance' })).toBeVisible({ timeout: 5000 });
+
+    // Alias selector should show YOLO Mode selected by default
+    const aliasSelect = instancesPage.page.locator('select').first();
+    await expect(aliasSelect).toBeVisible();
+
+    // The selected option should contain YOLO Mode
+    await expect(aliasSelect.locator('option:checked')).toContainText('YOLO Mode');
+  });
+});
+
 test.describe('Instance Management', () => {
   test.beforeEach(async ({ apiClient }) => {
     await apiClient.cleanupAllInstances();

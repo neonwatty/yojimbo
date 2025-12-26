@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useInstancesStore } from '../../store/instancesStore';
 import { useUIStore } from '../../store/uiStore';
-import { instancesApi } from '../../api/client';
 import { Icons } from './Icons';
 
 interface CommandAction {
@@ -33,6 +32,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
     toggleTerminalPanel,
     setShowSettingsModal,
     setShowShortcutsModal,
+    setShowNewInstanceModal,
   } = useUIStore();
 
   // Build actions list
@@ -70,14 +70,8 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
         label: 'New Instance',
         shortcut: ['Cmd', 'N'],
         category: 'instances',
-        action: async () => {
-          const response = await instancesApi.create({
-            name: `instance-${instances.length + 1}`,
-            workingDir: '~',
-          });
-          if (response.data) {
-            navigate(`/instances/${response.data.id}`);
-          }
+        action: () => {
+          setShowNewInstanceModal(true);
         },
         keywords: ['create', 'add', 'terminal'],
       },

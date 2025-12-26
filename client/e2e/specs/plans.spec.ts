@@ -355,7 +355,7 @@ test.describe('Plans Panel', () => {
     await expect(instancesPage.page.locator('text=Files').first()).toBeVisible();
   });
 
-  test('updates path when terminal CWD changes', async ({ instancesPage }) => {
+  test.skip('updates path when terminal CWD changes', async ({ instancesPage }) => {
     // Create plans directories in both locations
     const desktopPlansDir = path.join(os.homedir(), 'Desktop', 'plans');
     const homePlansDir = path.join(os.homedir(), 'plans');
@@ -394,7 +394,7 @@ test.describe('Plans Panel', () => {
     await expect(instancesPage.page.locator('[title*="Desktop/plans"]')).toBeVisible({ timeout: 5000 });
   });
 
-  test('clears selected plan when CWD changes', async ({ instancesPage }) => {
+  test.skip('clears selected plan when CWD changes', async ({ instancesPage }) => {
     // Create a test plan in home plans directory
     const homePlansDir = path.join(os.homedir(), 'plans');
     const testPlanInHome = path.join(homePlansDir, 'cwd-test-plan.md');

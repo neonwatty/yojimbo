@@ -3,6 +3,7 @@ import { useSettingsStore } from '../../store/settingsStore';
 import { settingsApi } from '../../api/client';
 import { toast } from '../../store/toastStore';
 import { Icons } from '../common/Icons';
+import type { ClaudeCodeAlias } from '@cc-orchestrator/shared';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -10,18 +11,78 @@ interface SettingsModalProps {
 }
 
 export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
-  const { theme, terminalFontSize, terminalFontFamily, setTheme, setTerminalFontSize, setTerminalFontFamily } =
-    useSettingsStore();
+  const {
+    theme,
+    terminalFontSize,
+    terminalFontFamily,
+    claudeCodeAliases,
+    setTheme,
+    setTerminalFontSize,
+    setTerminalFontFamily,
+    addAlias,
+    updateAlias,
+    removeAlias,
+    setDefaultAlias,
+  } = useSettingsStore();
   const [resetConfirmation, setResetConfirmation] = useState('');
   const [isResetting, setIsResetting] = useState(false);
   const [isResettingStatus, setIsResettingStatus] = useState(false);
 
-  // Reset confirmation state when modal closes
+  // Alias editing state
+  const [editingAliasId, setEditingAliasId] = useState<string | null>(null);
+  const [editingAlias, setEditingAlias] = useState<Partial<ClaudeCodeAlias>>({});
+  const [isAddingAlias, setIsAddingAlias] = useState(false);
+  const [newAliasName, setNewAliasName] = useState('');
+  const [newAliasCommand, setNewAliasCommand] = useState('');
+
+  // Reset state when modal closes
   useEffect(() => {
     if (!isOpen) {
       setResetConfirmation('');
+      setEditingAliasId(null);
+      setEditingAlias({});
+      setIsAddingAlias(false);
+      setNewAliasName('');
+      setNewAliasCommand('');
     }
   }, [isOpen]);
+
+  const handleAddAlias = () => {
+    if (!newAliasName.trim() || !newAliasCommand.trim()) {
+      toast.error('Name and command are required');
+      return;
+    }
+    addAlias(newAliasName.trim(), newAliasCommand.trim());
+    setIsAddingAlias(false);
+    setNewAliasName('');
+    setNewAliasCommand('');
+    toast.success('Alias added');
+  };
+
+  const handleUpdateAlias = (id: string) => {
+    if (!editingAlias.name?.trim() || !editingAlias.command?.trim()) {
+      toast.error('Name and command are required');
+      return;
+    }
+    updateAlias(id, {
+      name: editingAlias.name.trim(),
+      command: editingAlias.command.trim(),
+    });
+    setEditingAliasId(null);
+    setEditingAlias({});
+    toast.success('Alias updated');
+  };
+
+  const handleRemoveAlias = (id: string) => {
+    if (!window.confirm('Remove this alias?')) return;
+    removeAlias(id);
+    toast.success('Alias removed');
+  };
+
+  const startEditingAlias = (alias: ClaudeCodeAlias) => {
+    setEditingAliasId(alias.id);
+    setEditingAlias({ name: alias.name, command: alias.command });
+  };
 
   const handleResetInstanceStatus = async () => {
     setIsResettingStatus(true);
@@ -72,7 +133,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
       <div
-        className="bg-surface-700 rounded-xl shadow-2xl max-w-sm w-full mx-4 animate-in"
+        className="bg-surface-700 rounded-xl shadow-2xl max-w-lg w-full mx-4 animate-in max-h-[85vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -87,7 +148,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
         </div>
 
         {/* Content */}
-        <div className="px-6 py-4 space-y-4">
+        <div className="px-6 py-4 space-y-4 overflow-y-auto flex-1">
           <h3 className="text-xs font-semibold text-theme-muted uppercase tracking-wider">Appearance</h3>
 
           {/* Theme Selector */}
@@ -139,6 +200,149 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
               <option value="Monaco">Monaco</option>
               <option value="Menlo">Menlo</option>
             </select>
+          </div>
+
+          {/* Claude Code Section */}
+          <div className="pt-4 mt-4 border-t border-surface-600">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-xs font-semibold text-theme-muted uppercase tracking-wider">Claude Code Aliases</h3>
+              {!isAddingAlias && (
+                <button
+                  onClick={() => setIsAddingAlias(true)}
+                  className="text-xs text-accent hover:text-accent/80 transition-colors flex items-center gap-1"
+                >
+                  <Icons.plus />
+                  Add Alias
+                </button>
+              )}
+            </div>
+
+            <p className="text-xs text-theme-muted mb-3">
+              Define command shortcuts for launching Claude Code with different flags or configurations.
+            </p>
+
+            {/* Add new alias form */}
+            {isAddingAlias && (
+              <div className="bg-surface-800 border border-surface-600 rounded-lg p-3 mb-3 space-y-2">
+                <input
+                  type="text"
+                  value={newAliasName}
+                  onChange={(e) => setNewAliasName(e.target.value)}
+                  placeholder="Alias name (e.g., YOLO Mode)"
+                  className="w-full bg-surface-700 border border-surface-500 rounded px-2 py-1.5 text-sm text-theme-primary placeholder:text-theme-muted focus:outline-none focus:ring-1 focus:ring-accent/50"
+                />
+                <input
+                  type="text"
+                  value={newAliasCommand}
+                  onChange={(e) => setNewAliasCommand(e.target.value)}
+                  placeholder="Command (e.g., claude --dangerously-skip-permissions)"
+                  className="w-full bg-surface-700 border border-surface-500 rounded px-2 py-1.5 text-sm text-theme-primary font-mono placeholder:text-theme-muted focus:outline-none focus:ring-1 focus:ring-accent/50"
+                />
+                <div className="flex justify-end gap-2">
+                  <button
+                    onClick={() => {
+                      setIsAddingAlias(false);
+                      setNewAliasName('');
+                      setNewAliasCommand('');
+                    }}
+                    className="px-2 py-1 text-xs text-theme-muted hover:text-theme-primary transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleAddAlias}
+                    className="px-2 py-1 text-xs bg-accent text-white rounded hover:bg-accent/90 transition-colors"
+                  >
+                    Add
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Alias list */}
+            <div className="space-y-2">
+              {claudeCodeAliases.map((alias) => (
+                <div
+                  key={alias.id}
+                  className="bg-surface-800 border border-surface-600 rounded-lg p-3"
+                >
+                  {editingAliasId === alias.id ? (
+                    <div className="space-y-2">
+                      <input
+                        type="text"
+                        value={editingAlias.name || ''}
+                        onChange={(e) => setEditingAlias({ ...editingAlias, name: e.target.value })}
+                        className="w-full bg-surface-700 border border-surface-500 rounded px-2 py-1.5 text-sm text-theme-primary focus:outline-none focus:ring-1 focus:ring-accent/50"
+                      />
+                      <input
+                        type="text"
+                        value={editingAlias.command || ''}
+                        onChange={(e) => setEditingAlias({ ...editingAlias, command: e.target.value })}
+                        className="w-full bg-surface-700 border border-surface-500 rounded px-2 py-1.5 text-sm text-theme-primary font-mono focus:outline-none focus:ring-1 focus:ring-accent/50"
+                      />
+                      <div className="flex justify-end gap-2">
+                        <button
+                          onClick={() => {
+                            setEditingAliasId(null);
+                            setEditingAlias({});
+                          }}
+                          className="px-2 py-1 text-xs text-theme-muted hover:text-theme-primary transition-colors"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={() => handleUpdateAlias(alias.id)}
+                          className="px-2 py-1 text-xs bg-accent text-white rounded hover:bg-accent/90 transition-colors"
+                        >
+                          Save
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-theme-primary">{alias.name}</span>
+                          {alias.isDefault && (
+                            <span className="px-1.5 py-0.5 text-[10px] bg-accent/20 text-accent rounded">
+                              Default
+                            </span>
+                          )}
+                        </div>
+                        <code className="text-xs text-theme-muted font-mono block truncate mt-0.5">
+                          {alias.command}
+                        </code>
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        {!alias.isDefault && (
+                          <button
+                            onClick={() => setDefaultAlias(alias.id)}
+                            className="p-1 text-theme-muted hover:text-accent transition-colors"
+                            title="Set as default"
+                          >
+                            {Icons.star(false)}
+                          </button>
+                        )}
+                        <button
+                          onClick={() => startEditingAlias(alias)}
+                          className="p-1 text-theme-muted hover:text-theme-primary transition-colors"
+                          title="Edit"
+                        >
+                          <Icons.edit />
+                        </button>
+                        <button
+                          onClick={() => handleRemoveAlias(alias.id)}
+                          className="p-1 text-theme-muted hover:text-red-400 transition-colors"
+                          title="Remove"
+                        >
+                          <Icons.trash />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* Maintenance */}

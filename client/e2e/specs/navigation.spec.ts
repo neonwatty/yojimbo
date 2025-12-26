@@ -93,9 +93,18 @@ test.describe('Keyboard Shortcuts', () => {
     await expect(basePage.page).toHaveURL(/.*\/history/);
   });
 
-  test('Cmd+N creates new instance', async ({ basePage, apiClient }) => {
+  test('Cmd+N opens new instance modal', async ({ basePage, apiClient }) => {
     await basePage.goto('/instances');
     await basePage.page.keyboard.press('Meta+n');
+
+    // Modal should appear
+    await expect(basePage.page.getByRole('heading', { name: 'New Instance' })).toBeVisible({ timeout: 5000 });
+
+    // Fill in name and submit
+    await basePage.page.locator('input[placeholder="My Project"]').fill('keyboard-test');
+    const modal = basePage.page.locator('.fixed.inset-0').filter({ has: basePage.page.getByRole('heading', { name: 'New Instance' }) });
+    await modal.getByRole('button', { name: 'Create Instance' }).click();
+
     // Should navigate to a new instance page
     await basePage.page.waitForURL(/.*\/instances\/[a-f0-9-]+/);
     await expect(basePage.page).toHaveURL(/.*\/instances\/[a-f0-9-]+/);

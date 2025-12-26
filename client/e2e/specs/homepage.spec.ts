@@ -14,6 +14,14 @@ test.describe('HomePage', () => {
     await expect(newInstanceButton).toBeVisible();
     await newInstanceButton.click();
 
+    // Modal should appear
+    await expect(basePage.page.getByRole('heading', { name: 'New Instance' })).toBeVisible({ timeout: 5000 });
+
+    // Fill in name and submit
+    await basePage.page.locator('input[placeholder="My Project"]').fill('test-instance');
+    const modal = basePage.page.locator('.fixed.inset-0').filter({ has: basePage.page.getByRole('heading', { name: 'New Instance' }) });
+    await modal.getByRole('button', { name: 'Create Instance' }).click();
+
     // Should navigate to the new instance's expanded view
     await basePage.page.waitForURL(/.*\/instances\/[a-f0-9-]+/);
     await expect(basePage.page).toHaveURL(/.*\/instances\/[a-f0-9-]+/);
@@ -30,6 +38,12 @@ test.describe('HomePage', () => {
     // Click the "New Instance" button
     const newInstanceButton = basePage.page.locator('button:has-text("New Instance")');
     await newInstanceButton.click();
+
+    // Modal should appear - fill in name and submit
+    await expect(basePage.page.getByRole('heading', { name: 'New Instance' })).toBeVisible({ timeout: 5000 });
+    await basePage.page.locator('input[placeholder="My Project"]').fill(`instance-${Date.now()}`);
+    const modal = basePage.page.locator('.fixed.inset-0').filter({ has: basePage.page.getByRole('heading', { name: 'New Instance' }) });
+    await modal.getByRole('button', { name: 'Create Instance' }).click();
 
     // Wait for navigation to instance
     await basePage.page.waitForURL(/.*\/instances\/[a-f0-9-]+/);

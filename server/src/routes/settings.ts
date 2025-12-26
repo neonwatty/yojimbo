@@ -9,6 +9,10 @@ const DEFAULT_SETTINGS: Settings = {
   terminalFontSize: 14,
   terminalFontFamily: 'JetBrains Mono',
   showWelcomeBanner: true,
+  // Client-side settings (stored in localStorage, not server DB)
+  claudeCodeAliases: [],
+  lastUsedDirectory: '~',
+  lastInstanceMode: 'claude-code',
 };
 
 function getSettingsFromDb(): Settings {

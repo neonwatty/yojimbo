@@ -143,3 +143,67 @@ test.describe('Settings Modal', () => {
     expect(instancesAfter.length).toBe(0);
   });
 });
+
+test.describe('Claude Code Aliases Settings', () => {
+  test('shows Claude Code Aliases section in settings', async ({ basePage }) => {
+    await basePage.goto('/instances');
+    await basePage.openSettings();
+
+    // Check Claude Code Aliases section heading exists
+    await expect(basePage.page.locator('text=Claude Code Aliases')).toBeVisible();
+  });
+
+  test('shows default aliases (YOLO Mode and Default)', async ({ basePage }) => {
+    await basePage.goto('/instances');
+    await basePage.openSettings();
+
+    // Check default aliases are listed
+    await expect(basePage.page.locator('text=YOLO Mode')).toBeVisible();
+
+    // Check the YOLO command is shown (truncated in UI so use partial match)
+    await expect(basePage.page.locator('code:has-text("claude --dangerously-skip-permissions")')).toBeVisible();
+  });
+
+  test('can add a new alias', async ({ basePage }) => {
+    await basePage.goto('/instances');
+    await basePage.openSettings();
+
+    // Click Add Alias button
+    await basePage.page.locator('text=Add Alias').click();
+
+    // Fill in the new alias form (using partial placeholder match)
+    await basePage.page.locator('input[placeholder*="Alias name"]').fill('Test Alias');
+    await basePage.page.locator('input[placeholder*="Command"]').fill('claude --verbose');
+
+    // Click Add button to confirm
+    await basePage.page.locator('button:has-text("Add")').last().click();
+
+    // The new alias should appear in the list
+    await expect(basePage.page.locator('text=Test Alias')).toBeVisible();
+    await expect(basePage.page.locator('code:has-text("claude --verbose")')).toBeVisible();
+  });
+
+  test('can remove an alias', async ({ basePage }) => {
+    await basePage.goto('/instances');
+    await basePage.openSettings();
+
+    // First add a new alias to delete
+    await basePage.page.locator('text=Add Alias').click();
+    await basePage.page.locator('input[placeholder*="Alias name"]').fill('To Delete');
+    await basePage.page.locator('input[placeholder*="Command"]').fill('claude --test');
+    await basePage.page.locator('button:has-text("Add")').last().click();
+
+    // Verify it was added
+    await expect(basePage.page.locator('text=To Delete')).toBeVisible();
+
+    // Find and click remove button for this alias (title is "Remove")
+    const aliasCard = basePage.page.locator('.bg-surface-800').filter({ hasText: 'To Delete' });
+
+    // Handle confirmation dialog
+    basePage.page.once('dialog', dialog => dialog.accept());
+    await aliasCard.locator('button[title="Remove"]').click();
+
+    // Alias should be removed
+    await expect(basePage.page.locator('text=To Delete')).not.toBeVisible();
+  });
+});

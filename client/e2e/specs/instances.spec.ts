@@ -62,6 +62,51 @@ test.describe('New Instance Modal', () => {
     // Should navigate to the new instance
     await expect(instancesPage.page).toHaveURL(/.*\/instances\/[a-zA-Z0-9-]+$/);
   });
+
+  test('defaults to Claude Code mode', async ({ instancesPage }) => {
+    await instancesPage.gotoInstances();
+    await instancesPage.newInstanceButton.click();
+
+    await expect(instancesPage.page.getByRole('heading', { name: 'New Instance' })).toBeVisible({ timeout: 5000 });
+
+    // Claude Code button should be selected (has bg-accent class)
+    const claudeCodeButton = instancesPage.page.getByRole('button', { name: 'Claude Code' });
+    await expect(claudeCodeButton).toHaveClass(/bg-accent/);
+
+    // Command Alias dropdown should be visible
+    await expect(instancesPage.page.locator('text=Command Alias')).toBeVisible();
+  });
+
+  test('can switch to Terminal mode', async ({ instancesPage }) => {
+    await instancesPage.gotoInstances();
+    await instancesPage.newInstanceButton.click();
+
+    await expect(instancesPage.page.getByRole('heading', { name: 'New Instance' })).toBeVisible({ timeout: 5000 });
+
+    // Click Terminal mode button
+    await instancesPage.page.getByRole('button', { name: 'Terminal' }).click();
+
+    // Terminal button should be selected
+    const terminalButton = instancesPage.page.getByRole('button', { name: 'Terminal' });
+    await expect(terminalButton).toHaveClass(/bg-accent/);
+
+    // Command Alias dropdown should NOT be visible in Terminal mode
+    await expect(instancesPage.page.locator('text=Command Alias')).not.toBeVisible();
+  });
+
+  test('shows alias selector with YOLO Mode as default', async ({ instancesPage }) => {
+    await instancesPage.gotoInstances();
+    await instancesPage.newInstanceButton.click();
+
+    await expect(instancesPage.page.getByRole('heading', { name: 'New Instance' })).toBeVisible({ timeout: 5000 });
+
+    // Alias selector should show YOLO Mode selected by default
+    const aliasSelect = instancesPage.page.locator('select').first();
+    await expect(aliasSelect).toBeVisible();
+
+    // The selected option should contain YOLO Mode
+    await expect(aliasSelect.locator('option:checked')).toContainText('YOLO Mode');
+  });
 });
 
 test.describe('Instance Management', () => {

@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useInstancesStore } from '../../store/instancesStore';
 import { useUIStore } from '../../store/uiStore';
 import { StatusDot } from '../common/Status';
@@ -11,7 +11,13 @@ import type { Instance } from '@cc-orchestrator/shared';
 
 export function LeftSidebar() {
   const navigate = useNavigate();
-  const { id: expandedId } = useParams();
+  const location = useLocation();
+
+  // Extract instance ID from URL path (since we're outside Routes, useParams doesn't work)
+  const expandedId = useMemo(() => {
+    const match = location.pathname.match(/\/instances\/([^/]+)/);
+    return match ? match[1] : undefined;
+  }, [location.pathname]);
 
   // Use selectors for better performance
   const instances = useInstancesStore((state) => state.instances);
@@ -149,7 +155,7 @@ export function LeftSidebar() {
               onClick={() => handleSelectInstance(inst.id)}
               className={`p-2 rounded-lg transition-colors ${
                 expandedId === inst.id
-                  ? 'bg-accent/20 text-accent ring-1 ring-accent'
+                  ? 'bg-violet-600 text-white shadow-lg shadow-violet-600/40'
                   : activeInstanceId === inst.id
                   ? 'bg-surface-700 text-accent'
                   : 'text-theme-muted hover:text-theme-primary hover:bg-surface-700'
@@ -227,7 +233,7 @@ export function LeftSidebar() {
                   onClick={() => handleSelectInstance(inst.id)}
                   className={`group w-full flex items-center gap-2 px-2 py-2 rounded-lg text-left transition-colors mb-1 cursor-pointer
                     ${expandedId === inst.id
-                      ? 'bg-accent/20 text-theme-primary ring-1 ring-accent'
+                      ? 'bg-violet-600 text-white font-medium shadow-lg shadow-violet-600/40'
                       : activeInstanceId === inst.id
                       ? 'bg-surface-700 text-theme-primary'
                       : 'text-theme-secondary hover:bg-surface-700'}`}
@@ -278,7 +284,7 @@ export function LeftSidebar() {
                 onClick={() => handleSelectInstance(inst.id)}
                 className={`group w-full flex items-center gap-2 px-2 py-2 rounded-lg text-left transition-colors mb-1 cursor-pointer
                   ${expandedId === inst.id
-                    ? 'bg-accent/20 text-theme-primary ring-1 ring-accent'
+                    ? 'bg-violet-600 text-white font-medium shadow-lg shadow-violet-600/40'
                     : activeInstanceId === inst.id
                     ? 'bg-surface-700 text-theme-primary'
                     : 'text-theme-secondary hover:bg-surface-700'}`}

@@ -11,7 +11,8 @@ export class InstancesPage extends BasePage {
     // Target the card that contains "New Instance" span (excludes tooltip)
     this.newInstanceButton = page.locator('.grid > div').filter({ has: page.locator('span:has-text("New Instance")') });
     this.instanceCards = page.locator('.grid > div').filter({ hasNot: page.locator('span:has-text("New Instance")') });
-    this.newInstanceModal = page.locator('div').filter({ hasText: /^New Instance$/ }).locator('..').locator('..');
+    // Target the modal dialog (fixed overlay with the New Instance heading)
+    this.newInstanceModal = page.locator('.fixed.inset-0').filter({ has: page.getByRole('heading', { name: 'New Instance' }) });
   }
 
   async gotoInstances() {
@@ -29,8 +30,8 @@ export class InstancesPage extends BasePage {
     const instanceName = name || `instance-${Date.now()}`;
     await this.page.locator('input[placeholder="My Project"]').fill(instanceName);
 
-    // Click Create Instance button
-    await this.page.getByRole('button', { name: 'Create Instance' }).click();
+    // Click Create Instance button inside the modal
+    await this.newInstanceModal.getByRole('button', { name: 'Create Instance' }).click();
 
     // Wait for modal to close and navigation
     await this.page.waitForTimeout(500);

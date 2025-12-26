@@ -21,9 +21,10 @@ test.describe('New Instance Modal', () => {
     await expect(instancesPage.page.getByRole('button', { name: 'Terminal' })).toBeVisible();
     await expect(instancesPage.page.getByRole('button', { name: 'Claude Code' })).toBeVisible();
 
-    // Should have Cancel and Create Instance buttons
-    await expect(instancesPage.page.getByRole('button', { name: 'Cancel' })).toBeVisible();
-    await expect(instancesPage.page.getByRole('button', { name: 'Create Instance' })).toBeVisible();
+    // Should have Cancel and Create Instance buttons in the modal
+    const modal = instancesPage.page.locator('.fixed.inset-0').filter({ has: instancesPage.page.getByRole('heading', { name: 'New Instance' }) });
+    await expect(modal.getByRole('button', { name: 'Cancel' })).toBeVisible();
+    await expect(modal.getByRole('button', { name: 'Create Instance' })).toBeVisible();
   });
 
   test('can close modal with Cancel button', async ({ instancesPage }) => {

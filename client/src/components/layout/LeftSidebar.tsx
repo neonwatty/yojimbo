@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useInstancesStore } from '../../store/instancesStore';
 import { useUIStore } from '../../store/uiStore';
 import { StatusDot } from '../common/Status';
@@ -11,7 +11,13 @@ import type { Instance } from '@cc-orchestrator/shared';
 
 export function LeftSidebar() {
   const navigate = useNavigate();
-  const { id: expandedId } = useParams();
+  const location = useLocation();
+
+  // Extract instance ID from URL path (since we're outside Routes, useParams doesn't work)
+  const expandedId = useMemo(() => {
+    const match = location.pathname.match(/\/instances\/([^/]+)/);
+    return match ? match[1] : undefined;
+  }, [location.pathname]);
 
   // Use selectors for better performance
   const instances = useInstancesStore((state) => state.instances);

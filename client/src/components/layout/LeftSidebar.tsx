@@ -155,7 +155,7 @@ export function LeftSidebar() {
               onClick={() => handleSelectInstance(inst.id)}
               className={`p-2 rounded-lg transition-colors ${
                 expandedId === inst.id
-                  ? 'bg-accent text-surface-900 shadow-lg shadow-accent/40'
+                  ? 'bg-violet-600 text-white shadow-lg shadow-violet-600/40'
                   : activeInstanceId === inst.id
                   ? 'bg-surface-700 text-accent'
                   : 'text-theme-muted hover:text-theme-primary hover:bg-surface-700'
@@ -233,7 +233,7 @@ export function LeftSidebar() {
                   onClick={() => handleSelectInstance(inst.id)}
                   className={`group w-full flex items-center gap-2 px-2 py-2 rounded-lg text-left transition-colors mb-1 cursor-pointer
                     ${expandedId === inst.id
-                      ? 'bg-accent text-surface-900 font-medium shadow-lg shadow-accent/40'
+                      ? 'bg-violet-600 text-white font-medium shadow-lg shadow-violet-600/40'
                       : activeInstanceId === inst.id
                       ? 'bg-surface-700 text-theme-primary'
                       : 'text-theme-secondary hover:bg-surface-700'}`}
@@ -284,7 +284,7 @@ export function LeftSidebar() {
                 onClick={() => handleSelectInstance(inst.id)}
                 className={`group w-full flex items-center gap-2 px-2 py-2 rounded-lg text-left transition-colors mb-1 cursor-pointer
                   ${expandedId === inst.id
-                    ? 'bg-accent text-surface-900 font-medium shadow-lg shadow-accent/40'
+                    ? 'bg-violet-600 text-white font-medium shadow-lg shadow-violet-600/40'
                     : activeInstanceId === inst.id
                     ? 'bg-surface-700 text-theme-primary'
                     : 'text-theme-secondary hover:bg-surface-700'}`}

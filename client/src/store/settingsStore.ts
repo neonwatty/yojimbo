@@ -23,12 +23,20 @@ interface SettingsState extends Settings {
   setLastInstanceMode: (mode: InstanceMode) => void;
 }
 
-const defaultAlias: ClaudeCodeAlias = {
-  id: 'default',
-  name: 'Default',
-  command: 'claude',
-  isDefault: true,
-};
+const defaultAliases: ClaudeCodeAlias[] = [
+  {
+    id: 'yolo',
+    name: 'YOLO Mode',
+    command: 'claude --dangerously-skip-permissions',
+    isDefault: true,
+  },
+  {
+    id: 'default',
+    name: 'Default',
+    command: 'claude',
+    isDefault: false,
+  },
+];
 
 export const useSettingsStore = create<SettingsState>()(
   persist(
@@ -38,7 +46,7 @@ export const useSettingsStore = create<SettingsState>()(
       terminalFontSize: 14,
       terminalFontFamily: 'JetBrains Mono',
       showWelcomeBanner: true,
-      claudeCodeAliases: [defaultAlias],
+      claudeCodeAliases: defaultAliases,
       lastUsedDirectory: '~',
       lastInstanceMode: 'terminal',
 

@@ -13,6 +13,10 @@ const DEFAULT_SETTINGS: Settings = {
   claudeCodeAliases: [],
   lastUsedDirectory: '~',
   lastInstanceMode: 'claude-code',
+  // Activity Feed defaults
+  showActivityInNav: true,
+  feedEnabledEventTypes: ['completed'],
+  feedRetentionDays: 7,
 };
 
 function getSettingsFromDb(): Settings {

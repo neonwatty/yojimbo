@@ -2,6 +2,7 @@ import { Router } from 'express';
 import os from 'os';
 import { getDatabase } from '../db/connection.js';
 import { broadcast } from '../websocket/server.js';
+import { createActivityEvent } from '../services/feed.service.js';
 import type { HookStatusEvent, HookNotificationEvent, HookStopEvent, InstanceStatus } from '@cc-orchestrator/shared';
 
 const router = Router();
@@ -9,6 +10,7 @@ const router = Router();
 // Database row type for instances (subset needed by hooks)
 interface InstanceRow {
   id: string;
+  name: string;
   working_dir: string;
   status: InstanceStatus;
 }
@@ -65,6 +67,15 @@ function findInstanceByWorkingDir(projectDir: string): InstanceRow | null {
 function updateInstanceStatus(instanceId: string, status: InstanceStatus): void {
   const db = getDatabase();
 
+  // Get instance name and previous status
+  const instance = db.prepare('SELECT name, status FROM instances WHERE id = ?')
+    .get(instanceId) as { name: string; status: string } | undefined;
+
+  if (!instance) return;
+
+  const previousStatus = instance.status;
+
+  // Update database
   db.prepare(`
     UPDATE instances
     SET status = ?, updated_at = datetime('now')
@@ -79,6 +90,17 @@ function updateInstanceStatus(instanceId: string, status: InstanceStatus): void 
   });
 
   console.log(`📊 Instance ${instanceId} status changed to: ${status}`);
+
+  // Create activity events for significant transitions
+  if (status === 'idle' && previousStatus === 'working') {
+    createActivityEvent(instanceId, instance.name, 'completed', `${instance.name} finished working`);
+  } else if (status === 'awaiting' && previousStatus !== 'awaiting') {
+    createActivityEvent(instanceId, instance.name, 'awaiting', `${instance.name} needs attention`);
+  } else if (status === 'error' && previousStatus !== 'error') {
+    createActivityEvent(instanceId, instance.name, 'error', `${instance.name} encountered an error`);
+  } else if (status === 'working' && previousStatus === 'idle') {
+    createActivityEvent(instanceId, instance.name, 'started', `${instance.name} started working`);
+  }
 }
 
 // POST /api/hooks/status - Receive status updates (working/idle)

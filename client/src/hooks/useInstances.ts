@@ -1,12 +1,14 @@
 import { useEffect, useCallback } from 'react';
 import { useInstancesStore } from '../store/instancesStore';
-import { instancesApi } from '../api/client';
+import { useFeedStore } from '../store/feedStore';
+import { instancesApi, feedApi } from '../api/client';
 import { useWebSocket } from './useWebSocket';
 import { getWsUrl } from '../config';
-import type { Instance } from '@cc-orchestrator/shared';
+import type { Instance, ActivityEvent } from '@cc-orchestrator/shared';
 
 export function useInstances() {
   const { instances, setInstances, addInstance, updateInstance, removeInstance, setCurrentCwd } = useInstancesStore();
+  const { addEvent, setStats } = useFeedStore();
 
   const { subscribe, isConnected } = useWebSocket(getWsUrl(), {
     onOpen: () => {
@@ -55,9 +57,34 @@ export function useInstances() {
       setCurrentCwd(instanceId, cwd);
     });
 
+    // Feed events
+    const unsubscribeFeedNew = subscribe('feed:new', (data: unknown) => {
+      const { event } = data as { event: ActivityEvent };
+      addEvent(event);
+    });
+
+    const unsubscribeFeedUpdated = subscribe('feed:updated', async () => {
+      // Refresh feed stats when something changes
+      try {
+        const response = await feedApi.getStats();
+        if (response.data) {
+          setStats(response.data);
+        }
+      } catch {
+        // Ignore errors
+      }
+    });
+
     // Re-fetch instances after WebSocket connects to catch any status updates
     // that occurred before we subscribed (fixes race condition)
     fetchInstances();
+
+    // Also fetch initial feed stats
+    feedApi.getStats().then((response) => {
+      if (response.data) {
+        setStats(response.data);
+      }
+    }).catch(() => {});
 
     return () => {
       unsubscribeCreated();
@@ -65,8 +92,10 @@ export function useInstances() {
       unsubscribeClosed();
       unsubscribeStatus();
       unsubscribeCwd();
+      unsubscribeFeedNew();
+      unsubscribeFeedUpdated();
     };
-  }, [isConnected, subscribe, addInstance, updateInstance, removeInstance, setCurrentCwd, fetchInstances]);
+  }, [isConnected, subscribe, addInstance, updateInstance, removeInstance, setCurrentCwd, fetchInstances, addEvent, setStats]);
 
   // Fetch instances on mount
   useEffect(() => {

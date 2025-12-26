@@ -2,6 +2,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useUIStore } from '../../store/uiStore';
 import { useInstancesStore } from '../../store/instancesStore';
 import { useSettingsStore } from '../../store/settingsStore';
+import { useFeedStore } from '../../store/feedStore';
 import { Icons } from '../common/Icons';
 import Tooltip from '../common/Tooltip';
 import { ConnectionStatus } from '../common/ConnectionStatus';
@@ -19,11 +20,14 @@ export default function Header() {
   const instances = useInstancesStore((state) => state.instances);
   const theme = useSettingsStore((state) => state.theme);
   const setTheme = useSettingsStore((state) => state.setTheme);
+  const showActivityInNav = useSettingsStore((state) => state.showActivityInNav);
+  const unreadCount = useFeedStore((state) => state.stats.unread);
 
   const pinnedCount = instances.filter((i) => i.isPinned).length;
   const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
 
   const isHistoryView = location.pathname === '/history';
+  const isActivityView = location.pathname === '/activity';
 
   return (
     <header className="flex items-center justify-between px-4 py-3 bg-surface-800 border-b border-surface-600">
@@ -71,6 +75,27 @@ export default function Header() {
             <span className="hidden sm:inline">History</span>
           </button>
         </Tooltip>
+
+        {/* Activity Button */}
+        {showActivityInNav && (
+          <Tooltip text={isActivityView ? 'Close activity' : 'View activity'} position="bottom">
+            <button
+              onClick={() => navigate(isActivityView ? '/instances' : '/activity')}
+              className={`relative flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors
+                ${isActivityView
+                  ? 'bg-accent text-surface-900'
+                  : 'text-theme-muted hover:text-theme-primary hover:bg-surface-700'}`}
+            >
+              <Icons.activity />
+              <span className="hidden sm:inline">Activity</span>
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] flex items-center justify-center px-1 text-xs font-bold bg-accent text-white rounded-full">
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </span>
+              )}
+            </button>
+          </Tooltip>
+        )}
 
         {/* Layout Switcher */}
         <div className="flex items-center gap-1 bg-surface-700 rounded-lg p-1" role="group" aria-label="View layout">

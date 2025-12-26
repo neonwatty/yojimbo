@@ -30,6 +30,25 @@ export interface ReorderInstancesRequest {
   instanceIds: string[];
 }
 
+// Activity Feed types
+export type ActivityEventType = 'completed' | 'awaiting' | 'error' | 'started';
+
+export interface ActivityEvent {
+  id: string;
+  instanceId: string | null; // null if instance deleted
+  instanceName: string;
+  eventType: ActivityEventType;
+  message: string;
+  metadata: Record<string, unknown> | null;
+  createdAt: string;
+  readAt: string | null;
+}
+
+export interface ActivityFeedStats {
+  total: number;
+  unread: number;
+}
+
 // Session types
 export interface Session {
   id: string;
@@ -126,6 +145,8 @@ export type WSServerMessageType =
   | 'cwd:changed'
   | 'file:changed'
   | 'file:deleted'
+  | 'feed:new'
+  | 'feed:updated'
   | 'error';
 
 export interface FileChangeEvent {
@@ -146,6 +167,7 @@ export interface WSServerMessage {
   session?: Session;
   cwd?: string;
   fileChange?: FileChangeEvent;
+  event?: ActivityEvent;
   error?: string;
 }
 
@@ -183,6 +205,10 @@ export interface Settings {
   claudeCodeAliases: ClaudeCodeAlias[];
   lastUsedDirectory: string;
   lastInstanceMode: InstanceMode;
+  // Activity Feed settings
+  showActivityInNav: boolean;
+  feedEnabledEventTypes: ActivityEventType[];
+  feedRetentionDays: number;
 }
 
 export const DEFAULT_CLAUDE_ALIAS: ClaudeCodeAlias = {
@@ -200,6 +226,10 @@ export const DEFAULT_SETTINGS: Settings = {
   claudeCodeAliases: [DEFAULT_CLAUDE_ALIAS],
   lastUsedDirectory: '~',
   lastInstanceMode: 'terminal',
+  // Activity Feed defaults
+  showActivityInNav: true,
+  feedEnabledEventTypes: ['completed'],
+  feedRetentionDays: 7,
 };
 
 // Filesystem API types

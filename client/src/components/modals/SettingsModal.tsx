@@ -3,7 +3,7 @@ import { useSettingsStore } from '../../store/settingsStore';
 import { settingsApi } from '../../api/client';
 import { toast } from '../../store/toastStore';
 import { Icons } from '../common/Icons';
-import type { ClaudeCodeAlias } from '@cc-orchestrator/shared';
+import type { ClaudeCodeAlias, ActivityEventType } from '@cc-orchestrator/shared';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -16,6 +16,9 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     terminalFontSize,
     terminalFontFamily,
     claudeCodeAliases,
+    showActivityInNav,
+    feedEnabledEventTypes,
+    feedRetentionDays,
     setTheme,
     setTerminalFontSize,
     setTerminalFontFamily,
@@ -23,6 +26,9 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     updateAlias,
     removeAlias,
     setDefaultAlias,
+    setShowActivityInNav,
+    toggleFeedEventType,
+    setFeedRetentionDays,
   } = useSettingsStore();
   const [resetConfirmation, setResetConfirmation] = useState('');
   const [isResetting, setIsResetting] = useState(false);
@@ -342,6 +348,79 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                   )}
                 </div>
               ))}
+            </div>
+          </div>
+
+          {/* Activity Feed Section */}
+          <div className="pt-4 mt-4 border-t border-surface-600">
+            <h3 className="text-xs font-semibold text-theme-muted uppercase tracking-wider mb-3">Activity Feed</h3>
+
+            <p className="text-xs text-theme-muted mb-4">
+              Configure the activity feed that tracks status changes from your Claude Code instances.
+            </p>
+
+            {/* Show in Nav Toggle */}
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <span className="text-theme-primary">Show in navigation</span>
+                <p className="text-xs text-theme-muted mt-0.5">Display the Activity button in the header</p>
+              </div>
+              <button
+                onClick={() => setShowActivityInNav(!showActivityInNav)}
+                className={`relative w-11 h-6 rounded-full transition-colors ${
+                  showActivityInNav ? 'bg-accent' : 'bg-surface-600'
+                }`}
+              >
+                <div
+                  className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
+                    showActivityInNav ? 'translate-x-5' : 'translate-x-0.5'
+                  }`}
+                />
+              </button>
+            </div>
+
+            {/* Event Types */}
+            <div className="mb-4">
+              <span className="text-theme-primary text-sm">Event types to display</span>
+              <p className="text-xs text-theme-muted mt-0.5 mb-2">Select which event types appear in the activity feed</p>
+              <div className="space-y-2">
+                {(['completed', 'awaiting', 'error', 'started'] as ActivityEventType[]).map((eventType) => (
+                  <label key={eventType} className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={feedEnabledEventTypes.includes(eventType)}
+                      onChange={() => toggleFeedEventType(eventType)}
+                      className="w-4 h-4 rounded border-surface-500 bg-surface-800 text-accent focus:ring-accent/50"
+                    />
+                    <span className="text-sm text-theme-primary capitalize">{eventType}</span>
+                    <span className="text-xs text-theme-muted">
+                      {eventType === 'completed' && '- Instance finished working'}
+                      {eventType === 'awaiting' && '- Instance needs attention'}
+                      {eventType === 'error' && '- Instance encountered an error'}
+                      {eventType === 'started' && '- Instance started working'}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Retention Days */}
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-theme-primary">Retention period</span>
+                <p className="text-xs text-theme-muted mt-0.5">How long to keep activity events</p>
+              </div>
+              <select
+                value={feedRetentionDays}
+                onChange={(e) => setFeedRetentionDays(parseInt(e.target.value))}
+                className="bg-surface-800 border border-surface-600 rounded-lg px-3 py-1.5 text-sm text-theme-primary focus:outline-none focus:ring-2 focus:ring-accent/50"
+              >
+                {[1, 3, 7, 14, 30].map((days) => (
+                  <option key={days} value={days}>
+                    {days} {days === 1 ? 'day' : 'days'}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 

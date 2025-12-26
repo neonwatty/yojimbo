@@ -15,6 +15,8 @@ import type {
   DirectoryListResponse,
   HomePathResponse,
   ClaudeCliStatus,
+  ActivityEvent,
+  ActivityFeedStats,
 } from '@cc-orchestrator/shared';
 import { toast } from '../store/toastStore';
 
@@ -174,4 +176,27 @@ export const filesystemApi = {
   home: () => request<ApiResponse<HomePathResponse>>('/filesystem/home'),
 
   claudeStatus: () => request<ApiResponse<ClaudeCliStatus>>('/filesystem/claude-status'),
+};
+
+// Feed API
+export const feedApi = {
+  list: (limit = 50, offset = 0) =>
+    request<ApiResponse<ActivityEvent[]>>(`/feed?limit=${limit}&offset=${offset}`),
+
+  getStats: () => request<ApiResponse<ActivityFeedStats>>('/feed/stats'),
+
+  markAsRead: (id: string) =>
+    request<ApiResponse<ActivityEvent>>(`/feed/${id}/read`, {
+      method: 'PATCH',
+    }),
+
+  markAllAsRead: () =>
+    request<ApiResponse<{ count: number }>>('/feed/mark-all-read', {
+      method: 'POST',
+    }),
+
+  clear: () =>
+    request<ApiResponse<{ count: number }>>('/feed/clear', {
+      method: 'DELETE',
+    }),
 };

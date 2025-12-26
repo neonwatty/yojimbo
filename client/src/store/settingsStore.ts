@@ -1,28 +1,101 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { Settings } from '@cc-orchestrator/shared';
+import { v4 as uuidv4 } from 'uuid';
+import type { Settings, ClaudeCodeAlias, InstanceMode } from '@cc-orchestrator/shared';
 
 interface SettingsState extends Settings {
+  // Existing setters
   setTheme: (theme: Settings['theme']) => void;
   setTerminalFontSize: (size: number) => void;
   setTerminalFontFamily: (family: string) => void;
   setShowWelcomeBanner: (show: boolean) => void;
   updateSettings: (settings: Partial<Settings>) => void;
+
+  // Claude Code alias management
+  addAlias: (name: string, command: string) => void;
+  updateAlias: (id: string, updates: Partial<Omit<ClaudeCodeAlias, 'id'>>) => void;
+  removeAlias: (id: string) => void;
+  setDefaultAlias: (id: string) => void;
+  getDefaultAlias: () => ClaudeCodeAlias | undefined;
+
+  // Instance creation preferences
+  setLastUsedDirectory: (dir: string) => void;
+  setLastInstanceMode: (mode: InstanceMode) => void;
 }
+
+const defaultAlias: ClaudeCodeAlias = {
+  id: 'default',
+  name: 'Default',
+  command: 'claude',
+  isDefault: true,
+};
 
 export const useSettingsStore = create<SettingsState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
+      // Default values
       theme: 'dark',
       terminalFontSize: 14,
       terminalFontFamily: 'JetBrains Mono',
       showWelcomeBanner: true,
+      claudeCodeAliases: [defaultAlias],
+      lastUsedDirectory: '~',
+      lastInstanceMode: 'terminal',
 
+      // Existing setters
       setTheme: (theme) => set({ theme }),
       setTerminalFontSize: (terminalFontSize) => set({ terminalFontSize }),
       setTerminalFontFamily: (terminalFontFamily) => set({ terminalFontFamily }),
       setShowWelcomeBanner: (showWelcomeBanner) => set({ showWelcomeBanner }),
       updateSettings: (settings) => set(settings),
+
+      // Claude Code alias management
+      addAlias: (name, command) =>
+        set((state) => ({
+          claudeCodeAliases: [
+            ...state.claudeCodeAliases,
+            {
+              id: uuidv4(),
+              name,
+              command,
+              isDefault: state.claudeCodeAliases.length === 0, // First one is default
+            },
+          ],
+        })),
+
+      updateAlias: (id, updates) =>
+        set((state) => ({
+          claudeCodeAliases: state.claudeCodeAliases.map((alias) =>
+            alias.id === id ? { ...alias, ...updates } : alias
+          ),
+        })),
+
+      removeAlias: (id) =>
+        set((state) => {
+          const filtered = state.claudeCodeAliases.filter((a) => a.id !== id);
+          // If we removed the default, make the first one default
+          if (filtered.length > 0 && !filtered.some((a) => a.isDefault)) {
+            filtered[0].isDefault = true;
+          }
+          return { claudeCodeAliases: filtered };
+        }),
+
+      setDefaultAlias: (id) =>
+        set((state) => ({
+          claudeCodeAliases: state.claudeCodeAliases.map((alias) => ({
+            ...alias,
+            isDefault: alias.id === id,
+          })),
+        })),
+
+      getDefaultAlias: () => {
+        const state = get();
+        return state.claudeCodeAliases.find((a) => a.isDefault) || state.claudeCodeAliases[0];
+      },
+
+      // Instance creation preferences
+      setLastUsedDirectory: (lastUsedDirectory) => set({ lastUsedDirectory }),
+      setLastInstanceMode: (lastInstanceMode) => set({ lastInstanceMode }),
     }),
     {
       name: 'yojimbo-settings',

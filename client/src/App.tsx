@@ -9,11 +9,10 @@ import MainLayout from './components/layout/MainLayout';
 import HomePage from './pages/HomePage';
 import InstancesPage from './pages/InstancesPage';
 import HistoryPage from './pages/HistoryPage';
-import { ShortcutsModal, SettingsModal } from './components/modals';
+import { ShortcutsModal, SettingsModal, NewInstanceModal } from './components/modals';
 import { CommandPalette } from './components/common/CommandPalette';
 import { ToastContainer } from './components/common/Toast';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
-import { instancesApi } from './api/client';
 
 function App() {
   const navigate = useNavigate();
@@ -23,9 +22,11 @@ function App() {
   const {
     showShortcutsModal,
     showSettingsModal,
+    showNewInstanceModal,
     showCommandPalette,
     setShowShortcutsModal,
     setShowSettingsModal,
+    setShowNewInstanceModal,
     setShowCommandPalette,
     toggleLeftSidebar,
     toggleEditorPanel,
@@ -59,15 +60,9 @@ function App() {
     navigate(`/instances/${instances[newIndex].id}`);
   }, [instances, location.pathname, navigate, setActiveInstanceId]);
 
-  const handleNewInstance = useCallback(async () => {
-    const response = await instancesApi.create({
-      name: `instance-${instances.length + 1}`,
-      workingDir: '~',
-    });
-    if (response.data) {
-      navigate(`/instances/${response.data.id}`);
-    }
-  }, [instances.length, navigate]);
+  const handleNewInstance = useCallback(() => {
+    setShowNewInstanceModal(true);
+  }, [setShowNewInstanceModal]);
 
   // Use keyboard shortcuts hook for new shortcuts
   useKeyboardShortcuts({
@@ -159,6 +154,10 @@ function App() {
           setShowCommandPalette(false);
           return;
         }
+        if (showNewInstanceModal) {
+          setShowNewInstanceModal(false);
+          return;
+        }
         if (showShortcutsModal) {
           setShowShortcutsModal(false);
           return;
@@ -181,6 +180,7 @@ function App() {
     navigate,
     showShortcutsModal,
     showSettingsModal,
+    showNewInstanceModal,
     showCommandPalette,
     toggleLeftSidebar,
     toggleEditorPanel,
@@ -188,6 +188,7 @@ function App() {
     toggleTerminalPanel,
     setShowShortcutsModal,
     setShowSettingsModal,
+    setShowNewInstanceModal,
     setShowCommandPalette,
   ]);
 
@@ -206,6 +207,7 @@ function App() {
 
       {/* Global Modals */}
       <CommandPalette isOpen={showCommandPalette} onClose={() => setShowCommandPalette(false)} />
+      <NewInstanceModal isOpen={showNewInstanceModal} onClose={() => setShowNewInstanceModal(false)} />
       <ShortcutsModal isOpen={showShortcutsModal} onClose={() => setShowShortcutsModal(false)} />
       <SettingsModal isOpen={showSettingsModal} onClose={() => setShowSettingsModal(false)} />
 

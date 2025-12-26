@@ -17,6 +17,7 @@ export interface Instance {
 export interface CreateInstanceRequest {
   name: string;
   workingDir: string;
+  startupCommand?: string; // Optional command to run after terminal starts
 }
 
 export interface UpdateInstanceRequest {
@@ -164,16 +165,65 @@ export interface PaginatedResponse<T> {
 }
 
 // Settings types
+export interface ClaudeCodeAlias {
+  id: string;
+  name: string; // Display name (e.g., "Full Permissions")
+  command: string; // The actual command (e.g., "claude --dangerously-skip-permissions")
+  isDefault: boolean; // One marked as default
+}
+
+export type InstanceMode = 'terminal' | 'claude-code';
+
 export interface Settings {
   theme: 'light' | 'dark' | 'system';
   terminalFontSize: number;
   terminalFontFamily: string;
   showWelcomeBanner: boolean;
+  // Claude Code settings
+  claudeCodeAliases: ClaudeCodeAlias[];
+  lastUsedDirectory: string;
+  lastInstanceMode: InstanceMode;
 }
+
+export const DEFAULT_CLAUDE_ALIAS: ClaudeCodeAlias = {
+  id: 'default',
+  name: 'Default',
+  command: 'claude',
+  isDefault: true,
+};
 
 export const DEFAULT_SETTINGS: Settings = {
   theme: 'dark',
   terminalFontSize: 14,
   terminalFontFamily: 'JetBrains Mono',
   showWelcomeBanner: true,
+  claudeCodeAliases: [DEFAULT_CLAUDE_ALIAS],
+  lastUsedDirectory: '~',
+  lastInstanceMode: 'terminal',
 };
+
+// Filesystem API types
+export interface DirectoryEntry {
+  name: string;
+  path: string;
+  isDirectory: boolean;
+}
+
+export interface DirectoryListResponse {
+  currentPath: string;
+  displayPath: string; // With ~ for home
+  entries: DirectoryEntry[];
+  hasParent: boolean;
+  parentPath: string | null;
+}
+
+export interface HomePathResponse {
+  path: string;
+  displayPath: string;
+}
+
+export interface ClaudeCliStatus {
+  installed: boolean;
+  path: string | null;
+  version: string | null;
+}

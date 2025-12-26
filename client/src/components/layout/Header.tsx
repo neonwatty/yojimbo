@@ -15,6 +15,7 @@ export default function Header() {
   const setLayout = useUIStore((state) => state.setLayout);
   const setShowShortcutsModal = useUIStore((state) => state.setShowShortcutsModal);
   const setShowSettingsModal = useUIStore((state) => state.setShowSettingsModal);
+  const setShowNewInstanceModal = useUIStore((state) => state.setShowNewInstanceModal);
   const instances = useInstancesStore((state) => state.instances);
   const theme = useSettingsStore((state) => state.theme);
   const setTheme = useSettingsStore((state) => state.setTheme);
@@ -46,6 +47,17 @@ export default function Header() {
       </div>
 
       <div className="flex items-center gap-3">
+        {/* New Instance Button */}
+        <Tooltip text="New Instance (⌘N)" position="bottom">
+          <button
+            onClick={() => setShowNewInstanceModal(true)}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium bg-accent text-white hover:bg-accent/90 transition-colors"
+          >
+            <Icons.plus />
+            <span className="hidden sm:inline">New</span>
+          </button>
+        </Tooltip>
+
         {/* History Button */}
         <Tooltip text={isHistoryView ? 'Close history' : 'View history'} position="bottom">
           <button

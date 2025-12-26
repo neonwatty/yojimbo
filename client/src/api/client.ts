@@ -12,6 +12,9 @@ import type {
   ApiResponse,
   PaginatedResponse,
   Settings,
+  DirectoryListResponse,
+  HomePathResponse,
+  ClaudeCliStatus,
 } from '@cc-orchestrator/shared';
 import { toast } from '../store/toastStore';
 
@@ -161,4 +164,14 @@ export const settingsApi = {
     request<ApiResponse<{ reset: boolean; count: number }>>('/settings/reset-instance-status', {
       method: 'POST',
     }),
+};
+
+// Filesystem API
+export const filesystemApi = {
+  list: (path = '~') =>
+    request<ApiResponse<DirectoryListResponse>>(`/filesystem/list?path=${encodeURIComponent(path)}`),
+
+  home: () => request<ApiResponse<HomePathResponse>>('/filesystem/home'),
+
+  claudeStatus: () => request<ApiResponse<ClaudeCliStatus>>('/filesystem/claude-status'),
 };

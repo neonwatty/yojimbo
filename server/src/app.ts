@@ -8,6 +8,7 @@ import plansRouter from './routes/plans.js';
 import mockupsRouter from './routes/mockups.js';
 import hooksRouter from './routes/hooks.js';
 import settingsRouter from './routes/settings.js';
+import filesystemRouter from './routes/filesystem.js';
 import CONFIG from './config/index.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -40,6 +41,7 @@ app.use('/api/plans', plansRouter);
 app.use('/api/mockups', mockupsRouter);
 app.use('/api/hooks', hooksRouter);
 app.use('/api/settings', settingsRouter);
+app.use('/api/filesystem', filesystemRouter);
 
 // Health check
 app.get('/api/health', (_req, res) => {

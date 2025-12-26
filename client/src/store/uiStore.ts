@@ -39,6 +39,7 @@ interface UIState {
   browserHeight: number;
   showShortcutsModal: boolean;
   showSettingsModal: boolean;
+  showNewInstanceModal: boolean;
   // File browser state for Plans panel
   plansBrowserWidth: number;
   plansBrowserCollapsed: boolean;
@@ -71,6 +72,7 @@ interface UIState {
   setBrowserHeight: (height: number) => void;
   setShowShortcutsModal: (show: boolean) => void;
   setShowSettingsModal: (show: boolean) => void;
+  setShowNewInstanceModal: (show: boolean) => void;
   // File browser setters
   setPlansBrowserWidth: (width: number) => void;
   togglePlansBrowserCollapsed: () => void;
@@ -96,6 +98,7 @@ export const useUIStore = create<UIState>()(
       // Modal states always start closed (not persisted)
       showShortcutsModal: false,
       showSettingsModal: false,
+      showNewInstanceModal: false,
       // Command palette state (not persisted)
       showCommandPalette: false,
       pendingKeySequence: null,
@@ -120,6 +123,7 @@ export const useUIStore = create<UIState>()(
       setBrowserHeight: (browserHeight) => set({ browserHeight }),
       setShowShortcutsModal: (showShortcutsModal) => set({ showShortcutsModal }),
       setShowSettingsModal: (showSettingsModal) => set({ showSettingsModal }),
+      setShowNewInstanceModal: (showNewInstanceModal) => set({ showNewInstanceModal }),
       setPlansBrowserWidth: (plansBrowserWidth) => set({ plansBrowserWidth }),
       togglePlansBrowserCollapsed: () => set((state) => ({ plansBrowserCollapsed: !state.plansBrowserCollapsed })),
       setMockupsBrowserWidth: (mockupsBrowserWidth) => set({ mockupsBrowserWidth }),

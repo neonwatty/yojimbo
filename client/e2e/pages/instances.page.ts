@@ -4,20 +4,35 @@ import { BasePage } from './base.page';
 export class InstancesPage extends BasePage {
   readonly newInstanceButton: Locator;
   readonly instanceCards: Locator;
+  readonly newInstanceModal: Locator;
 
   constructor(page: Page) {
     super(page);
     // Target the card that contains "New Instance" span (excludes tooltip)
     this.newInstanceButton = page.locator('.grid > div').filter({ has: page.locator('span:has-text("New Instance")') });
     this.instanceCards = page.locator('.grid > div').filter({ hasNot: page.locator('span:has-text("New Instance")') });
+    this.newInstanceModal = page.locator('div').filter({ hasText: /^New Instance$/ }).locator('..').locator('..');
   }
 
   async gotoInstances() {
     await this.goto('/instances');
   }
 
-  async createNewInstance() {
+  async createNewInstance(name?: string) {
+    // Click the New Instance button (either in cards or header)
     await this.newInstanceButton.click();
+
+    // Wait for modal to appear
+    await expect(this.page.getByRole('heading', { name: 'New Instance' })).toBeVisible({ timeout: 5000 });
+
+    // Fill in the name if provided, otherwise use a default
+    const instanceName = name || `instance-${Date.now()}`;
+    await this.page.locator('input[placeholder="My Project"]').fill(instanceName);
+
+    // Click Create Instance button
+    await this.page.getByRole('button', { name: 'Create Instance' }).click();
+
+    // Wait for modal to close and navigation
     await this.page.waitForTimeout(500);
   }
 

@@ -1,5 +1,68 @@
 import { test, expect } from '../fixtures/test-fixtures';
 
+test.describe('New Instance Modal', () => {
+  test.beforeEach(async ({ apiClient }) => {
+    await apiClient.cleanupAllInstances();
+  });
+
+  test('opens modal when clicking New Instance button', async ({ instancesPage }) => {
+    await instancesPage.gotoInstances();
+
+    // Click the New Instance card
+    await instancesPage.newInstanceButton.click();
+
+    // Modal should appear with correct title
+    await expect(instancesPage.page.getByRole('heading', { name: 'New Instance' })).toBeVisible({ timeout: 5000 });
+
+    // Should have name input
+    await expect(instancesPage.page.locator('input[placeholder="My Project"]')).toBeVisible();
+
+    // Should have mode selector with Terminal and Claude Code buttons
+    await expect(instancesPage.page.getByRole('button', { name: 'Terminal' })).toBeVisible();
+    await expect(instancesPage.page.getByRole('button', { name: 'Claude Code' })).toBeVisible();
+
+    // Should have Cancel and Create Instance buttons
+    await expect(instancesPage.page.getByRole('button', { name: 'Cancel' })).toBeVisible();
+    await expect(instancesPage.page.getByRole('button', { name: 'Create Instance' })).toBeVisible();
+  });
+
+  test('can close modal with Cancel button', async ({ instancesPage }) => {
+    await instancesPage.gotoInstances();
+    await instancesPage.newInstanceButton.click();
+
+    await expect(instancesPage.page.getByRole('heading', { name: 'New Instance' })).toBeVisible({ timeout: 5000 });
+
+    // Click Cancel
+    await instancesPage.page.getByRole('button', { name: 'Cancel' }).click();
+
+    // Modal should close
+    await expect(instancesPage.page.getByRole('heading', { name: 'New Instance' })).not.toBeVisible();
+  });
+
+  test('can close modal with Escape key', async ({ instancesPage }) => {
+    await instancesPage.gotoInstances();
+    await instancesPage.newInstanceButton.click();
+
+    await expect(instancesPage.page.getByRole('heading', { name: 'New Instance' })).toBeVisible({ timeout: 5000 });
+
+    // Press Escape
+    await instancesPage.page.keyboard.press('Escape');
+
+    // Modal should close
+    await expect(instancesPage.page.getByRole('heading', { name: 'New Instance' })).not.toBeVisible();
+  });
+
+  test('creates instance with custom name', async ({ instancesPage }) => {
+    await instancesPage.gotoInstances();
+
+    // Create instance with specific name
+    await instancesPage.createNewInstance('my-test-project');
+
+    // Should navigate to the new instance
+    await expect(instancesPage.page).toHaveURL(/.*\/instances\/[a-zA-Z0-9-]+$/);
+  });
+});
+
 test.describe('Instance Management', () => {
   test.beforeEach(async ({ apiClient }) => {
     await apiClient.cleanupAllInstances();

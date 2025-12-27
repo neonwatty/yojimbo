@@ -1,18 +1,18 @@
 import { test, expect } from '../fixtures/test-fixtures';
 
-test.describe('New Instance Modal', () => {
+test.describe('New Session Modal', () => {
   test.beforeEach(async ({ apiClient }) => {
     await apiClient.cleanupAllInstances();
   });
 
-  test('opens modal when clicking New Instance button', async ({ instancesPage }) => {
+  test('opens modal when clicking New Session button', async ({ instancesPage }) => {
     await instancesPage.gotoInstances();
 
-    // Click the New Instance card
+    // Click the New Session card
     await instancesPage.newInstanceButton.click();
 
     // Modal should appear with correct title
-    await expect(instancesPage.page.getByRole('heading', { name: 'New Instance' })).toBeVisible({ timeout: 5000 });
+    await expect(instancesPage.page.getByRole('heading', { name: 'New Session' })).toBeVisible({ timeout: 5000 });
 
     // Should have name input
     await expect(instancesPage.page.locator('input[placeholder="My Project"]')).toBeVisible();
@@ -21,36 +21,36 @@ test.describe('New Instance Modal', () => {
     await expect(instancesPage.page.getByRole('button', { name: 'Terminal' })).toBeVisible();
     await expect(instancesPage.page.getByRole('button', { name: 'Claude Code' })).toBeVisible();
 
-    // Should have Cancel and Create Instance buttons in the modal
-    const modal = instancesPage.page.locator('.fixed.inset-0').filter({ has: instancesPage.page.getByRole('heading', { name: 'New Instance' }) });
+    // Should have Cancel and Create Session buttons in the modal
+    const modal = instancesPage.page.locator('.fixed.inset-0').filter({ has: instancesPage.page.getByRole('heading', { name: 'New Session' }) });
     await expect(modal.getByRole('button', { name: 'Cancel' })).toBeVisible();
-    await expect(modal.getByRole('button', { name: 'Create Instance' })).toBeVisible();
+    await expect(modal.getByRole('button', { name: 'Create Session' })).toBeVisible();
   });
 
   test('can close modal with Cancel button', async ({ instancesPage }) => {
     await instancesPage.gotoInstances();
     await instancesPage.newInstanceButton.click();
 
-    await expect(instancesPage.page.getByRole('heading', { name: 'New Instance' })).toBeVisible({ timeout: 5000 });
+    await expect(instancesPage.page.getByRole('heading', { name: 'New Session' })).toBeVisible({ timeout: 5000 });
 
     // Click Cancel
     await instancesPage.page.getByRole('button', { name: 'Cancel' }).click();
 
     // Modal should close
-    await expect(instancesPage.page.getByRole('heading', { name: 'New Instance' })).not.toBeVisible();
+    await expect(instancesPage.page.getByRole('heading', { name: 'New Session' })).not.toBeVisible();
   });
 
   test('can close modal with Escape key', async ({ instancesPage }) => {
     await instancesPage.gotoInstances();
     await instancesPage.newInstanceButton.click();
 
-    await expect(instancesPage.page.getByRole('heading', { name: 'New Instance' })).toBeVisible({ timeout: 5000 });
+    await expect(instancesPage.page.getByRole('heading', { name: 'New Session' })).toBeVisible({ timeout: 5000 });
 
     // Press Escape
     await instancesPage.page.keyboard.press('Escape');
 
     // Modal should close
-    await expect(instancesPage.page.getByRole('heading', { name: 'New Instance' })).not.toBeVisible();
+    await expect(instancesPage.page.getByRole('heading', { name: 'New Session' })).not.toBeVisible();
   });
 
   test('creates instance with custom name', async ({ instancesPage }) => {
@@ -67,11 +67,11 @@ test.describe('New Instance Modal', () => {
     await instancesPage.gotoInstances();
     await instancesPage.newInstanceButton.click();
 
-    await expect(instancesPage.page.getByRole('heading', { name: 'New Instance' })).toBeVisible({ timeout: 5000 });
+    await expect(instancesPage.page.getByRole('heading', { name: 'New Session' })).toBeVisible({ timeout: 5000 });
 
-    // Claude Code button should be selected (has bg-accent class)
+    // Claude Code button should be selected (has bg-frost-4 class)
     const claudeCodeButton = instancesPage.page.getByRole('button', { name: 'Claude Code' });
-    await expect(claudeCodeButton).toHaveClass(/bg-accent/);
+    await expect(claudeCodeButton).toHaveClass(/bg-frost-4/);
 
     // Command Alias dropdown should be visible
     await expect(instancesPage.page.locator('text=Command Alias')).toBeVisible();
@@ -81,14 +81,14 @@ test.describe('New Instance Modal', () => {
     await instancesPage.gotoInstances();
     await instancesPage.newInstanceButton.click();
 
-    await expect(instancesPage.page.getByRole('heading', { name: 'New Instance' })).toBeVisible({ timeout: 5000 });
+    await expect(instancesPage.page.getByRole('heading', { name: 'New Session' })).toBeVisible({ timeout: 5000 });
 
     // Click Terminal mode button
     await instancesPage.page.getByRole('button', { name: 'Terminal' }).click();
 
-    // Terminal button should be selected
+    // Terminal button should be selected (has bg-frost-4 class)
     const terminalButton = instancesPage.page.getByRole('button', { name: 'Terminal' });
-    await expect(terminalButton).toHaveClass(/bg-accent/);
+    await expect(terminalButton).toHaveClass(/bg-frost-4/);
 
     // Command Alias dropdown should NOT be visible in Terminal mode
     await expect(instancesPage.page.locator('text=Command Alias')).not.toBeVisible();
@@ -98,7 +98,7 @@ test.describe('New Instance Modal', () => {
     await instancesPage.gotoInstances();
     await instancesPage.newInstanceButton.click();
 
-    await expect(instancesPage.page.getByRole('heading', { name: 'New Instance' })).toBeVisible({ timeout: 5000 });
+    await expect(instancesPage.page.getByRole('heading', { name: 'New Session' })).toBeVisible({ timeout: 5000 });
 
     // Alias selector should show YOLO Mode selected by default
     const aliasSelect = instancesPage.page.locator('select').first();

@@ -9,8 +9,9 @@ test.describe('HomePage', () => {
     // Navigate to home page
     await basePage.goto('/');
 
-    // Click the "New Session" button
-    const newInstanceButton = basePage.page.locator('button:has-text("New Session")');
+    // Click the "New Session" button in the main content area (not header)
+    const mainContent = basePage.page.locator('.flex-1.overflow-auto');
+    const newInstanceButton = mainContent.locator('button:has-text("New Session")');
     await expect(newInstanceButton).toBeVisible();
     await newInstanceButton.click();
 
@@ -35,8 +36,9 @@ test.describe('HomePage', () => {
     // Navigate to home page
     await basePage.goto('/');
 
-    // Click the "New Session" button
-    const newInstanceButton = basePage.page.locator('button:has-text("New Session")');
+    // Click the "New Session" button in the main content area (not header)
+    const mainContent = basePage.page.locator('.flex-1.overflow-auto');
+    const newInstanceButton = mainContent.locator('button:has-text("New Session")');
     await newInstanceButton.click();
 
     // Modal should appear - fill in name and submit

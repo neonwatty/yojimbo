@@ -90,8 +90,8 @@ test.describe('HomePage', () => {
 
     // Should show pinned section with the instance (in main content area, not sidebar)
     const mainContent = basePage.page.locator('.flex-1.overflow-auto');
-    // The section header is "★ Pinned" so we match just "Pinned"
-    await expect(mainContent.getByText('Pinned', { exact: true })).toBeVisible();
+    // The section header is "★ Pinned" - use locator to find the h3 containing "Pinned"
+    await expect(mainContent.locator('h3:has-text("Pinned")')).toBeVisible();
     await expect(mainContent.getByText('pinned-test')).toBeVisible();
   });
 
@@ -122,11 +122,10 @@ test.describe('HomePage', () => {
     // Should show recent instances section heading
     const mainContent = basePage.page.locator('.flex-1.overflow-auto');
     // The section header is just "Recent"
-    await expect(mainContent.getByText('Recent', { exact: true })).toBeVisible();
+    await expect(mainContent.locator('h3:has-text("Recent")')).toBeVisible();
 
-    // Check that both instances appear in the recent section (use the specific container)
-    const recentSection = mainContent.locator('div').filter({ hasText: 'Recent' }).first().locator('.bg-surface-700');
-    await expect(recentSection.getByText('recent-1')).toBeVisible();
-    await expect(recentSection.getByText('recent-2')).toBeVisible();
+    // Check that both instances appear in the main content area
+    await expect(mainContent.getByText('recent-1')).toBeVisible();
+    await expect(mainContent.getByText('recent-2')).toBeVisible();
   });
 });

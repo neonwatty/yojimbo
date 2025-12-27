@@ -107,10 +107,13 @@ export default function Header() {
 
       const decoder = new TextDecoder();
       let buffer = '';
+      let done = false;
 
-      while (true) {
-        const { done, value } = await reader.read();
+      while (!done) {
+        const result = await reader.read();
+        done = result.done;
         if (done) break;
+        const value = result.value;
 
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split('\n');

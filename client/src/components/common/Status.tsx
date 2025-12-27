@@ -7,9 +7,9 @@ interface StatusDotProps {
 
 export function StatusDot({ status, size = 'md' }: StatusDotProps) {
   const sizeClasses = {
-    sm: 'w-2 h-2',
-    md: 'w-3 h-3',
-    lg: 'w-4 h-4',
+    sm: 'w-1.5 h-1.5',
+    md: 'w-2 h-2',
+    lg: 'w-2.5 h-2.5',
   };
 
   const colorClasses = {
@@ -17,7 +17,7 @@ export function StatusDot({ status, size = 'md' }: StatusDotProps) {
     awaiting: 'bg-state-awaiting',
     idle: 'bg-state-idle',
     error: 'bg-state-error',
-    disconnected: 'bg-gray-500',
+    disconnected: 'bg-surface-500',
   };
 
   return <span className={`inline-block rounded-full ${sizeClasses[size]} ${colorClasses[status]}`} />;
@@ -41,12 +41,12 @@ export function StatusBadge({ status }: StatusBadgeProps) {
     awaiting: 'bg-state-awaiting/20 text-state-awaiting border-state-awaiting/30',
     idle: 'bg-state-idle/20 text-state-idle border-state-idle/30',
     error: 'bg-state-error/20 text-state-error border-state-error/30',
-    disconnected: 'bg-gray-500/20 text-gray-500 border-gray-500/30',
+    disconnected: 'bg-surface-500/20 text-surface-500 border-surface-500/30',
   };
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium border ${bgClasses[status]}`}
+      className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium border ${bgClasses[status]}`}
     >
       <StatusDot status={status} size="sm" />
       {labels[status]}

@@ -86,20 +86,20 @@ export const ListLayout = memo(function ListLayout({
           onDragLeave={() => setDragOverId(null)}
           onClick={() => handleClick(instance.id)}
           onDoubleClick={() => onExpand(instance.id)}
-          className={`group flex items-center gap-4 px-4 py-3 cursor-grab active:cursor-grabbing
+          className={`group flex items-center gap-2 px-3 py-2 cursor-grab active:cursor-grabbing
             transition-all hover:bg-surface-700 relative
-            ${draggedId === instance.id ? 'opacity-50 scale-[0.98]' : ''}
-            ${dragOverId === instance.id ? 'bg-accent/20 ring-2 ring-accent ring-inset' : ''}
+            ${draggedId === instance.id ? 'opacity-50 scale-[0.99]' : ''}
+            ${dragOverId === instance.id ? 'bg-frost-4/20 ring-1 ring-frost-4 ring-inset' : ''}
             ${activeId === instance.id && dragOverId !== instance.id ? 'bg-surface-700' : ''}`}
         >
           {/* Drop indicator line */}
           {dragOverId === instance.id && (
-            <div className="absolute -top-px left-0 right-0 h-0.5 bg-accent" />
+            <div className="absolute -top-px left-0 right-0 h-0.5 bg-frost-4" />
           )}
 
           {/* Drag handle */}
           <span
-            className="text-theme-dim opacity-50 group-hover:opacity-100 cursor-grab select-none"
+            className="text-theme-dim opacity-50 group-hover:opacity-100 cursor-grab select-none text-xs"
             title="Drag to reorder"
           >
             ⋮⋮
@@ -111,8 +111,8 @@ export const ListLayout = memo(function ListLayout({
               e.stopPropagation();
               onTogglePin(instance.id);
             }}
-            className={`p-1 rounded transition-all transform hover:scale-110 active:scale-95
-              ${instance.isPinned ? 'text-accent hover:text-accent-bright' : 'text-gray-500 hover:text-gray-300'}`}
+            className={`p-0.5 rounded transition-all
+              ${instance.isPinned ? 'text-accent hover:text-accent-bright' : 'text-theme-dim hover:text-theme-primary'}`}
             title={instance.isPinned ? 'Unpin' : 'Pin'}
             aria-label={instance.isPinned ? `Unpin ${instance.name}` : `Pin ${instance.name}`}
             aria-pressed={instance.isPinned}
@@ -120,7 +120,7 @@ export const ListLayout = memo(function ListLayout({
             {Icons.star(instance.isPinned)}
           </button>
 
-          <StatusDot status={instance.status} size="lg" />
+          <StatusDot status={instance.status} size="md" />
 
           {/* Name and path */}
           <div className="flex-1 min-w-0">
@@ -133,9 +133,10 @@ export const ListLayout = memo(function ListLayout({
                 onValueChange={onEditingNameChange}
                 onConfirm={() => onConfirmRename(instance.id)}
                 onCancel={onCancelEditing}
+                className="text-xs"
               />
             </div>
-            <div className="text-xs text-gray-500 font-mono truncate">{instance.workingDir}</div>
+            <div className="text-[10px] text-theme-dim font-mono truncate">{instance.workingDir}</div>
           </div>
 
           <StatusBadge status={instance.status} />
@@ -146,7 +147,7 @@ export const ListLayout = memo(function ListLayout({
               e.stopPropagation();
               onExpand(instance.id);
             }}
-            className="p-1 rounded transition-all text-gray-500 hover:text-accent hover:bg-accent/10 opacity-0 group-hover:opacity-100"
+            className="p-0.5 rounded transition-all text-theme-dim hover:text-frost-2 hover:bg-frost-4/20 opacity-0 group-hover:opacity-100"
             title="Expand"
             aria-label={`Expand ${instance.name}`}
           >
@@ -157,7 +158,7 @@ export const ListLayout = memo(function ListLayout({
               e.stopPropagation();
               onClose(instance);
             }}
-            className="p-1 rounded transition-all text-gray-500 hover:text-red-400 hover:bg-red-400/10 opacity-0 group-hover:opacity-100"
+            className="p-0.5 rounded transition-all text-theme-dim hover:text-state-error hover:bg-state-error/10 opacity-0 group-hover:opacity-100"
             title="Close"
             aria-label={`Close ${instance.name}`}
           >

@@ -240,18 +240,19 @@ export default function InstancesPage() {
     return (
       <div className="flex-1 flex flex-col bg-surface-900 overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 bg-surface-800 border-b border-surface-600 flex-shrink-0">
-          <div className="flex items-center gap-3">
+        <div className="flex items-center justify-between px-3 h-10 bg-surface-800 border-b border-surface-600 flex-shrink-0">
+          <div className="flex items-center gap-2">
             <button
               onClick={() => navigate('/instances')}
-              className="p-1.5 rounded-lg bg-surface-700 hover:bg-surface-600 text-gray-400 hover:text-gray-200 transition-colors"
+              className="p-1 rounded hover:bg-surface-700 text-theme-dim hover:text-theme-primary transition-colors"
               title="Back to overview (Escape)"
             >
-              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M15 18l-6-6 6-6" />
               </svg>
             </button>
-            <StatusDot status={instance.status} size="lg" />
+            <span className="text-surface-600">│</span>
+            <StatusDot status={instance.status} size="md" />
             <EditableName
               name={instance.name}
               isEditing={editingId === instance.id}
@@ -260,42 +261,43 @@ export default function InstancesPage() {
               onValueChange={setEditingName}
               onConfirm={() => handleConfirmRename(instance.id)}
               onCancel={handleCancelEditing}
-              className="text-lg"
+              className="text-sm font-medium"
             />
             <StatusBadge status={instance.status} />
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1">
             <button
               onClick={toggleEditorPanel}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors
+              className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs transition-colors
                 ${editorPanelOpen
-                  ? 'bg-accent text-surface-900'
-                  : 'text-theme-muted hover:text-theme-primary hover:bg-surface-700'}`}
+                  ? 'bg-frost-4/30 text-frost-2 border border-frost-4/50'
+                  : 'text-theme-dim hover:text-theme-primary hover:bg-surface-700'}`}
             >
               <Icons.file />
               <span>Plans</span>
             </button>
             <button
               onClick={() => setMockupsPanelOpen(!mockupsPanelOpen)}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors
+              className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs transition-colors
                 ${mockupsPanelOpen
-                  ? 'bg-accent text-surface-900'
-                  : 'text-theme-muted hover:text-theme-primary hover:bg-surface-700'}`}
+                  ? 'bg-frost-4/30 text-frost-2 border border-frost-4/50'
+                  : 'text-theme-dim hover:text-theme-primary hover:bg-surface-700'}`}
             >
               <Icons.code />
               <span>Mockups</span>
             </button>
             <button
               onClick={toggleTerminalPanel}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors
+              className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs transition-colors
                 ${terminalPanelOpen
-                  ? 'bg-accent text-surface-900'
-                  : 'text-theme-muted hover:text-theme-primary hover:bg-surface-700'}`}
+                  ? 'bg-frost-4/30 text-frost-2 border border-frost-4/50'
+                  : 'text-theme-dim hover:text-theme-primary hover:bg-surface-700'}`}
             >
               <Icons.terminal />
               <span>Terminal</span>
             </button>
-            <span className="text-xs text-gray-500 font-mono font-light">{instance.workingDir}</span>
+            <span className="text-surface-600 mx-1">│</span>
+            <span className="text-[10px] text-theme-dim font-mono">{instance.workingDir}</span>
           </div>
         </div>
 
@@ -417,17 +419,19 @@ export default function InstancesPage() {
 
         {/* Empty state when no instances exist */}
         {instances.length === 0 && (
-          <div className="flex items-center justify-center h-full min-h-[400px]">
+          <div className="flex items-center justify-center h-full min-h-[300px]">
             <div className="text-center">
-              <div className="text-6xl mb-4">🖥️</div>
-              <h3 className="text-xl font-semibold text-theme-primary mb-2">No instances yet</h3>
-              <p className="text-theme-muted mb-4">Create your first Claude Code instance to get started.</p>
+              <div className="text-theme-dim mb-3">
+                <Icons.terminal />
+              </div>
+              <h3 className="text-sm font-medium text-theme-primary mb-1">No sessions yet</h3>
+              <p className="text-xs text-theme-dim mb-4">Create your first Claude Code session.</p>
               <button
                 onClick={handleNewInstance}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-accent text-surface-900 font-medium rounded-lg hover:bg-accent-bright transition-colors"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-accent text-surface-900 text-xs font-medium rounded hover:bg-accent-bright transition-colors"
               >
                 <Icons.plus />
-                Create Instance
+                New Session
               </button>
             </div>
           </div>

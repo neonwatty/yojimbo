@@ -193,49 +193,51 @@ export default function Header() {
   const isActivityView = location.pathname === '/activity';
 
   return (
-    <header className="flex items-center justify-between px-4 py-3 bg-surface-800 border-b border-surface-600">
-      <div className="flex items-center gap-4">
+    <header className="h-10 flex items-center justify-between px-3 bg-surface-800 border-b border-surface-600">
+      <div className="flex items-center gap-3">
         <h1
-          className="text-xl font-bold tracking-tight text-theme-primary cursor-pointer hover:text-accent transition-colors"
+          className="text-sm font-semibold text-theme-primary cursor-pointer hover:text-frost-2 transition-colors"
           onClick={() => navigate('/')}
           title="Go to Home"
         >
-          <span className="text-accent font-extrabold">Yo</span>jimbo
+          <span className="text-accent font-bold">Yo</span>jimbo
         </h1>
+        <span className="text-surface-500">│</span>
         <div className="flex items-center gap-3">
-          <div className="text-xs text-theme-muted font-mono">
+          <div className="text-xs text-theme-dim">
             {instances.length} {instances.length === 1 ? 'instance' : 'instances'}
             {pinnedCount > 0 && (
-              <span className="ml-2 text-accent">({pinnedCount} pinned)</span>
+              <span className="ml-1 text-accent">({pinnedCount} pinned)</span>
             )}
           </div>
           <ConnectionStatus />
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-1">
         {/* New Instance Button */}
         <Tooltip text="New Instance (⌘N)" position="bottom">
           <button
             onClick={() => setShowNewInstanceModal(true)}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium bg-accent text-white hover:bg-accent/90 transition-colors"
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium bg-accent text-surface-900 hover:bg-accent-bright transition-colors"
           >
             <Icons.plus />
             <span className="hidden sm:inline">New</span>
           </button>
         </Tooltip>
 
+        <span className="text-surface-600 mx-1">│</span>
+
         {/* History Button */}
         <Tooltip text={isHistoryView ? 'Close history' : 'View history'} position="bottom">
           <button
             onClick={() => navigate(isHistoryView ? '/instances' : '/history')}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors
+            className={`px-2 py-1 rounded text-xs transition-colors
               ${isHistoryView
-                ? 'bg-accent text-surface-900'
-                : 'text-theme-muted hover:text-theme-primary hover:bg-surface-700'}`}
+                ? 'bg-frost-4/30 text-frost-2 border border-frost-4/50'
+                : 'text-theme-dim hover:text-theme-primary hover:bg-surface-700'}`}
           >
-            <Icons.history />
-            <span className="hidden sm:inline">History</span>
+            History
           </button>
         </Tooltip>
 
@@ -244,15 +246,14 @@ export default function Header() {
           <Tooltip text={isActivityView ? 'Close activity' : 'View activity'} position="bottom">
             <button
               onClick={() => navigate(isActivityView ? '/instances' : '/activity')}
-              className={`relative flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors
+              className={`relative px-2 py-1 rounded text-xs transition-colors
                 ${isActivityView
-                  ? 'bg-accent text-surface-900'
-                  : 'text-theme-muted hover:text-theme-primary hover:bg-surface-700'}`}
+                  ? 'bg-frost-4/30 text-frost-2 border border-frost-4/50'
+                  : 'text-theme-dim hover:text-theme-primary hover:bg-surface-700'}`}
             >
-              <Icons.activity />
-              <span className="hidden sm:inline">Activity</span>
+              Activity
               {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] flex items-center justify-center px-1 text-xs font-bold bg-accent text-white rounded-full">
+                <span className="absolute -top-0.5 -right-0.5 min-w-[14px] h-[14px] flex items-center justify-center text-[10px] font-bold bg-accent text-surface-900 rounded-full">
                   {unreadCount > 99 ? '99+' : unreadCount}
                 </span>
               )}
@@ -265,43 +266,44 @@ export default function Header() {
           <Tooltip text="Generate work summary" position="bottom">
             <button
               onClick={() => setShowSummaryMenu(!showSummaryMenu)}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors
+              className={`flex items-center gap-1 px-2 py-1 rounded text-xs transition-colors
                 ${showSummaryMenu
                   ? 'bg-surface-600 text-theme-primary'
-                  : 'text-theme-muted hover:text-theme-primary hover:bg-surface-700'}`}
+                  : 'text-theme-dim hover:text-theme-primary hover:bg-surface-700'}`}
             >
-              <Icons.document />
-              <span className="hidden sm:inline">Summary</span>
+              Summary
               <Icons.chevronDown />
             </button>
           </Tooltip>
           {showSummaryMenu && (
-            <div className="absolute right-0 mt-1 w-48 bg-surface-700 border border-surface-600 rounded-lg shadow-xl z-50 py-1">
+            <div className="absolute right-0 mt-1 w-44 bg-surface-700 border border-surface-600 rounded z-50 py-1">
               <button
                 onClick={() => generateSummaryWithStreaming('daily')}
-                className="w-full px-4 py-2 text-sm text-left text-theme-primary hover:bg-surface-600 transition-colors"
+                className="w-full px-3 py-1.5 text-xs text-left text-theme-primary hover:bg-surface-600 transition-colors"
               >
-                Generate Daily Summary
+                Daily Summary
               </button>
               <button
                 onClick={() => generateSummaryWithStreaming('weekly')}
-                className="w-full px-4 py-2 text-sm text-left text-theme-primary hover:bg-surface-600 transition-colors"
+                className="w-full px-3 py-1.5 text-xs text-left text-theme-primary hover:bg-surface-600 transition-colors"
               >
-                Generate Weekly Summary
+                Weekly Summary
               </button>
             </div>
           )}
         </div>
 
+        <span className="text-surface-600 mx-1">│</span>
+
         {/* Layout Switcher */}
-        <div className="flex items-center gap-1 bg-surface-700 rounded-lg p-1" role="group" aria-label="View layout">
+        <div className="flex items-center bg-surface-700 rounded p-0.5" role="group" aria-label="View layout">
           <button
             onClick={() => {
               setLayout('cards');
               navigate('/instances');
             }}
-            className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors
-              ${layout === 'cards' ? 'bg-surface-500 text-theme-primary' : 'text-theme-muted hover:text-theme-primary'}`}
+            className={`px-2 py-0.5 rounded text-xs transition-colors
+              ${layout === 'cards' ? 'bg-surface-600 text-theme-primary' : 'text-theme-dim hover:text-theme-primary'}`}
             title="Cards"
             aria-label="Card layout"
             aria-pressed={layout === 'cards'}
@@ -313,8 +315,8 @@ export default function Header() {
               setLayout('list');
               navigate('/instances');
             }}
-            className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors
-              ${layout === 'list' ? 'bg-surface-500 text-theme-primary' : 'text-theme-muted hover:text-theme-primary'}`}
+            className={`px-2 py-0.5 rounded text-xs transition-colors
+              ${layout === 'list' ? 'bg-surface-600 text-theme-primary' : 'text-theme-dim hover:text-theme-primary'}`}
             title="List"
             aria-label="List layout"
             aria-pressed={layout === 'list'}
@@ -323,11 +325,13 @@ export default function Header() {
           </button>
         </div>
 
+        <span className="text-surface-600 mx-1">│</span>
+
         {/* Theme Toggle */}
         <Tooltip text={isDark ? 'Light mode' : 'Dark mode'} position="bottom">
           <button
             onClick={() => setTheme(isDark ? 'light' : 'dark')}
-            className="p-2 rounded-lg text-theme-muted hover:text-theme-primary hover:bg-surface-600 transition-colors"
+            className="p-1.5 rounded text-theme-dim hover:text-state-awaiting hover:bg-surface-700 transition-colors"
             aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
           >
             {isDark ? <Icons.sun /> : <Icons.moon />}
@@ -338,7 +342,7 @@ export default function Header() {
         <Tooltip text="Settings (⌘,)" position="bottom">
           <button
             onClick={() => setShowSettingsModal(true)}
-            className="p-2 rounded-lg text-theme-muted hover:text-theme-primary hover:bg-surface-700 transition-colors"
+            className="p-1.5 rounded text-theme-dim hover:text-theme-primary hover:bg-surface-700 transition-colors"
             aria-label="Open settings"
           >
             <Icons.settings />
@@ -349,7 +353,7 @@ export default function Header() {
         <Tooltip text="Keyboard shortcuts (⌘?)" position="bottom">
           <button
             onClick={() => setShowShortcutsModal(true)}
-            className="p-2 rounded-lg text-theme-muted hover:text-theme-primary hover:bg-surface-700 transition-colors"
+            className="p-1.5 rounded text-theme-dim hover:text-theme-primary hover:bg-surface-700 transition-colors"
             aria-label="View keyboard shortcuts"
           >
             <Icons.help />

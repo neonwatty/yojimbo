@@ -128,31 +128,31 @@ export function NewInstanceModal({ isOpen, onClose }: NewInstanceModalProps) {
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
       <div
-        className="bg-surface-700 rounded-xl shadow-2xl max-w-md w-full mx-4 animate-in"
+        className="bg-surface-700 rounded shadow-2xl max-w-md w-full mx-4"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-surface-600">
-          <h2 className="text-lg font-semibold text-theme-primary">New Instance</h2>
+        <div className="flex items-center justify-between px-4 py-3 border-b border-surface-600">
+          <h2 className="text-sm font-medium text-theme-primary">New Session</h2>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-theme-muted hover:text-theme-primary hover:bg-surface-600 transition-colors"
+            className="p-1 rounded text-theme-dim hover:text-theme-primary hover:bg-surface-600 transition-colors"
           >
             <Icons.close />
           </button>
         </div>
 
         {/* Content */}
-        <div className="px-6 py-4 space-y-4">
+        <div className="px-4 py-3 space-y-3">
           {/* Claude CLI Warning */}
           {!checkingClaude && claudeStatus && !claudeStatus.installed && (
-            <div className="flex items-start gap-3 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+            <div className="flex items-start gap-2 p-2 bg-state-awaiting/10 border border-state-awaiting/20 rounded">
               <Icons.warning />
               <div className="flex-1">
-                <p className="text-sm text-yellow-400 font-medium">Claude CLI not found</p>
-                <p className="text-xs text-theme-muted mt-1">
-                  Install Claude Code to use Claude Code mode:{' '}
-                  <code className="px-1 py-0.5 bg-surface-800 rounded text-xs">npm install -g @anthropic-ai/claude-code</code>
+                <p className="text-xs text-state-awaiting font-medium">Claude CLI not found</p>
+                <p className="text-[10px] text-theme-dim mt-0.5">
+                  Install Claude Code:{' '}
+                  <code className="px-1 py-0.5 bg-surface-800 rounded">npm install -g @anthropic-ai/claude-code</code>
                 </p>
               </div>
             </div>
@@ -160,28 +160,31 @@ export function NewInstanceModal({ isOpen, onClose }: NewInstanceModalProps) {
 
           {/* Name Input */}
           <div>
-            <label className="block text-sm text-theme-muted mb-1.5">Name</label>
+            <label className="block text-xs text-theme-dim mb-1">Name</label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="My Project"
-              className="w-full bg-surface-800 border border-surface-600 rounded-lg px-3 py-2 text-sm text-theme-primary placeholder:text-theme-muted focus:outline-none focus:ring-2 focus:ring-accent/50"
+              className="w-full bg-surface-800 border border-surface-600 rounded px-3 py-1.5 text-xs text-theme-primary placeholder:text-theme-dim focus:outline-none focus:ring-1 focus:ring-frost-4/50"
               autoFocus
             />
+            {!name.trim() && (
+              <p className="text-[10px] text-theme-dim mt-1">Select a directory below to auto-fill</p>
+            )}
           </div>
 
           {/* Mode Selector */}
           <div>
-            <label className="block text-sm text-theme-muted mb-1.5">Mode</label>
+            <label className="block text-xs text-theme-dim mb-1">Mode</label>
             <div className="flex gap-2">
               <button
                 type="button"
                 onClick={() => setMode('terminal')}
-                className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors
+                className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-colors
                   ${mode === 'terminal'
-                    ? 'bg-accent text-white'
-                    : 'bg-surface-600 text-theme-muted hover:text-theme-primary hover:bg-surface-500'}`}
+                    ? 'bg-frost-4/30 text-frost-2 border border-frost-4/50'
+                    : 'bg-surface-600 text-theme-dim hover:text-theme-primary hover:bg-surface-500'}`}
               >
                 <Icons.terminal />
                 Terminal
@@ -190,10 +193,10 @@ export function NewInstanceModal({ isOpen, onClose }: NewInstanceModalProps) {
                 type="button"
                 onClick={() => setMode('claude-code')}
                 disabled={!claudeStatus?.installed && !checkingClaude}
-                className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed
+                className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed
                   ${mode === 'claude-code'
-                    ? 'bg-accent text-white'
-                    : 'bg-surface-600 text-theme-muted hover:text-theme-primary hover:bg-surface-500'}`}
+                    ? 'bg-frost-4/30 text-frost-2 border border-frost-4/50'
+                    : 'bg-surface-600 text-theme-dim hover:text-theme-primary hover:bg-surface-500'}`}
               >
                 <Icons.code />
                 Claude Code
@@ -204,11 +207,11 @@ export function NewInstanceModal({ isOpen, onClose }: NewInstanceModalProps) {
           {/* Claude Code Alias Selector (only when Claude Code mode is selected) */}
           {mode === 'claude-code' && claudeCodeAliases.length > 0 && (
             <div>
-              <label className="block text-sm text-theme-muted mb-1.5">Command Alias</label>
+              <label className="block text-xs text-theme-dim mb-1">Command Alias</label>
               <select
                 value={selectedAliasId}
                 onChange={(e) => setSelectedAliasId(e.target.value)}
-                className="w-full bg-surface-800 border border-surface-600 rounded-lg px-3 py-2 text-sm text-theme-primary focus:outline-none focus:ring-2 focus:ring-accent/50"
+                className="w-full bg-surface-800 border border-surface-600 rounded px-3 py-1.5 text-xs text-theme-primary focus:outline-none focus:ring-1 focus:ring-frost-4/50"
               >
                 {claudeCodeAliases.map((alias) => (
                   <option key={alias.id} value={alias.id}>
@@ -217,7 +220,7 @@ export function NewInstanceModal({ isOpen, onClose }: NewInstanceModalProps) {
                 ))}
               </select>
               {selectedAlias && (
-                <p className="text-xs text-theme-muted mt-1">
+                <p className="text-[10px] text-theme-dim mt-1">
                   Will run: <code className="px-1 py-0.5 bg-surface-800 rounded">{selectedAlias.command}</code>
                 </p>
               )}
@@ -226,25 +229,35 @@ export function NewInstanceModal({ isOpen, onClose }: NewInstanceModalProps) {
 
           {/* Working Directory Picker */}
           <div>
-            <label className="block text-sm text-theme-muted mb-1.5">Working Directory</label>
-            <DirectoryPicker value={workingDir} onChange={setWorkingDir} />
+            <label className="block text-xs text-theme-dim mb-1">Working Directory</label>
+            <DirectoryPicker
+              value={workingDir}
+              onChange={(path) => {
+                setWorkingDir(path);
+                // Auto-generate name from directory if name is empty
+                if (!name.trim()) {
+                  const dirName = path.split('/').filter(Boolean).pop() || 'New Project';
+                  setName(dirName);
+                }
+              }}
+            />
           </div>
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-surface-600 flex items-center justify-end gap-3">
+        <div className="px-4 py-3 border-t border-surface-600 flex items-center justify-end gap-2">
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-lg text-sm font-medium text-theme-muted hover:text-theme-primary hover:bg-surface-600 transition-colors"
+            className="px-3 py-1.5 rounded text-xs font-medium text-theme-dim hover:text-theme-primary hover:bg-surface-600 transition-colors"
           >
             Cancel
           </button>
           <button
             onClick={handleCreate}
             disabled={isCreating || !name.trim()}
-            className="px-4 py-2 rounded-lg text-sm font-medium bg-accent text-white hover:bg-accent/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-3 py-1.5 rounded text-xs font-medium bg-accent text-surface-900 hover:bg-accent-bright transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isCreating ? 'Creating...' : 'Create Instance'}
+            {isCreating ? 'Creating...' : 'Create Session'}
           </button>
         </div>
       </div>

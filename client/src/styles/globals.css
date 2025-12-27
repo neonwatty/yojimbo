@@ -295,6 +295,30 @@ body {
   font-size: 0.875rem;
   line-height: 1.6;
   min-height: 100%;
+  color: var(--text-primary);
+}
+
+/* Ensure dark theme text color is applied */
+.mdx-editor-wrapper.dark-theme .mdx-editor-content {
+  color: #ffffff;
+}
+
+.mdx-editor-wrapper.dark-theme .mdx-editor-content * {
+  color: inherit;
+}
+
+.mdx-editor-wrapper.dark-theme .mdx-editor-content h1,
+.mdx-editor-wrapper.dark-theme .mdx-editor-content h2,
+.mdx-editor-wrapper.dark-theme .mdx-editor-content h3,
+.mdx-editor-wrapper.dark-theme .mdx-editor-content h4,
+.mdx-editor-wrapper.dark-theme .mdx-editor-content h5,
+.mdx-editor-wrapper.dark-theme .mdx-editor-content h6 {
+  color: #ffffff;
+}
+
+.mdx-editor-wrapper.dark-theme .mdx-editor-content p,
+.mdx-editor-wrapper.dark-theme .mdx-editor-content li {
+  color: #d1d5db;
 }
 
 .mdx-editor-content h1 {

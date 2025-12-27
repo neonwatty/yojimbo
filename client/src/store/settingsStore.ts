@@ -27,6 +27,16 @@ interface SettingsState extends Settings {
   setFeedEnabledEventTypes: (types: ActivityEventType[]) => void;
   setFeedRetentionDays: (days: number) => void;
   toggleFeedEventType: (eventType: ActivityEventType) => void;
+
+  // Work Summaries settings
+  summaryIncludePRs: boolean;
+  summaryIncludeCommits: boolean;
+  summaryIncludeIssues: boolean;
+  summaryCustomPrompt: string;
+  setSummaryIncludePRs: (include: boolean) => void;
+  setSummaryIncludeCommits: (include: boolean) => void;
+  setSummaryIncludeIssues: (include: boolean) => void;
+  setSummaryCustomPrompt: (prompt: string) => void;
 }
 
 const defaultAliases: ClaudeCodeAlias[] = [
@@ -59,6 +69,11 @@ export const useSettingsStore = create<SettingsState>()(
       showActivityInNav: true,
       feedEnabledEventTypes: ['completed'] as ActivityEventType[],
       feedRetentionDays: 7,
+      // Work Summaries defaults
+      summaryIncludePRs: true,
+      summaryIncludeCommits: false,
+      summaryIncludeIssues: false,
+      summaryCustomPrompt: '',
 
       // Existing setters
       setTheme: (theme) => set({ theme }),
@@ -128,6 +143,12 @@ export const useSettingsStore = create<SettingsState>()(
             return { feedEnabledEventTypes: [...types, eventType] };
           }
         }),
+
+      // Work Summaries settings
+      setSummaryIncludePRs: (summaryIncludePRs) => set({ summaryIncludePRs }),
+      setSummaryIncludeCommits: (summaryIncludeCommits) => set({ summaryIncludeCommits }),
+      setSummaryIncludeIssues: (summaryIncludeIssues) => set({ summaryIncludeIssues }),
+      setSummaryCustomPrompt: (summaryCustomPrompt) => set({ summaryCustomPrompt }),
     }),
     {
       name: 'yojimbo-settings',

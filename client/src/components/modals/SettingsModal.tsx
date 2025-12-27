@@ -19,6 +19,10 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     showActivityInNav,
     feedEnabledEventTypes,
     feedRetentionDays,
+    summaryIncludePRs,
+    summaryIncludeCommits,
+    summaryIncludeIssues,
+    summaryCustomPrompt,
     setTheme,
     setTerminalFontSize,
     setTerminalFontFamily,
@@ -29,6 +33,10 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     setShowActivityInNav,
     toggleFeedEventType,
     setFeedRetentionDays,
+    setSummaryIncludePRs,
+    setSummaryIncludeCommits,
+    setSummaryIncludeIssues,
+    setSummaryCustomPrompt,
   } = useSettingsStore();
   const [resetConfirmation, setResetConfirmation] = useState('');
   const [isResetting, setIsResetting] = useState(false);
@@ -421,6 +429,92 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                   </option>
                 ))}
               </select>
+            </div>
+          </div>
+
+          {/* Work Summaries Section */}
+          <div className="pt-4 mt-4 border-t border-surface-600">
+            <h3 className="text-xs font-semibold text-theme-muted uppercase tracking-wider mb-3">Work Summaries</h3>
+
+            <p className="text-xs text-theme-muted mb-4">
+              Configure which data sources to include when generating work summaries.
+            </p>
+
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={summaryIncludePRs}
+                  onChange={(e) => setSummaryIncludePRs(e.target.checked)}
+                  className="w-4 h-4 rounded border-surface-500 bg-surface-800 text-accent focus:ring-accent/50"
+                />
+                <span className="text-sm text-theme-primary">Pull Requests</span>
+                <span className="text-xs text-theme-muted">- PRs created and merged</span>
+              </label>
+
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={summaryIncludeCommits}
+                  onChange={(e) => setSummaryIncludeCommits(e.target.checked)}
+                  className="w-4 h-4 rounded border-surface-500 bg-surface-800 text-accent focus:ring-accent/50"
+                />
+                <span className="text-sm text-theme-primary">Commits</span>
+                <span className="text-xs text-theme-muted">- Git commit history</span>
+              </label>
+
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={summaryIncludeIssues}
+                  onChange={(e) => setSummaryIncludeIssues(e.target.checked)}
+                  className="w-4 h-4 rounded border-surface-500 bg-surface-800 text-accent focus:ring-accent/50"
+                />
+                <span className="text-sm text-theme-primary">Closed Issues</span>
+                <span className="text-xs text-theme-muted">- Issues you've closed</span>
+              </label>
+            </div>
+
+            {/* Custom Prompt */}
+            <div className="mt-4">
+              <label className="block text-sm text-theme-primary mb-1">
+                Custom Prompt (optional)
+              </label>
+              <p className="text-xs text-theme-muted mb-2">
+                Customize the instructions given to Claude for generating summaries.
+                Use {'{{period}}'}, {'{{data}}'}, and {'{{type}}'} as placeholders.
+                Leave empty to use the default prompt.
+              </p>
+
+              {/* Show default prompt */}
+              <details className="mb-2">
+                <summary className="text-xs text-accent cursor-pointer hover:text-accent/80">
+                  View default prompt
+                </summary>
+                <pre className="mt-2 p-3 bg-surface-900 rounded-lg text-xs text-theme-muted font-mono whitespace-pre-wrap border border-surface-600 max-h-48 overflow-y-auto">
+{`You are a helpful assistant that summarizes work completed. Based on the following data about what was accomplished {{period}}, write a concise, professional summary suitable for sharing with a team or manager.
+
+Focus on:
+- Key accomplishments and completed work
+- Notable pull requests and their purpose
+- Any significant issues resolved
+- Patterns in the work (e.g., "focused on bug fixes" or "primarily feature development")
+
+Keep the summary to 3-5 bullet points or a short paragraph. Be specific but concise.
+
+Here is the raw data:
+{{data}}
+
+Write a {{type}} work summary:`}
+                </pre>
+              </details>
+
+              <textarea
+                value={summaryCustomPrompt}
+                onChange={(e) => setSummaryCustomPrompt(e.target.value)}
+                placeholder="Leave empty to use the default prompt shown above..."
+                className="w-full h-32 bg-surface-800 border border-surface-600 rounded-lg px-3 py-2 text-sm text-theme-primary placeholder:text-theme-muted resize-none focus:outline-none focus:ring-2 focus:ring-accent/50"
+              />
             </div>
           </div>
 

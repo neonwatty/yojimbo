@@ -90,7 +90,8 @@ test.describe('HomePage', () => {
 
     // Should show pinned section with the instance (in main content area, not sidebar)
     const mainContent = basePage.page.locator('.flex-1.overflow-auto');
-    await expect(mainContent.getByText('Pinned Instances')).toBeVisible();
+    // The section header is "★ Pinned" so we match just "Pinned"
+    await expect(mainContent.getByText('Pinned', { exact: true })).toBeVisible();
     await expect(mainContent.getByText('pinned-test')).toBeVisible();
   });
 
@@ -120,10 +121,11 @@ test.describe('HomePage', () => {
 
     // Should show recent instances section heading
     const mainContent = basePage.page.locator('.flex-1.overflow-auto');
-    await expect(mainContent.getByText('Recent Instances')).toBeVisible();
+    // The section header is just "Recent"
+    await expect(mainContent.getByText('Recent', { exact: true })).toBeVisible();
 
     // Check that both instances appear in the recent section (use the specific container)
-    const recentSection = mainContent.locator('div').filter({ hasText: 'Recent Instances' }).locator('..').locator('.bg-surface-700');
+    const recentSection = mainContent.locator('div').filter({ hasText: 'Recent' }).first().locator('.bg-surface-700');
     await expect(recentSection.getByText('recent-1')).toBeVisible();
     await expect(recentSection.getByText('recent-2')).toBeVisible();
   });

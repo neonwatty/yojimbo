@@ -1,3 +1,4 @@
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useUIStore } from '../../store/uiStore';
 import { useInstancesStore } from '../../store/instancesStore';
@@ -6,10 +7,24 @@ import { useFeedStore } from '../../store/feedStore';
 import { Icons } from '../common/Icons';
 import Tooltip from '../common/Tooltip';
 import { ConnectionStatus } from '../common/ConnectionStatus';
+import { SummaryModal } from '../modals/SummaryModal';
+import { toast } from '../../store/toastStore';
+import type { SummaryType, GenerateSummaryResponse, CommandExecution, SummarySSEEvent } from '@cc-orchestrator/shared';
 
 export default function Header() {
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Summary menu state
+  const [showSummaryMenu, setShowSummaryMenu] = useState(false);
+  const [showSummaryModal, setShowSummaryModal] = useState(false);
+  const [summaryType, setSummaryType] = useState<SummaryType>('daily');
+  const [summaryData, setSummaryData] = useState<GenerateSummaryResponse | null>(null);
+  const [isLoadingSummary, setIsLoadingSummary] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [streamingCommands, setStreamingCommands] = useState<CommandExecution[]>([]);
+  const summaryMenuRef = useRef<HTMLDivElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // Use selectors for better performance
   const layout = useUIStore((state) => state.layout);
@@ -21,7 +36,155 @@ export default function Header() {
   const theme = useSettingsStore((state) => state.theme);
   const setTheme = useSettingsStore((state) => state.setTheme);
   const showActivityInNav = useSettingsStore((state) => state.showActivityInNav);
+  const summaryIncludePRs = useSettingsStore((state) => state.summaryIncludePRs);
+  const summaryIncludeCommits = useSettingsStore((state) => state.summaryIncludeCommits);
+  const summaryIncludeIssues = useSettingsStore((state) => state.summaryIncludeIssues);
+  const summaryCustomPrompt = useSettingsStore((state) => state.summaryCustomPrompt);
   const unreadCount = useFeedStore((state) => state.stats.unread);
+
+  // Close summary menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (summaryMenuRef.current && !summaryMenuRef.current.contains(event.target as Node)) {
+        setShowSummaryMenu(false);
+      }
+    };
+
+    if (showSummaryMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showSummaryMenu]);
+
+  // Cleanup abort controller on unmount
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
+
+  const generateSummaryWithStreaming = useCallback(async (type: SummaryType) => {
+    setShowSummaryMenu(false);
+    setSummaryType(type);
+    setSummaryData(null);
+    setStreamingCommands([]);
+    setIsLoadingSummary(true);
+    setIsStreaming(true);
+    setShowSummaryModal(true);
+
+    // Cancel any existing request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = new AbortController();
+
+    try {
+      const response = await fetch('/api/summaries/generate-stream', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          type,
+          includePRs: summaryIncludePRs,
+          includeCommits: summaryIncludeCommits,
+          includeIssues: summaryIncludeIssues,
+          customPrompt: summaryCustomPrompt || undefined,
+        }),
+        signal: abortControllerRef.current.signal,
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to start summary generation');
+      }
+
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error('No response body');
+      }
+
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let done = false;
+
+      while (!done) {
+        const result = await reader.read();
+        done = result.done;
+        if (done) break;
+        const value = result.value;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || ''; // Keep incomplete line in buffer
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const event: SummarySSEEvent = JSON.parse(line.slice(6));
+
+              switch (event.type) {
+                case 'command_start':
+                  setStreamingCommands(prev => [
+                    ...prev,
+                    { command: event.command, status: 'running' }
+                  ]);
+                  break;
+
+                case 'command_complete':
+                  setStreamingCommands(prev =>
+                    prev.map((cmd, i) =>
+                      i === event.index
+                        ? {
+                            ...cmd,
+                            status: event.success ? 'success' : 'error',
+                            resultCount: event.resultCount,
+                          }
+                        : cmd
+                    )
+                  );
+                  break;
+
+                case 'summary_complete':
+                  setSummaryData(event.data);
+                  setIsStreaming(false);
+                  setIsLoadingSummary(false);
+                  break;
+
+                case 'error':
+                  toast.error(event.message);
+                  setIsStreaming(false);
+                  setIsLoadingSummary(false);
+                  break;
+              }
+            } catch (parseError) {
+              console.warn('Failed to parse SSE event:', line);
+            }
+          }
+        }
+      }
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        // Request was cancelled, ignore
+        return;
+      }
+      console.error('Failed to generate summary:', error);
+      toast.error('Failed to generate summary');
+      setIsStreaming(false);
+      setIsLoadingSummary(false);
+    }
+  }, [summaryIncludePRs, summaryIncludeCommits, summaryIncludeIssues, summaryCustomPrompt]);
+
+  const handleCloseSummaryModal = useCallback(() => {
+    // Abort any ongoing request when closing
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    setShowSummaryModal(false);
+    setIsStreaming(false);
+    setIsLoadingSummary(false);
+  }, []);
 
   const pinnedCount = instances.filter((i) => i.isPinned).length;
   const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
@@ -97,6 +260,39 @@ export default function Header() {
           </Tooltip>
         )}
 
+        {/* Summary Button with Dropdown */}
+        <div className="relative" ref={summaryMenuRef}>
+          <Tooltip text="Generate work summary" position="bottom">
+            <button
+              onClick={() => setShowSummaryMenu(!showSummaryMenu)}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors
+                ${showSummaryMenu
+                  ? 'bg-surface-600 text-theme-primary'
+                  : 'text-theme-muted hover:text-theme-primary hover:bg-surface-700'}`}
+            >
+              <Icons.document />
+              <span className="hidden sm:inline">Summary</span>
+              <Icons.chevronDown />
+            </button>
+          </Tooltip>
+          {showSummaryMenu && (
+            <div className="absolute right-0 mt-1 w-48 bg-surface-700 border border-surface-600 rounded-lg shadow-xl z-50 py-1">
+              <button
+                onClick={() => generateSummaryWithStreaming('daily')}
+                className="w-full px-4 py-2 text-sm text-left text-theme-primary hover:bg-surface-600 transition-colors"
+              >
+                Generate Daily Summary
+              </button>
+              <button
+                onClick={() => generateSummaryWithStreaming('weekly')}
+                className="w-full px-4 py-2 text-sm text-left text-theme-primary hover:bg-surface-600 transition-colors"
+              >
+                Generate Weekly Summary
+              </button>
+            </div>
+          )}
+        </div>
+
         {/* Layout Switcher */}
         <div className="flex items-center gap-1 bg-surface-700 rounded-lg p-1" role="group" aria-label="View layout">
           <button
@@ -160,6 +356,17 @@ export default function Header() {
           </button>
         </Tooltip>
       </div>
+
+      {/* Summary Modal */}
+      <SummaryModal
+        isOpen={showSummaryModal}
+        onClose={handleCloseSummaryModal}
+        summaryType={summaryType}
+        summaryData={summaryData}
+        isLoading={isLoadingSummary}
+        streamingCommands={streamingCommands}
+        isStreaming={isStreaming}
+      />
     </header>
   );
 }

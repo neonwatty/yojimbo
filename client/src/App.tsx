@@ -1,5 +1,5 @@
 import { useEffect, useCallback } from 'react';
-import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
+import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { useSettingsStore } from './store/settingsStore';
 import { useUIStore } from './store/uiStore';
 import { useInstancesStore } from './store/instancesStore';
@@ -203,6 +203,8 @@ function App() {
             <Route path="/instances/:id" element={<InstancesPage />} />
             <Route path="/history" element={<HistoryPage />} />
             <Route path="/activity" element={<ActivityPage />} />
+            {/* Catch-all: redirect unknown routes to home */}
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </MainLayout>
       </ErrorBoundary>

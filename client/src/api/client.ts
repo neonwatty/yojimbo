@@ -17,6 +17,8 @@ import type {
   ClaudeCliStatus,
   ActivityEvent,
   ActivityFeedStats,
+  GenerateSummaryRequest,
+  GenerateSummaryResponse,
 } from '@cc-orchestrator/shared';
 import { toast } from '../store/toastStore';
 
@@ -198,5 +200,14 @@ export const feedApi = {
   clear: () =>
     request<ApiResponse<{ count: number }>>('/feed/clear', {
       method: 'DELETE',
+    }),
+};
+
+// Summaries API
+export const summariesApi = {
+  generate: (data: GenerateSummaryRequest) =>
+    request<ApiResponse<GenerateSummaryResponse>>('/summaries/generate', {
+      method: 'POST',
+      body: JSON.stringify(data),
     }),
 };

@@ -257,3 +257,68 @@ export interface ClaudeCliStatus {
   path: string | null;
   version: string | null;
 }
+
+// Summary types
+export type SummaryType = 'daily' | 'weekly';
+
+export interface GenerateSummaryRequest {
+  type: SummaryType;
+  includePRs: boolean;
+  includeCommits: boolean;
+  includeIssues: boolean;
+  customPrompt?: string;
+}
+
+export interface SummaryRawData {
+  prsCreated: unknown[];
+  prsMerged: unknown[];
+  issuesClosed: unknown[];
+  commits: string[];
+  activityEvents: unknown[];
+}
+
+export interface GenerateSummaryResponse {
+  summary: string;
+  rawData: SummaryRawData;
+  commandsExecuted: string[];
+}
+
+// SSE streaming event types for summary generation
+export interface SummaryCommandStartEvent {
+  type: 'command_start';
+  command: string;
+  index: number;
+}
+
+export interface SummaryCommandCompleteEvent {
+  type: 'command_complete';
+  command: string;
+  index: number;
+  success: boolean;
+  resultCount?: number;
+}
+
+export interface SummaryCompleteEvent {
+  type: 'summary_complete';
+  data: GenerateSummaryResponse;
+}
+
+export interface SummaryErrorEvent {
+  type: 'error';
+  message: string;
+}
+
+export type SummarySSEEvent =
+  | SummaryCommandStartEvent
+  | SummaryCommandCompleteEvent
+  | SummaryCompleteEvent
+  | SummaryErrorEvent;
+
+// Command status for UI display
+export type CommandStatus = 'pending' | 'running' | 'success' | 'error';
+
+export interface CommandExecution {
+  command: string;
+  status: CommandStatus;
+  resultCount?: number;
+}

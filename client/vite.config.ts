@@ -1,3 +1,4 @@
+/// <reference types="vitest" />
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
@@ -54,6 +55,16 @@ export default defineConfig({
       '/api': {
         target: `http://${serverHost}:${serverPort}`,
         changeOrigin: true,
+        // Disable buffering for SSE streaming endpoints
+        configure: (proxy) => {
+          proxy.on('proxyRes', (proxyRes, req) => {
+            if (req.url?.includes('generate-stream')) {
+              // Disable buffering for SSE
+              proxyRes.headers['x-accel-buffering'] = 'no';
+              proxyRes.headers['cache-control'] = 'no-cache';
+            }
+          });
+        },
       },
       '/ws': {
         target: `ws://${serverHost}:${serverPort}`,
@@ -64,5 +75,8 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: true,
+  },
+  test: {
+    exclude: ['e2e/**', 'node_modules/**'],
   },
 });

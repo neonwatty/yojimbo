@@ -10,6 +10,7 @@ import hooksRouter from './routes/hooks.js';
 import settingsRouter from './routes/settings.js';
 import filesystemRouter from './routes/filesystem.js';
 import feedRouter from './routes/feed.js';
+import summariesRouter from './routes/summaries.js';
 import CONFIG from './config/index.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -44,6 +45,7 @@ app.use('/api/hooks', hooksRouter);
 app.use('/api/settings', settingsRouter);
 app.use('/api/filesystem', filesystemRouter);
 app.use('/api/feed', feedRouter);
+app.use('/api/summaries', summariesRouter);
 
 // Health check
 app.get('/api/health', (_req, res) => {

@@ -122,10 +122,13 @@ test.describe('HomePage', () => {
     // Should show recent instances section heading
     const mainContent = basePage.page.locator('.flex-1.overflow-auto');
     // The section header is just "Recent"
-    await expect(mainContent.locator('h3:has-text("Recent")')).toBeVisible();
+    const recentHeader = mainContent.locator('h3:has-text("Recent")');
+    await expect(recentHeader).toBeVisible();
 
-    // Check that both instances appear in the main content area
-    await expect(mainContent.getByText('recent-1')).toBeVisible();
-    await expect(mainContent.getByText('recent-2')).toBeVisible();
+    // Check that both instances appear in the recent section (sibling of the h3)
+    // The structure is: <div><h3>Recent</h3><div class="bg-surface-700">...instances...</div></div>
+    const recentSection = recentHeader.locator('..').locator('.bg-surface-700');
+    await expect(recentSection.getByText('recent-1')).toBeVisible();
+    await expect(recentSection.getByText('recent-2')).toBeVisible();
   });
 });

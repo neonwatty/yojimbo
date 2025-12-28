@@ -33,24 +33,24 @@ const icons: Record<ToastVariant, JSX.Element> = {
 
 const colorClasses: Record<ToastVariant, { bg: string; border: string; icon: string }> = {
   success: {
-    bg: 'bg-emerald-500/10',
-    border: 'border-emerald-500/30',
-    icon: 'text-emerald-400',
+    bg: 'bg-surface-700',
+    border: 'border-state-working',
+    icon: 'text-state-working',
   },
   error: {
-    bg: 'bg-rose-500/10',
-    border: 'border-rose-500/30',
-    icon: 'text-rose-400',
+    bg: 'bg-surface-700',
+    border: 'border-state-error',
+    icon: 'text-state-error',
   },
   warning: {
-    bg: 'bg-amber-500/10',
-    border: 'border-amber-500/30',
-    icon: 'text-amber-400',
+    bg: 'bg-surface-700',
+    border: 'border-state-awaiting',
+    icon: 'text-state-awaiting',
   },
   info: {
-    bg: 'bg-cyan-500/10',
-    border: 'border-cyan-500/30',
-    icon: 'text-cyan-400',
+    bg: 'bg-surface-700',
+    border: 'border-frost-2',
+    icon: 'text-frost-2',
   },
 };
 
@@ -94,12 +94,12 @@ export function Toast({ toast }: ToastProps) {
       <span className={`flex-shrink-0 mt-0.5 ${colors.icon}`}>
         {icons[toast.type]}
       </span>
-      <p className="flex-1 text-sm text-text-primary leading-relaxed">
+      <p className="flex-1 text-xs text-theme-primary leading-relaxed font-mono">
         {toast.message}
       </p>
       <button
         onClick={handleClose}
-        className="flex-shrink-0 p-0.5 -mr-1 -mt-0.5 rounded hover:bg-surface-600/50 transition-colors text-text-secondary hover:text-text-primary"
+        className="flex-shrink-0 p-0.5 -mr-1 -mt-0.5 rounded hover:bg-surface-600/50 transition-colors text-theme-dim hover:text-theme-primary"
         aria-label="Dismiss"
       >
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

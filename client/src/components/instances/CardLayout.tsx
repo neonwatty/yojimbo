@@ -76,7 +76,7 @@ export const CardLayout = memo(function CardLayout({
   };
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 p-4">
+    <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 p-3">
       {instances.map((instance) => (
         <div
           key={instance.id}
@@ -88,11 +88,11 @@ export const CardLayout = memo(function CardLayout({
           onDragLeave={() => setDragOverId(null)}
           onClick={() => handleClick(instance.id)}
           onDoubleClick={() => onExpand(instance.id)}
-          className={`group relative hover-lift
-            bg-surface-700 rounded-xl p-4 cursor-grab active:cursor-grabbing transition-all hover:bg-surface-600
+          className={`group relative
+            bg-surface-700 rounded p-3 cursor-grab active:cursor-grabbing transition-all hover:bg-surface-600
             ${draggedId === instance.id ? 'opacity-50 scale-95' : ''}
-            ${dragOverId === instance.id ? 'ring-2 ring-accent ring-offset-2 ring-offset-surface-800 scale-[1.02]' : ''}
-            ${activeId === instance.id && dragOverId !== instance.id ? 'ring-2 ring-accent active-glow' : ''}`}
+            ${dragOverId === instance.id ? 'ring-1 ring-frost-4 scale-[1.01]' : ''}
+            ${activeId === instance.id && dragOverId !== instance.id ? 'ring-1 ring-frost-4' : ''}`}
         >
           {/* Drag handle indicator */}
           <div
@@ -103,13 +103,13 @@ export const CardLayout = memo(function CardLayout({
           </div>
 
           {/* Action buttons */}
-          <div className="absolute top-3 right-3 flex items-center gap-1 opacity-0 group-hover:opacity-100">
+          <div className="absolute top-2 right-2 flex items-center gap-0.5 opacity-0 group-hover:opacity-100">
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 onExpand(instance.id);
               }}
-              className="p-1 rounded transition-all text-gray-500 hover:text-accent hover:bg-accent/10"
+              className="p-0.5 rounded transition-all text-theme-dim hover:text-frost-2 hover:bg-frost-4/20"
               title="Expand"
               aria-label={`Expand ${instance.name}`}
             >
@@ -120,7 +120,7 @@ export const CardLayout = memo(function CardLayout({
                 e.stopPropagation();
                 onClose(instance);
               }}
-              className="p-1 rounded transition-all text-gray-500 hover:text-red-400 hover:bg-red-400/10"
+              className="p-0.5 rounded transition-all text-theme-dim hover:text-state-error hover:bg-state-error/10"
               title="Close"
               aria-label={`Close ${instance.name}`}
             >
@@ -129,9 +129,9 @@ export const CardLayout = memo(function CardLayout({
           </div>
 
           {/* Header */}
-          <div className="flex items-center justify-between mb-3 pr-12">
-            <div className="flex items-center gap-2">
-              <StatusDot status={instance.status} size="lg" />
+          <div className="flex items-center justify-between mb-2 pr-10">
+            <div className="flex items-center gap-1.5">
+              <StatusDot status={instance.status} size="md" />
               <EditableName
                 name={instance.name}
                 isEditing={editingId === instance.id}
@@ -140,6 +140,7 @@ export const CardLayout = memo(function CardLayout({
                 onValueChange={onEditingNameChange}
                 onConfirm={() => onConfirmRename(instance.id)}
                 onCancel={onCancelEditing}
+                className="text-xs"
               />
             </div>
             <button
@@ -147,8 +148,8 @@ export const CardLayout = memo(function CardLayout({
                 e.stopPropagation();
                 onTogglePin(instance.id);
               }}
-              className={`p-1 rounded transition-all transform hover:scale-110 active:scale-95
-                ${instance.isPinned ? 'text-accent hover:text-accent-bright' : 'text-gray-500 hover:text-gray-300'}`}
+              className={`p-0.5 rounded transition-all
+                ${instance.isPinned ? 'text-accent hover:text-accent-bright' : 'text-theme-dim hover:text-theme-primary'}`}
               title={instance.isPinned ? 'Unpin' : 'Pin'}
               aria-label={instance.isPinned ? `Unpin ${instance.name}` : `Pin ${instance.name}`}
               aria-pressed={instance.isPinned}
@@ -158,12 +159,12 @@ export const CardLayout = memo(function CardLayout({
           </div>
 
           <StatusBadge status={instance.status} />
-          <div className="mt-3 text-xs text-gray-500 font-mono truncate">{instance.workingDir}</div>
+          <div className="mt-2 text-[10px] text-theme-dim font-mono truncate">{instance.workingDir}</div>
 
           {/* Terminal preview */}
-          <div className="mt-3 bg-surface-900 rounded-lg p-3 h-20 overflow-hidden">
-            <div className="terminal-text text-gray-400 text-xs font-mono">
-              <div className="truncate text-theme-muted">Terminal output...</div>
+          <div className="mt-2 bg-surface-900 rounded p-2 h-16 overflow-hidden">
+            <div className="terminal-text text-theme-dim text-[10px] font-mono">
+              <div className="truncate">Terminal output...</div>
             </div>
           </div>
         </div>
@@ -172,13 +173,13 @@ export const CardLayout = memo(function CardLayout({
       {/* New Instance Card */}
       <div
         onClick={onNewInstance}
-        className="bg-surface-800 rounded-xl p-4 border-2 border-dashed border-surface-600 flex items-center justify-center transition-colors min-h-[200px] cursor-pointer hover:border-surface-500"
+        className="bg-surface-800 rounded p-3 border border-dashed border-surface-600 flex items-center justify-center transition-colors min-h-[160px] cursor-pointer hover:border-surface-500"
       >
-        <div className="text-center text-gray-500">
-          <div className="w-8 h-8 mx-auto mb-2 flex items-center justify-center">
+        <div className="text-center text-theme-dim">
+          <div className="w-6 h-6 mx-auto mb-1 flex items-center justify-center">
             <Icons.plus />
           </div>
-          <span className="text-sm">New Instance</span>
+          <span className="text-xs">New Session</span>
         </div>
       </div>
     </div>

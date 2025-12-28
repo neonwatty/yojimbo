@@ -5,7 +5,7 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['IBM Plex Sans', 'system-ui', 'sans-serif'],
+        sans: ['JetBrains Mono', 'monospace'],  // Ghostty theme: monospace everywhere
         mono: ['JetBrains Mono', 'monospace'],
       },
       colors: {
@@ -23,15 +23,22 @@ export default {
           dim: 'var(--text-dim)',
         },
         accent: {
-          DEFAULT: '#f59e0b',
-          bright: '#fbbf24',
-          dim: '#d97706',
+          DEFAULT: 'var(--accent)',
+          bright: 'var(--accent-bright)',
+          dim: 'var(--accent-dim)',
+        },
+        // Frost colors for active/selected states
+        frost: {
+          1: 'var(--frost-1)',
+          2: 'var(--frost-2)',
+          3: 'var(--frost-3)',
+          4: 'var(--frost-4)',
         },
         state: {
-          working: '#06b6d4',
-          awaiting: '#f59e0b',
-          idle: '#6b7280',
-          error: '#f43f5e',
+          working: 'var(--state-working)',
+          awaiting: 'var(--state-awaiting)',
+          idle: 'var(--state-idle)',
+          error: 'var(--state-error)',
         },
       },
       animation: {
@@ -46,16 +53,16 @@ export default {
           '50%': { opacity: '0.5' },
         },
         'reveal-up': {
-          from: { opacity: '0', transform: 'translateY(20px) scale(0.98)', filter: 'blur(4px)' },
-          to: { opacity: '1', transform: 'translateY(0) scale(1)', filter: 'blur(0)' },
+          from: { opacity: '0', transform: 'translateY(8px)' },
+          to: { opacity: '1', transform: 'translateY(0)' },
         },
         'slide-in': {
-          from: { opacity: '0', transform: 'translateX(20px)' },
+          from: { opacity: '0', transform: 'translateX(8px)' },
           to: { opacity: '1', transform: 'translateX(0)' },
         },
         'expand-in': {
-          from: { opacity: '0', transform: 'scale(0.95)' },
-          to: { opacity: '1', transform: 'scale(1)' },
+          from: { opacity: '0' },
+          to: { opacity: '1' },
         },
       },
     },

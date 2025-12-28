@@ -1,6 +1,9 @@
 import { test, expect } from '../fixtures/test-fixtures';
 
+// Skip Summary Feature tests in CI - they require `gh` CLI (with GH_TOKEN) and `claude` CLI
+// which are not available in the CI environment
 test.describe('Summary Feature', () => {
+  test.skip(!!process.env.CI, 'Requires gh CLI and claude CLI not available in CI');
   test('shows summary dropdown menu in header', async ({ basePage }) => {
     await basePage.goto('/instances');
 
@@ -180,7 +183,10 @@ test.describe('Summary Settings', () => {
   });
 });
 
+// Skip Summary API tests in CI - they require `gh` CLI and `claude` CLI
 test.describe('Summary API', () => {
+  test.skip(!!process.env.CI, 'Requires gh CLI and claude CLI not available in CI');
+
   test('can call generate-stream endpoint', async ({ page }) => {
     // Test the SSE streaming endpoint directly
     const response = await page.request.post('http://localhost:3456/api/summaries/generate-stream', {

@@ -8,11 +8,11 @@ export class InstancesPage extends BasePage {
 
   constructor(page: Page) {
     super(page);
-    // Target the card that contains "New Instance" span (excludes tooltip)
-    this.newInstanceButton = page.locator('.grid > div').filter({ has: page.locator('span:has-text("New Instance")') });
-    this.instanceCards = page.locator('.grid > div').filter({ hasNot: page.locator('span:has-text("New Instance")') });
-    // Target the modal dialog (fixed overlay with the New Instance heading)
-    this.newInstanceModal = page.locator('.fixed.inset-0').filter({ has: page.getByRole('heading', { name: 'New Instance' }) });
+    // Target the card that contains "New Session" span (excludes tooltip)
+    this.newInstanceButton = page.locator('.grid > div').filter({ has: page.locator('span:has-text("New Session")') });
+    this.instanceCards = page.locator('.grid > div').filter({ hasNot: page.locator('span:has-text("New Session")') });
+    // Target the modal dialog (fixed overlay with the New Session heading)
+    this.newInstanceModal = page.locator('.fixed.inset-0').filter({ has: page.getByRole('heading', { name: 'New Session' }) });
   }
 
   async gotoInstances() {
@@ -20,18 +20,18 @@ export class InstancesPage extends BasePage {
   }
 
   async createNewInstance(name?: string) {
-    // Click the New Instance button (either in cards or header)
+    // Click the New Session button (either in cards or header)
     await this.newInstanceButton.click();
 
     // Wait for modal to appear
-    await expect(this.page.getByRole('heading', { name: 'New Instance' })).toBeVisible({ timeout: 5000 });
+    await expect(this.page.getByRole('heading', { name: 'New Session' })).toBeVisible({ timeout: 5000 });
 
     // Fill in the name if provided, otherwise use a default
     const instanceName = name || `instance-${Date.now()}`;
     await this.page.locator('input[placeholder="My Project"]').fill(instanceName);
 
-    // Click Create Instance button inside the modal
-    await this.newInstanceModal.getByRole('button', { name: 'Create Instance' }).click();
+    // Click Create Session button inside the modal
+    await this.newInstanceModal.getByRole('button', { name: 'Create Session' }).click();
 
     // Wait for modal to close and navigation
     await this.page.waitForTimeout(500);

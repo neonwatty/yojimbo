@@ -192,8 +192,8 @@ export function LeftSidebar() {
       className="bg-surface-800 border-r border-surface-600 flex flex-col flex-shrink-0 relative"
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-3 py-3 border-b border-surface-600">
-        <span className="text-sm font-semibold text-theme-primary flex items-center gap-2">
+      <div className="flex items-center justify-between px-3 py-2 border-b border-surface-600">
+        <span className="text-xs font-medium text-theme-primary flex items-center gap-2">
           <Icons.instances />
           Sessions
         </span>
@@ -201,7 +201,7 @@ export function LeftSidebar() {
           <Tooltip text="New instance" position="bottom">
             <button
               onClick={handleNewInstance}
-              className="p-1.5 rounded hover:bg-surface-700 text-theme-muted hover:text-accent transition-colors"
+              className="p-1 rounded hover:bg-surface-700 text-theme-dim hover:text-accent transition-colors"
               aria-label="Create new instance"
             >
               <Icons.plus />
@@ -210,7 +210,7 @@ export function LeftSidebar() {
           <Tooltip text="Collapse sidebar (⌘B)" position="bottom">
             <button
               onClick={toggleLeftSidebar}
-              className="p-1.5 rounded hover:bg-surface-700 text-theme-muted hover:text-theme-primary transition-colors"
+              className="p-1 rounded hover:bg-surface-700 text-theme-dim hover:text-theme-primary transition-colors"
               aria-label="Collapse sidebar"
             >
               <Icons.panelLeft />
@@ -221,8 +221,8 @@ export function LeftSidebar() {
 
       {/* Pinned section */}
       {pinnedInstances.length > 0 && (
-        <div className="px-2 py-2">
-          <div className="text-xs font-medium text-theme-muted uppercase tracking-wider px-2 mb-2 flex items-center gap-1">
+        <div className="px-2 py-2 border-b border-surface-600">
+          <div className="text-[10px] uppercase tracking-wider px-2 mb-2 flex items-center gap-1.5 text-theme-dim">
             <span className="text-accent">★</span> Pinned
           </div>
           {pinnedInstances.map((inst) => {
@@ -231,15 +231,15 @@ export function LeftSidebar() {
               <Tooltip key={inst.id} text={getWorkingDirDisplay(inst)} position="right">
                 <div
                   onClick={() => handleSelectInstance(inst.id)}
-                  className={`group w-full flex items-center gap-2 px-2 py-2 rounded-lg text-left transition-colors mb-1 cursor-pointer
+                  className={`group w-full flex items-center gap-2 px-2 py-1.5 rounded text-left transition-colors mb-0.5 cursor-pointer
                     ${expandedId === inst.id
-                      ? 'bg-violet-600 text-white font-medium shadow-lg shadow-violet-600/40'
+                      ? 'bg-frost-4/30 text-frost-2 border border-frost-4/50'
                       : activeInstanceId === inst.id
                       ? 'bg-surface-700 text-theme-primary'
-                      : 'text-theme-secondary hover:bg-surface-700'}`}
+                      : 'text-theme-dim hover:bg-surface-700 hover:text-theme-primary'}`}
                 >
                   {shortcutNum && (
-                    <span className="w-5 h-5 rounded bg-surface-600 text-[10px] flex items-center justify-center text-theme-muted font-mono flex-shrink-0">
+                    <span className="w-4 h-4 rounded bg-surface-600 text-[10px] flex items-center justify-center text-theme-dim font-mono flex-shrink-0">
                       {shortcutNum}
                     </span>
                   )}
@@ -252,14 +252,14 @@ export function LeftSidebar() {
                     onValueChange={setEditingName}
                     onConfirm={handleConfirmRename}
                     onCancel={handleCancelEditing}
-                    className="flex-1 truncate text-sm"
+                    className="flex-1 truncate text-xs"
                   />
                   {inst.status === 'awaiting' && (
-                    <span className="w-2 h-2 rounded-full bg-state-awaiting animate-pulse group-hover:hidden" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-state-awaiting animate-pulse group-hover:hidden" />
                   )}
                   <button
                     onClick={(e) => handleCloseInstance(e, inst)}
-                    className="hidden group-hover:block p-0.5 rounded hover:bg-surface-600 text-theme-muted hover:text-red-400 transition-colors"
+                    className="hidden group-hover:block p-0.5 rounded hover:bg-surface-600 text-theme-dim hover:text-state-error transition-colors"
                     title="Close instance"
                   >
                     <Icons.close />
@@ -273,7 +273,7 @@ export function LeftSidebar() {
 
       {/* All instances section */}
       <div className="flex-1 overflow-auto px-2 py-2">
-        <div className="text-xs font-medium text-theme-muted uppercase tracking-wider px-2 mb-2">
+        <div className="text-[10px] uppercase tracking-wider px-2 mb-2 text-theme-dim">
           All Sessions
         </div>
         {unpinnedInstances.map((inst) => {
@@ -282,15 +282,15 @@ export function LeftSidebar() {
             <Tooltip key={inst.id} text={getWorkingDirDisplay(inst)} position="right">
               <div
                 onClick={() => handleSelectInstance(inst.id)}
-                className={`group w-full flex items-center gap-2 px-2 py-2 rounded-lg text-left transition-colors mb-1 cursor-pointer
+                className={`group w-full flex items-center gap-2 px-2 py-1.5 rounded text-left transition-colors mb-0.5 cursor-pointer
                   ${expandedId === inst.id
-                    ? 'bg-violet-600 text-white font-medium shadow-lg shadow-violet-600/40'
+                    ? 'bg-frost-4/30 text-frost-2 border border-frost-4/50'
                     : activeInstanceId === inst.id
                     ? 'bg-surface-700 text-theme-primary'
-                    : 'text-theme-secondary hover:bg-surface-700'}`}
+                    : 'text-theme-dim hover:bg-surface-700 hover:text-theme-primary'}`}
               >
                 {shortcutNum && (
-                  <span className="w-5 h-5 rounded bg-surface-600 text-[10px] flex items-center justify-center text-theme-muted font-mono flex-shrink-0">
+                  <span className="w-4 h-4 rounded bg-surface-600 text-[10px] flex items-center justify-center text-theme-dim font-mono flex-shrink-0">
                     {shortcutNum}
                   </span>
                 )}
@@ -303,14 +303,14 @@ export function LeftSidebar() {
                   onValueChange={setEditingName}
                   onConfirm={handleConfirmRename}
                   onCancel={handleCancelEditing}
-                  className="flex-1 truncate text-sm"
+                  className="flex-1 truncate text-xs"
                 />
                 {inst.status === 'awaiting' && (
-                  <span className="w-2 h-2 rounded-full bg-state-awaiting animate-pulse group-hover:hidden" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-state-awaiting animate-pulse group-hover:hidden" />
                 )}
                 <button
                   onClick={(e) => handleCloseInstance(e, inst)}
-                  className="hidden group-hover:block p-0.5 rounded hover:bg-surface-600 text-theme-muted hover:text-red-400 transition-colors"
+                  className="hidden group-hover:block p-0.5 rounded hover:bg-surface-600 text-theme-dim hover:text-state-error transition-colors"
                   title="Close instance"
                 >
                   <Icons.close />

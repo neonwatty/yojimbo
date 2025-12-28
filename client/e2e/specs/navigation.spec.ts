@@ -98,12 +98,12 @@ test.describe('Keyboard Shortcuts', () => {
     await basePage.page.keyboard.press('Meta+n');
 
     // Modal should appear
-    await expect(basePage.page.getByRole('heading', { name: 'New Instance' })).toBeVisible({ timeout: 5000 });
+    await expect(basePage.page.getByRole('heading', { name: 'New Session' })).toBeVisible({ timeout: 5000 });
 
     // Fill in name and submit
     await basePage.page.locator('input[placeholder="My Project"]').fill('keyboard-test');
-    const modal = basePage.page.locator('.fixed.inset-0').filter({ has: basePage.page.getByRole('heading', { name: 'New Instance' }) });
-    await modal.getByRole('button', { name: 'Create Instance' }).click();
+    const modal = basePage.page.locator('.fixed.inset-0').filter({ has: basePage.page.getByRole('heading', { name: 'New Session' }) });
+    await modal.getByRole('button', { name: 'Create Session' }).click();
 
     // Should navigate to a new instance page
     await basePage.page.waitForURL(/.*\/instances\/[a-f0-9-]+/);

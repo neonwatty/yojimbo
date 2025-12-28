@@ -9,18 +9,18 @@ test.describe('HomePage', () => {
     // Navigate to home page
     await basePage.goto('/');
 
-    // Click the "New Instance" button
-    const newInstanceButton = basePage.page.locator('button:has-text("New Instance")');
+    // Click the first "New Session" button (in the main content area)
+    const newInstanceButton = basePage.page.getByRole('button', { name: 'New Session' }).first();
     await expect(newInstanceButton).toBeVisible();
     await newInstanceButton.click();
 
     // Modal should appear
-    await expect(basePage.page.getByRole('heading', { name: 'New Instance' })).toBeVisible({ timeout: 5000 });
+    await expect(basePage.page.getByRole('heading', { name: 'New Session' })).toBeVisible({ timeout: 5000 });
 
     // Fill in name and submit
     await basePage.page.locator('input[placeholder="My Project"]').fill('test-instance');
-    const modal = basePage.page.locator('.fixed.inset-0').filter({ has: basePage.page.getByRole('heading', { name: 'New Instance' }) });
-    await modal.getByRole('button', { name: 'Create Instance' }).click();
+    const modal = basePage.page.locator('.fixed.inset-0').filter({ has: basePage.page.getByRole('heading', { name: 'New Session' }) });
+    await modal.getByRole('button', { name: 'Create Session' }).click();
 
     // Should navigate to the new instance's expanded view
     await basePage.page.waitForURL(/.*\/instances\/[a-f0-9-]+/);
@@ -35,15 +35,15 @@ test.describe('HomePage', () => {
     // Navigate to home page
     await basePage.goto('/');
 
-    // Click the "New Instance" button
-    const newInstanceButton = basePage.page.locator('button:has-text("New Instance")');
+    // Click the first "New Session" button (in the main content area)
+    const newInstanceButton = basePage.page.getByRole('button', { name: 'New Session' }).first();
     await newInstanceButton.click();
 
     // Modal should appear - fill in name and submit
-    await expect(basePage.page.getByRole('heading', { name: 'New Instance' })).toBeVisible({ timeout: 5000 });
+    await expect(basePage.page.getByRole('heading', { name: 'New Session' })).toBeVisible({ timeout: 5000 });
     await basePage.page.locator('input[placeholder="My Project"]').fill(`instance-${Date.now()}`);
-    const modal = basePage.page.locator('.fixed.inset-0').filter({ has: basePage.page.getByRole('heading', { name: 'New Instance' }) });
-    await modal.getByRole('button', { name: 'Create Instance' }).click();
+    const modal = basePage.page.locator('.fixed.inset-0').filter({ has: basePage.page.getByRole('heading', { name: 'New Session' }) });
+    await modal.getByRole('button', { name: 'Create Session' }).click();
 
     // Wait for navigation to instance
     await basePage.page.waitForURL(/.*\/instances\/[a-f0-9-]+/);
@@ -90,7 +90,8 @@ test.describe('HomePage', () => {
 
     // Should show pinned section with the instance (in main content area, not sidebar)
     const mainContent = basePage.page.locator('.flex-1.overflow-auto');
-    await expect(mainContent.getByText('Pinned Instances')).toBeVisible();
+    // The section header is "★ Pinned" - use locator to find the h3 containing "Pinned"
+    await expect(mainContent.locator('h3:has-text("Pinned")')).toBeVisible();
     await expect(mainContent.getByText('pinned-test')).toBeVisible();
   });
 
@@ -120,10 +121,13 @@ test.describe('HomePage', () => {
 
     // Should show recent instances section heading
     const mainContent = basePage.page.locator('.flex-1.overflow-auto');
-    await expect(mainContent.getByText('Recent Instances')).toBeVisible();
+    // The section header is just "Recent"
+    const recentHeader = mainContent.locator('h3:has-text("Recent")');
+    await expect(recentHeader).toBeVisible();
 
-    // Check that both instances appear in the recent section (use the specific container)
-    const recentSection = mainContent.locator('div').filter({ hasText: 'Recent Instances' }).locator('..').locator('.bg-surface-700');
+    // Check that both instances appear in the recent section (sibling of the h3)
+    // The structure is: <div><h3>Recent</h3><div class="bg-surface-700">...instances...</div></div>
+    const recentSection = recentHeader.locator('..').locator('.bg-surface-700');
     await expect(recentSection.getByText('recent-1')).toBeVisible();
     await expect(recentSection.getByText('recent-2')).toBeVisible();
   });

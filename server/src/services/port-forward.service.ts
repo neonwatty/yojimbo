@@ -1,5 +1,7 @@
 import { EventEmitter } from 'events';
 import { v4 as uuidv4 } from 'uuid';
+import fs from 'fs';
+import os from 'os';
 import { Client, ClientChannel } from 'ssh2';
 import { getDatabase } from '../db/connection.js';
 import { terminalManager } from './terminal-manager.service.js';
@@ -119,9 +121,6 @@ class PortForwardService extends EventEmitter {
       await new Promise<void>((resolve, reject) => {
         client.on('ready', () => resolve());
         client.on('error', reject);
-
-        const fs = require('fs');
-        const os = require('os');
 
         let privateKey: Buffer | undefined;
         if (sshConfig.privateKeyPath) {

@@ -1,5 +1,6 @@
 // Instance types
 export type InstanceStatus = 'working' | 'awaiting' | 'idle' | 'error' | 'disconnected';
+export type MachineType = 'local' | 'remote';
 
 export interface Instance {
   id: string;
@@ -9,6 +10,8 @@ export interface Instance {
   isPinned: boolean;
   displayOrder: number;
   pid: number | null;
+  machineType: MachineType;
+  machineId: string | null;
   createdAt: string;
   updatedAt: string;
   closedAt: string | null;
@@ -18,6 +21,59 @@ export interface CreateInstanceRequest {
   name: string;
   workingDir: string;
   startupCommand?: string; // Optional command to run after terminal starts
+  machineType?: MachineType; // 'local' or 'remote', defaults to 'local'
+  machineId?: string; // Required if machineType is 'remote'
+}
+
+// Remote Machine types
+export type MachineStatus = 'online' | 'offline' | 'unknown';
+
+export interface RemoteMachine {
+  id: string;
+  name: string;
+  hostname: string;
+  port: number;
+  username: string;
+  sshKeyPath: string | null;
+  status: MachineStatus;
+  lastConnectedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateMachineRequest {
+  name: string;
+  hostname: string;
+  port?: number;
+  username: string;
+  sshKeyPath?: string;
+}
+
+export interface UpdateMachineRequest {
+  name?: string;
+  hostname?: string;
+  port?: number;
+  username?: string;
+  sshKeyPath?: string;
+}
+
+// Port Forward types
+export type PortForwardStatus = 'active' | 'closed';
+
+export interface PortForward {
+  id: string;
+  instanceId: string;
+  remotePort: number;
+  localPort: number;
+  status: PortForwardStatus;
+  createdAt: string;
+}
+
+// SSH Key types
+export interface SSHKey {
+  name: string;
+  path: string;
+  hasPublicKey: boolean;
 }
 
 export interface UpdateInstanceRequest {
@@ -147,6 +203,10 @@ export type WSServerMessageType =
   | 'file:deleted'
   | 'feed:new'
   | 'feed:updated'
+  | 'port:detected'
+  | 'port:forwarded'
+  | 'port:closed'
+  | 'machine:status'
   | 'error';
 
 export interface FileChangeEvent {
@@ -168,6 +228,8 @@ export interface WSServerMessage {
   cwd?: string;
   fileChange?: FileChangeEvent;
   event?: ActivityEvent;
+  portForward?: PortForward;
+  machineStatus?: { machineId: string; status: MachineStatus };
   error?: string;
 }
 

@@ -85,6 +85,31 @@ export function initDatabase(): Database.Database {
       read_at TEXT
     );
 
+    -- remote_machines table
+    CREATE TABLE IF NOT EXISTS remote_machines (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      hostname TEXT NOT NULL,
+      port INTEGER DEFAULT 22,
+      username TEXT NOT NULL,
+      ssh_key_path TEXT,
+      status TEXT DEFAULT 'unknown' CHECK(status IN ('online', 'offline', 'unknown')),
+      last_connected_at TEXT,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    );
+
+    -- port_forwards table
+    CREATE TABLE IF NOT EXISTS port_forwards (
+      id TEXT PRIMARY KEY,
+      instance_id TEXT NOT NULL,
+      remote_port INTEGER NOT NULL,
+      local_port INTEGER NOT NULL,
+      status TEXT DEFAULT 'active' CHECK(status IN ('active', 'closed')),
+      created_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (instance_id) REFERENCES instances(id) ON DELETE CASCADE
+    );
+
     -- indexes
     CREATE INDEX IF NOT EXISTS idx_instances_status ON instances(status);
     CREATE INDEX IF NOT EXISTS idx_instances_pinned ON instances(is_pinned);
@@ -93,6 +118,10 @@ export function initDatabase(): Database.Database {
     CREATE INDEX IF NOT EXISTS idx_messages_session ON session_messages(session_id);
     CREATE INDEX IF NOT EXISTS idx_activity_feed_created ON activity_feed(created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_activity_feed_unread ON activity_feed(read_at) WHERE read_at IS NULL;
+    CREATE INDEX IF NOT EXISTS idx_remote_machines_status ON remote_machines(status);
+    CREATE INDEX IF NOT EXISTS idx_port_forwards_instance ON port_forwards(instance_id);
+    CREATE INDEX IF NOT EXISTS idx_port_forwards_status ON port_forwards(status);
+    CREATE INDEX IF NOT EXISTS idx_instances_machine ON instances(machine_id);
   `;
 
   db.exec(schema);
@@ -106,13 +135,25 @@ export function initDatabase(): Database.Database {
 }
 
 function runMigrations(): void {
-  // Check if last_cwd column exists, add if not
   const tableInfo = db.prepare("PRAGMA table_info(instances)").all() as { name: string }[];
-  const hasLastCwd = tableInfo.some((col) => col.name === 'last_cwd');
+  const columnNames = new Set(tableInfo.map((col) => col.name));
 
-  if (!hasLastCwd) {
+  // Migration: add last_cwd column
+  if (!columnNames.has('last_cwd')) {
     console.log('🔧 Running migration: adding last_cwd column to instances');
     db.exec('ALTER TABLE instances ADD COLUMN last_cwd TEXT');
+  }
+
+  // Migration: add machine_type column for remote instance support
+  if (!columnNames.has('machine_type')) {
+    console.log('🔧 Running migration: adding machine_type column to instances');
+    db.exec("ALTER TABLE instances ADD COLUMN machine_type TEXT DEFAULT 'local'");
+  }
+
+  // Migration: add machine_id column for remote instance support
+  if (!columnNames.has('machine_id')) {
+    console.log('🔧 Running migration: adding machine_id column to instances');
+    db.exec('ALTER TABLE instances ADD COLUMN machine_id TEXT');
   }
 }
 

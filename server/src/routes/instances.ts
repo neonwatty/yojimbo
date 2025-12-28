@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { getDatabase } from '../db/connection.js';
 import { ptyService } from '../services/pty.service.js';
 import { broadcast } from '../websocket/server.js';
-import type { Instance, CreateInstanceRequest, UpdateInstanceRequest, InstanceStatus } from '@cc-orchestrator/shared';
+import type { Instance, CreateInstanceRequest, UpdateInstanceRequest, InstanceStatus, MachineType } from '@cc-orchestrator/shared';
 
 const router = Router();
 
@@ -16,6 +16,8 @@ interface InstanceRow {
   is_pinned: number;
   display_order: number;
   pid: number | null;
+  machine_type: MachineType;
+  machine_id: string | null;
   created_at: string;
   updated_at: string;
   closed_at: string | null;
@@ -32,6 +34,8 @@ function rowToInstance(row: InstanceRow): Instance {
     isPinned: Boolean(row.is_pinned),
     displayOrder: row.display_order,
     pid: row.pid,
+    machineType: row.machine_type || 'local',
+    machineId: row.machine_id,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     closedAt: row.closed_at,
@@ -57,10 +61,19 @@ router.get('/', (_req, res) => {
 // POST /api/instances - Create new instance
 router.post('/', (req, res) => {
   try {
-    const { name, workingDir, startupCommand } = req.body as CreateInstanceRequest;
+    const { name, workingDir, startupCommand, machineType = 'local', machineId } = req.body as CreateInstanceRequest;
 
     if (!name || !workingDir) {
       return res.status(400).json({ success: false, error: 'Name and workingDir are required' });
+    }
+
+    // Validate machine type
+    if (machineType === 'remote') {
+      if (!machineId) {
+        return res.status(400).json({ success: false, error: 'machineId is required for remote instances' });
+      }
+      // SSH backend will be implemented in Phase 3
+      return res.status(501).json({ success: false, error: 'Remote instances not yet implemented' });
     }
 
     const db = getDatabase();
@@ -70,7 +83,7 @@ router.post('/', (req, res) => {
     const maxOrder = db.prepare('SELECT MAX(display_order) as max FROM instances WHERE closed_at IS NULL').get() as { max: number | null } | undefined;
     const displayOrder = (maxOrder?.max || 0) + 1;
 
-    // Spawn PTY
+    // Spawn PTY (local only for now)
     ptyService.spawn(id, workingDir);
     // Get PID after a short delay to allow async spawn to complete
     const pid = ptyService.getPid(id);
@@ -86,9 +99,9 @@ router.post('/', (req, res) => {
 
     // Insert into database
     db.prepare(`
-      INSERT INTO instances (id, name, working_dir, status, display_order, pid)
-      VALUES (?, ?, ?, 'idle', ?, ?)
-    `).run(id, name, workingDir, displayOrder, pid);
+      INSERT INTO instances (id, name, working_dir, status, display_order, pid, machine_type, machine_id)
+      VALUES (?, ?, ?, 'idle', ?, ?, ?, ?)
+    `).run(id, name, workingDir, displayOrder, pid, machineType, machineId || null);
 
     const row = db.prepare('SELECT * FROM instances WHERE id = ?').get(id) as InstanceRow;
     const instance = rowToInstance(row);

@@ -64,7 +64,7 @@ export interface ITerminalBackend {
 /**
  * Events emitted by terminal backends
  */
-export interface TerminalBackendEvents {
+interface TerminalBackendEvents {
   data: (id: string, data: string) => void;
   exit: (id: string, exitCode: number) => void;
 }

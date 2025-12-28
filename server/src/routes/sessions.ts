@@ -115,6 +115,41 @@ router.get('/search', (req, res) => {
   }
 });
 
+// GET /api/sessions/by-directory - List sessions for a specific directory
+router.get('/by-directory', (req, res) => {
+  try {
+    const db = getDatabase();
+    const dirPath = req.query.path as string;
+
+    if (!dirPath) {
+      return res.status(400).json({ success: false, error: 'Directory path is required' });
+    }
+
+    // Expand ~ to home directory and normalize path
+    const normalizedPath = dirPath.startsWith('~')
+      ? dirPath.replace('~', process.env.HOME || '')
+      : dirPath;
+
+    // Remove trailing slashes for consistent matching
+    const cleanPath = normalizedPath.replace(/\/+$/, '');
+
+    // Query sessions where project_path matches exactly
+    const rows = db
+      .prepare(`
+        SELECT * FROM sessions
+        WHERE project_path = ?
+        ORDER BY started_at DESC
+        LIMIT 10
+      `)
+      .all(cleanPath) as SessionRow[];
+
+    res.json({ success: true, data: rows.map(rowToSession) });
+  } catch (error) {
+    console.error('Error listing sessions by directory:', error);
+    res.status(500).json({ success: false, error: 'Failed to list sessions' });
+  }
+});
+
 // GET /api/sessions/:id - Get session details
 router.get('/:id', (req, res) => {
   try {

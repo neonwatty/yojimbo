@@ -171,12 +171,17 @@ test.describe('Claude Code Aliases Settings', () => {
     // Click Add Alias button
     await basePage.page.locator('text=Add Alias').click();
 
-    // Fill in the new alias form (using partial placeholder match)
-    await basePage.page.locator('input[placeholder*="Alias name"]').fill('Test Alias');
+    // Wait for the form to appear and fill it in
+    const nameInput = basePage.page.locator('input[placeholder*="Alias name"]');
+    await expect(nameInput).toBeVisible();
+    await nameInput.fill('Test Alias');
     await basePage.page.locator('input[placeholder*="Command"]').fill('claude --verbose');
 
     // Click Add button to confirm
     await basePage.page.locator('button:has-text("Add")').last().click();
+
+    // Wait for the form to close (input should disappear)
+    await expect(nameInput).not.toBeVisible();
 
     // The new alias should appear in the list
     await expect(basePage.page.locator('text=Test Alias')).toBeVisible();
@@ -189,9 +194,16 @@ test.describe('Claude Code Aliases Settings', () => {
 
     // First add a new alias to delete
     await basePage.page.locator('text=Add Alias').click();
-    await basePage.page.locator('input[placeholder*="Alias name"]').fill('To Delete');
+
+    // Wait for the form to appear and fill it in
+    const nameInput = basePage.page.locator('input[placeholder*="Alias name"]');
+    await expect(nameInput).toBeVisible();
+    await nameInput.fill('To Delete');
     await basePage.page.locator('input[placeholder*="Command"]').fill('claude --test');
     await basePage.page.locator('button:has-text("Add")').last().click();
+
+    // Wait for the form to close
+    await expect(nameInput).not.toBeVisible();
 
     // Verify it was added
     await expect(basePage.page.locator('text=To Delete')).toBeVisible();

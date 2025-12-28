@@ -146,7 +146,7 @@ export function RemoteMachinesSection() {
                   <button
                     onClick={() => handleTestConnection(machine.id)}
                     disabled={testingIds.has(machine.id)}
-                    className="px-2 py-0.5 text-xs text-theme-muted hover:text-theme-primary hover:bg-surface-700 rounded transition-colors disabled:opacity-50"
+                    className="px-2 py-0.5 text-xs text-theme-muted hover:text-theme-primary border border-surface-500 hover:border-surface-400 rounded transition-colors disabled:opacity-50"
                   >
                     {testingIds.has(machine.id) ? (
                       <Spinner size="sm" />

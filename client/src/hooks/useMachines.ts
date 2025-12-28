@@ -118,6 +118,10 @@ export function useMachines() {
   const testConnection = useCallback(async (id: string) => {
     const response = await machinesApi.testConnection(id);
     if (response.data) {
+      // Update local state with the returned machine (has updated status)
+      if (response.data.machine) {
+        setMachines((prev) => prev.map((m) => (m.id === response.data.machine.id ? response.data.machine : m)));
+      }
       return response.data;
     }
     throw new Error('Failed to test connection');

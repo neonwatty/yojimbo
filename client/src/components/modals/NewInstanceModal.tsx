@@ -1,11 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSettingsStore } from '../../store/settingsStore';
-import { instancesApi, filesystemApi } from '../../api/client';
+import { instancesApi, filesystemApi, sessionsApi } from '../../api/client';
 import { toast } from '../../store/toastStore';
 import { Icons } from '../common/Icons';
 import { DirectoryPicker } from '../common/DirectoryPicker';
-import type { InstanceMode, ClaudeCliStatus } from '@cc-orchestrator/shared';
+import { Spinner } from '../common/Spinner';
+import type { InstanceMode, ClaudeCliStatus, Session } from '@cc-orchestrator/shared';
 
 interface NewInstanceModalProps {
   isOpen: boolean;
@@ -33,6 +34,9 @@ export function NewInstanceModal({ isOpen, onClose }: NewInstanceModalProps) {
   const [claudeStatus, setClaudeStatus] = useState<ClaudeCliStatus | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [checkingClaude, setCheckingClaude] = useState(true);
+  const [availableSessions, setAvailableSessions] = useState<Session[]>([]);
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
+  const [loadingSessions, setLoadingSessions] = useState(false);
 
   // Check Claude CLI status on mount
   useEffect(() => {
@@ -40,6 +44,26 @@ export function NewInstanceModal({ isOpen, onClose }: NewInstanceModalProps) {
       checkClaudeStatus();
     }
   }, [isOpen]);
+
+  // Fetch sessions for a directory
+  const fetchSessionsForDirectory = useCallback(async (dir: string) => {
+    if (!dir || dir === '~') {
+      setAvailableSessions([]);
+      return;
+    }
+    setLoadingSessions(true);
+    try {
+      const response = await sessionsApi.listByDirectory(dir);
+      if (response.data) {
+        setAvailableSessions(response.data);
+      }
+    } catch {
+      // Silently fail - not critical
+      setAvailableSessions([]);
+    } finally {
+      setLoadingSessions(false);
+    }
+  }, []);
 
   // Reset form when opening
   useEffect(() => {
@@ -49,8 +73,20 @@ export function NewInstanceModal({ isOpen, onClose }: NewInstanceModalProps) {
       setMode(lastInstanceMode || 'terminal');
       const defaultAlias = getDefaultAlias();
       setSelectedAliasId(defaultAlias?.id || '');
+      setAvailableSessions([]);
+      setSelectedSessionId(null);
     }
   }, [isOpen, lastUsedDirectory, lastInstanceMode, getDefaultAlias]);
+
+  // Fetch sessions when directory changes and in Claude Code mode
+  useEffect(() => {
+    if (isOpen && mode === 'claude-code' && workingDir) {
+      fetchSessionsForDirectory(workingDir);
+    } else {
+      setAvailableSessions([]);
+      setSelectedSessionId(null);
+    }
+  }, [isOpen, mode, workingDir, fetchSessionsForDirectory]);
 
   const checkClaudeStatus = async () => {
     setCheckingClaude(true);
@@ -81,6 +117,10 @@ export function NewInstanceModal({ isOpen, onClose }: NewInstanceModalProps) {
         const selectedAlias = claudeCodeAliases.find((a) => a.id === selectedAliasId);
         if (selectedAlias) {
           startupCommand = selectedAlias.command;
+          // Append --resume flag if a session is selected
+          if (selectedSessionId) {
+            startupCommand = `${startupCommand} --resume ${selectedSessionId}`;
+          }
         }
       }
 
@@ -242,6 +282,77 @@ export function NewInstanceModal({ isOpen, onClose }: NewInstanceModalProps) {
               }}
             />
           </div>
+
+          {/* Resume Session Section (only when Claude Code mode and sessions exist) */}
+          {mode === 'claude-code' && (
+            <div>
+              {loadingSessions ? (
+                <div className="flex items-center gap-2 text-xs text-theme-dim">
+                  <Spinner size="sm" />
+                  <span>Checking for previous sessions...</span>
+                </div>
+              ) : availableSessions.length > 0 ? (
+                <div className="p-2 bg-surface-800 border border-surface-600 rounded">
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <Icons.history />
+                    <span className="text-xs text-theme-dim">
+                      {availableSessions.length} previous session{availableSessions.length !== 1 ? 's' : ''} found
+                    </span>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="flex items-center gap-2 p-1.5 rounded hover:bg-surface-700 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="sessionChoice"
+                        checked={selectedSessionId === null}
+                        onChange={() => setSelectedSessionId(null)}
+                        className="accent-frost-4"
+                      />
+                      <span className="text-xs text-theme-primary">Start fresh</span>
+                    </label>
+                    {availableSessions.map((session) => {
+                      const date = new Date(session.startedAt);
+                      const now = new Date();
+                      const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+                      const timeLabel = diffDays === 0
+                        ? date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+                        : diffDays === 1
+                          ? 'Yesterday'
+                          : diffDays < 7
+                            ? date.toLocaleDateString('en-US', { weekday: 'short' })
+                            : date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+                      return (
+                        <label
+                          key={session.id}
+                          className="flex items-start gap-2 p-1.5 rounded hover:bg-surface-700 cursor-pointer"
+                        >
+                          <input
+                            type="radio"
+                            name="sessionChoice"
+                            checked={selectedSessionId === session.id}
+                            onChange={() => setSelectedSessionId(session.id)}
+                            className="accent-frost-4 mt-0.5"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-theme-primary truncate">
+                                {session.summary || 'Untitled session'}
+                              </span>
+                              <span className="text-[10px] text-theme-muted shrink-0">{timeLabel}</span>
+                            </div>
+                            <span className="text-[10px] text-theme-dim">
+                              {session.messageCount} message{session.messageCount !== 1 ? 's' : ''}
+                            </span>
+                          </div>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          )}
         </div>
 
         {/* Footer */}

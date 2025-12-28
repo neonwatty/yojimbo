@@ -118,6 +118,126 @@ function scanProjectDirectory(projectDir: string): void {
   }
 }
 
+/**
+ * Decode a Claude Code project directory name back to its original filesystem path.
+ * Claude Code encodes paths by replacing '/' with '-', e.g.:
+ *   /Users/foo/my-project -> -Users-foo-my-project
+ *
+ * The challenge is that directory names can contain hyphens, so we can't simply
+ * replace all '-' with '/'. Instead, we try different split points and check
+ * which combination results in a valid filesystem path.
+ */
+function decodeProjectPath(encodedPath: string): string {
+  // Remove leading dash (represents root /)
+  const withoutLeading = encodedPath.startsWith('-') ? encodedPath.slice(1) : encodedPath;
+
+  // Split by dashes
+  const parts = withoutLeading.split('-');
+
+  if (parts.length === 0) {
+    return '/';
+  }
+
+  // Try to find the correct path by checking filesystem existence
+  // We'll use dynamic programming to try different groupings
+  const result = findValidPath(parts);
+
+  if (result) {
+    return result;
+  }
+
+  // Fallback: use heuristics for common path patterns
+  // On macOS, paths typically start with /Users/username/...
+  // On Linux, paths typically start with /home/username/...
+  const heuristicResult = applyPathHeuristics(parts);
+
+  return heuristicResult;
+}
+
+/**
+ * Try to find a valid filesystem path by testing different groupings of parts.
+ * Uses a greedy approach: build path from left to right, checking existence.
+ */
+function findValidPath(parts: string[]): string | null {
+  const result: string[] = [];
+  let currentGroup: string[] = [];
+
+  for (let i = 0; i < parts.length; i++) {
+    currentGroup.push(parts[i]);
+
+    // Try this as a complete path component
+    const testPath = '/' + [...result, currentGroup.join('-')].join('/');
+
+    if (fs.existsSync(testPath)) {
+      // This path exists, commit the current group and continue
+      result.push(currentGroup.join('-'));
+      currentGroup = [];
+    } else if (i === parts.length - 1) {
+      // Last part - must commit whatever we have
+      result.push(currentGroup.join('-'));
+    }
+    // Otherwise, keep accumulating in currentGroup
+  }
+
+  const finalPath = '/' + result.join('/');
+
+  // Verify the final path exists
+  if (fs.existsSync(finalPath)) {
+    return finalPath;
+  }
+
+  return null;
+}
+
+/**
+ * Apply heuristics for common path patterns when filesystem check fails.
+ * This handles cases where the original directory may have been deleted.
+ */
+function applyPathHeuristics(parts: string[]): string {
+  // Common path prefixes that we can identify
+  const commonPrefixes = ['Users', 'home', 'tmp', 'var', 'opt', 'usr'];
+
+  const result: string[] = [];
+  let i = 0;
+
+  // Check for common root directories
+  if (parts.length > 0 && commonPrefixes.includes(parts[0])) {
+    result.push(parts[0]);
+    i = 1;
+
+    // If it's Users or home, the next part is likely the username (single component)
+    if ((parts[0] === 'Users' || parts[0] === 'home') && i < parts.length) {
+      result.push(parts[i]);
+      i++;
+    }
+  }
+
+  // For remaining parts, use a simple heuristic:
+  // - Capitalized words are likely separate directories (Desktop, Documents, etc.)
+  // - Sequences of lowercase with hyphens are likely single directory names
+  let currentGroup: string[] = [];
+
+  for (; i < parts.length; i++) {
+    const part = parts[i];
+    const isCapitalized = part.length > 0 && part[0] === part[0].toUpperCase() && part[0] !== part[0].toLowerCase();
+
+    if (isCapitalized && currentGroup.length > 0) {
+      // Capitalized word after lowercase - commit previous group
+      result.push(currentGroup.join('-'));
+      currentGroup = [part];
+    } else {
+      currentGroup.push(part);
+    }
+  }
+
+  // Commit any remaining parts
+  if (currentGroup.length > 0) {
+    result.push(currentGroup.join('-'));
+  }
+
+  return '/' + result.join('/');
+}
+
 async function processSessionFile(filePath: string): Promise<void> {
   try {
     const lastProcessedLines = processedFiles.get(filePath) || 0;
@@ -225,7 +345,7 @@ async function parseJsonlFile(filePath: string, _skipLines: number = 0): Promise
   // Extract project path from file path
   // Format: ~/.claude/projects/-Users-foo-project/session.jsonl
   const projectDirName = path.basename(path.dirname(filePath));
-  const projectPath = projectDirName.replace(/-/g, '/');
+  const projectPath = decodeProjectPath(projectDirName);
 
   return {
     id: sessionId || uuidv4(),
@@ -268,15 +388,17 @@ function storeSession(session: ParsedSession): void {
     } | undefined;
 
     if (existing) {
-      // Update existing session
+      // Update existing session (include project_path to fix any incorrectly decoded paths)
       db.prepare(`
         UPDATE sessions
-        SET ended_at = ?,
+        SET project_path = ?,
+            ended_at = ?,
             message_count = ?,
             token_count = ?,
             summary = COALESCE(summary, ?)
         WHERE id = ?
       `).run(
+        session.projectPath,
         session.endedAt,
         session.messageCount,
         session.tokenCount,

@@ -96,6 +96,9 @@ export const sessionsApi = {
   search: (query: string) =>
     request<ApiResponse<Session[]>>(`/sessions/search?q=${encodeURIComponent(query)}`),
 
+  listByDirectory: (path: string) =>
+    request<ApiResponse<Session[]>>(`/sessions/by-directory?path=${encodeURIComponent(path)}`),
+
   get: (id: string) => request<ApiResponse<Session>>(`/sessions/${id}`),
 
   getMessages: (id: string, page = 1, pageSize = 50) =>

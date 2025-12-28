@@ -8,7 +8,7 @@ import type { RemoteMachine, MachineStatus } from '@cc-orchestrator/shared';
 
 function StatusIndicator({ status }: { status: MachineStatus }) {
   const colors = {
-    online: 'bg-state-idle',
+    online: 'bg-state-working',
     offline: 'bg-state-error',
     unknown: 'bg-surface-400',
   };

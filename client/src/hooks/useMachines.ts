@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { machinesApi, sshApi } from '../api/client';
 import { useWebSocket } from './useWebSocket';
 import { getWsUrl } from '../config';
@@ -47,6 +47,32 @@ export function useMachines() {
     load();
   }, [fetchMachines, fetchSSHKeys]);
 
+  // Ref to hold current machines for health check (avoids stale closure)
+  const machinesRef = useRef<RemoteMachine[]>([]);
+  machinesRef.current = machines;
+
+  // Periodic health check for all machines (every 60 seconds)
+  useEffect(() => {
+    const checkHealth = async () => {
+      const currentMachines = machinesRef.current;
+      if (currentMachines.length === 0) return;
+
+      for (const machine of currentMachines) {
+        try {
+          await machinesApi.testConnection(machine.id);
+        } catch {
+          // Ignore errors - status will be updated in DB
+        }
+      }
+      await fetchMachines();
+    };
+
+    // Run health check every 60 seconds
+    const interval = setInterval(checkHealth, 60000);
+
+    return () => clearInterval(interval);
+  }, [fetchMachines]);
+
   // Handle WebSocket messages for machine updates
   useEffect(() => {
     if (!isConnected) return;
@@ -79,17 +105,24 @@ export function useMachines() {
     };
   }, [isConnected, subscribe]);
 
-  // Create machine
+  // Create machine (and auto-test connection)
   const createMachine = useCallback(
     async (data: { name: string; hostname: string; port?: number; username: string; sshKeyPath?: string }) => {
       const response = await machinesApi.create(data);
       if (response.data) {
-        // Will be added via WebSocket event
+        // Auto-test connection after creation
+        try {
+          await machinesApi.testConnection(response.data.id);
+          await fetchMachines(); // Refetch to get updated status
+        } catch {
+          // Test failed, but machine was created - status will show as offline
+          await fetchMachines();
+        }
         return response.data;
       }
       throw new Error('Failed to create machine');
     },
-    []
+    [fetchMachines]
   );
 
   // Update machine
@@ -118,14 +151,12 @@ export function useMachines() {
   const testConnection = useCallback(async (id: string) => {
     const response = await machinesApi.testConnection(id);
     if (response.data) {
-      // Update local state with the returned machine (has updated status)
-      if (response.data.machine) {
-        setMachines((prev) => prev.map((m) => (m.id === response.data.machine.id ? response.data.machine : m)));
-      }
+      // Refetch to get updated status
+      await fetchMachines();
       return response.data;
     }
     throw new Error('Failed to test connection');
-  }, []);
+  }, [fetchMachines]);
 
   return {
     machines,

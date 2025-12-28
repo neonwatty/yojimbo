@@ -110,14 +110,24 @@ router.post('/status', (req, res) => {
 
     console.log(`🔔 Hook status event: ${event} for ${projectDir} (instanceId: ${instanceId || 'none'})`);
 
-    // Try to find by instanceId first (more reliable), fall back to projectDir
-    const instance = findInstanceById(instanceId || '') || findInstanceByWorkingDir(projectDir);
+    // Prefer matching by instanceId (more reliable)
+    let instance = findInstanceById(instanceId || '');
+
+    // Only fall back to directory matching if no instanceId was provided
+    if (!instance && !instanceId) {
+      instance = findInstanceByWorkingDir(projectDir);
+      if (instance) {
+        console.log(`📍 Matched by directory: ${projectDir} -> ${instance.id}`);
+      }
+    }
 
     if (instance) {
       const status: InstanceStatus = event === 'working' ? 'working' : 'idle';
       updateInstanceStatus(instance.id, status);
+    } else if (instanceId) {
+      console.log(`⚠️ No instance found with ID: ${instanceId}`);
     } else {
-      console.log(`⚠️ No instance found for: ${projectDir} (instanceId: ${instanceId || 'none'})`);
+      console.log(`⚠️ No instance found for directory: ${projectDir}`);
     }
 
     res.json({ ok: true });
@@ -134,13 +144,23 @@ router.post('/notification', (req, res) => {
 
     console.log(`🔔 Hook notification event for ${projectDir} (instanceId: ${instanceId || 'none'})`);
 
-    // Try to find by instanceId first (more reliable), fall back to projectDir
-    const instance = findInstanceById(instanceId || '') || findInstanceByWorkingDir(projectDir);
+    // Prefer matching by instanceId (more reliable)
+    let instance = findInstanceById(instanceId || '');
+
+    // Only fall back to directory matching if no instanceId was provided
+    if (!instance && !instanceId) {
+      instance = findInstanceByWorkingDir(projectDir);
+      if (instance) {
+        console.log(`📍 Matched by directory: ${projectDir} -> ${instance.id}`);
+      }
+    }
 
     if (instance) {
       updateInstanceStatus(instance.id, 'awaiting');
+    } else if (instanceId) {
+      console.log(`⚠️ No instance found with ID: ${instanceId}`);
     } else {
-      console.log(`⚠️ No instance found for: ${projectDir} (instanceId: ${instanceId || 'none'})`);
+      console.log(`⚠️ No instance found for directory: ${projectDir}`);
     }
 
     res.json({ ok: true });
@@ -157,13 +177,23 @@ router.post('/stop', (req, res) => {
 
     console.log(`🔔 Hook stop event for ${projectDir} (instanceId: ${instanceId || 'none'})`);
 
-    // Try to find by instanceId first (more reliable), fall back to projectDir
-    const instance = findInstanceById(instanceId || '') || findInstanceByWorkingDir(projectDir);
+    // Prefer matching by instanceId (more reliable)
+    let instance = findInstanceById(instanceId || '');
+
+    // Only fall back to directory matching if no instanceId was provided
+    if (!instance && !instanceId) {
+      instance = findInstanceByWorkingDir(projectDir);
+      if (instance) {
+        console.log(`📍 Matched by directory: ${projectDir} -> ${instance.id}`);
+      }
+    }
 
     if (instance) {
       updateInstanceStatus(instance.id, 'idle');
+    } else if (instanceId) {
+      console.log(`⚠️ No instance found with ID: ${instanceId}`);
     } else {
-      console.log(`⚠️ No instance found for: ${projectDir} (instanceId: ${instanceId || 'none'})`);
+      console.log(`⚠️ No instance found for directory: ${projectDir}`);
     }
 
     res.json({ ok: true });

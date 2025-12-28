@@ -121,7 +121,6 @@ export function initDatabase(): Database.Database {
     CREATE INDEX IF NOT EXISTS idx_remote_machines_status ON remote_machines(status);
     CREATE INDEX IF NOT EXISTS idx_port_forwards_instance ON port_forwards(instance_id);
     CREATE INDEX IF NOT EXISTS idx_port_forwards_status ON port_forwards(status);
-    CREATE INDEX IF NOT EXISTS idx_instances_machine ON instances(machine_id);
   `;
 
   db.exec(schema);
@@ -154,6 +153,14 @@ function runMigrations(): void {
   if (!columnNames.has('machine_id')) {
     console.log('🔧 Running migration: adding machine_id column to instances');
     db.exec('ALTER TABLE instances ADD COLUMN machine_id TEXT');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_instances_machine ON instances(machine_id)');
+  }
+
+  // Ensure machine_id index exists (for fresh databases or if migration already ran)
+  try {
+    db.exec('CREATE INDEX IF NOT EXISTS idx_instances_machine ON instances(machine_id)');
+  } catch {
+    // Index might already exist, ignore
   }
 }
 

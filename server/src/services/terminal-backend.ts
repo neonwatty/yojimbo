@@ -62,16 +62,12 @@ export interface ITerminalBackend {
 }
 
 /**
- * Events emitted by terminal backends
- */
-interface TerminalBackendEvents {
-  data: (id: string, data: string) => void;
-  exit: (id: string, exitCode: number) => void;
-}
-
-/**
- * Abstract base class for terminal backends
- * Provides common functionality like history management
+ * Abstract base class for terminal backends.
+ * Provides common functionality like history management.
+ *
+ * Events emitted:
+ * - 'data': (id: string, data: string) => void
+ * - 'exit': (id: string, exitCode: number) => void
  */
 export abstract class TerminalBackend extends EventEmitter implements ITerminalBackend {
   protected history: string = '';

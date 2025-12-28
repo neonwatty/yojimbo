@@ -13,8 +13,14 @@ function StatusIndicator({ status }: { status: MachineStatus }) {
     unknown: 'bg-surface-400',
   };
 
+  const tooltips = {
+    online: 'Connected - SSH connection verified',
+    offline: 'Offline - Connection failed',
+    unknown: 'Unknown - Click Test to verify connection',
+  };
+
   return (
-    <div className={`w-2 h-2 rounded-full ${colors[status]}`} title={status} />
+    <div className={`w-2 h-2 rounded-full ${colors[status]}`} title={tooltips[status]} />
   );
 }
 
@@ -140,13 +146,12 @@ export function RemoteMachinesSection() {
                   <button
                     onClick={() => handleTestConnection(machine.id)}
                     disabled={testingIds.has(machine.id)}
-                    className="p-1 text-theme-muted hover:text-theme-primary transition-colors disabled:opacity-50"
-                    title="Test connection"
+                    className="px-2 py-0.5 text-xs text-theme-muted hover:text-theme-primary hover:bg-surface-700 rounded transition-colors disabled:opacity-50"
                   >
                     {testingIds.has(machine.id) ? (
                       <Spinner size="sm" />
                     ) : (
-                      <Icons.wifi />
+                      'Test'
                     )}
                   </button>
                   <button

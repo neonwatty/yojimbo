@@ -345,20 +345,44 @@ export function NewInstanceModal({ isOpen, onClose }: NewInstanceModalProps) {
             </div>
           )}
 
-          {/* Working Directory Picker */}
+          {/* Working Directory */}
           <div>
-            <label className="block text-xs text-theme-dim mb-1">Working Directory</label>
-            <DirectoryPicker
-              value={workingDir}
-              onChange={(path) => {
-                setWorkingDir(path);
-                // Auto-generate name from directory if name is empty
-                if (!name.trim()) {
-                  const dirName = path.split('/').filter(Boolean).pop() || 'New Project';
-                  setName(dirName);
-                }
-              }}
-            />
+            <label className="block text-xs text-theme-dim mb-1">
+              Working Directory {machineType === 'remote' && <span className="text-theme-muted">(on remote machine)</span>}
+            </label>
+            {machineType === 'local' ? (
+              <DirectoryPicker
+                value={workingDir}
+                onChange={(path) => {
+                  setWorkingDir(path);
+                  // Auto-generate name from directory if name is empty
+                  if (!name.trim()) {
+                    const dirName = path.split('/').filter(Boolean).pop() || 'New Project';
+                    setName(dirName);
+                  }
+                }}
+              />
+            ) : (
+              <div>
+                <input
+                  type="text"
+                  value={workingDir}
+                  onChange={(e) => {
+                    setWorkingDir(e.target.value);
+                    // Auto-generate name from directory if name is empty
+                    if (!name.trim()) {
+                      const dirName = e.target.value.split('/').filter(Boolean).pop() || 'New Project';
+                      setName(dirName);
+                    }
+                  }}
+                  placeholder="~/projects/my-app"
+                  className="w-full bg-surface-800 border border-surface-600 rounded px-3 py-1.5 text-xs text-theme-primary placeholder:text-theme-dim focus:outline-none focus:ring-1 focus:ring-frost-4/50 font-mono"
+                />
+                <p className="text-[10px] text-theme-dim mt-1">
+                  Enter the full path on the remote machine (e.g., ~/projects or /home/user/code)
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Resume Session Section (only when Claude Code mode and sessions exist) */}

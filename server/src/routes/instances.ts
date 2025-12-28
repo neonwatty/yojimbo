@@ -71,8 +71,9 @@ router.post('/', (req, res) => {
     const displayOrder = (maxOrder?.max || 0) + 1;
 
     // Spawn PTY
-    const ptyInstance = ptyService.spawn(id, workingDir);
-    const pid = ptyInstance.pty.pid;
+    ptyService.spawn(id, workingDir);
+    // Get PID after a short delay to allow async spawn to complete
+    const pid = ptyService.getPid(id);
 
     // Execute startup command if provided (after a small delay for shell to be ready)
     if (startupCommand) {

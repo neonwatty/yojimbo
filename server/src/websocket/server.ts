@@ -184,9 +184,12 @@ function handleMessage(ws: WebSocket, message: WSClientMessage): void {
               // Use last_cwd if available, otherwise fall back to working_dir
               const spawnDir = row.last_cwd || row.working_dir;
               console.log(`🔄 Respawning PTY for instance ${message.instanceId} in ${spawnDir}`);
-              const ptyInstance = ptyService.spawn(message.instanceId, spawnDir);
+              ptyService.spawn(message.instanceId, spawnDir);
               // Update PID in database
-              db.prepare('UPDATE instances SET pid = ? WHERE id = ?').run(ptyInstance.pty.pid, message.instanceId);
+              const pid = ptyService.getPid(message.instanceId);
+              if (pid) {
+                db.prepare('UPDATE instances SET pid = ? WHERE id = ?').run(pid, message.instanceId);
+              }
             }
           } catch (error) {
             console.error(`Failed to respawn PTY for instance ${message.instanceId}:`, error);

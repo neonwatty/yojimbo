@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { getDatabase } from '../db/connection.js';
-import { ptyService } from '../services/pty.service.js';
+import { terminalManager } from '../services/terminal-manager.service.js';
+import { sshConnectionService } from '../services/ssh-connection.service.js';
 import { broadcast } from '../websocket/server.js';
 import type { Instance, CreateInstanceRequest, UpdateInstanceRequest, InstanceStatus, MachineType } from '@cc-orchestrator/shared';
 
@@ -59,7 +60,7 @@ router.get('/', (_req, res) => {
 });
 
 // POST /api/instances - Create new instance
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   try {
     const { name, workingDir, startupCommand, machineType = 'local', machineId } = req.body as CreateInstanceRequest;
 
@@ -72,8 +73,12 @@ router.post('/', (req, res) => {
       if (!machineId) {
         return res.status(400).json({ success: false, error: 'machineId is required for remote instances' });
       }
-      // SSH backend will be implemented in Phase 3
-      return res.status(501).json({ success: false, error: 'Remote instances not yet implemented' });
+
+      // Verify the machine exists and get its config
+      const sshConfig = sshConnectionService.getMachineSSHConfig(machineId);
+      if (!sshConfig) {
+        return res.status(404).json({ success: false, error: 'Remote machine not found' });
+      }
     }
 
     const db = getDatabase();
@@ -83,16 +88,31 @@ router.post('/', (req, res) => {
     const maxOrder = db.prepare('SELECT MAX(display_order) as max FROM instances WHERE closed_at IS NULL').get() as { max: number | null } | undefined;
     const displayOrder = (maxOrder?.max || 0) + 1;
 
-    // Spawn PTY (local only for now)
-    ptyService.spawn(id, workingDir);
-    // Get PID after a short delay to allow async spawn to complete
-    const pid = ptyService.getPid(id);
+    // Spawn terminal backend (local PTY or SSH)
+    try {
+      await terminalManager.spawn(id, {
+        type: machineType === 'remote' ? 'ssh' : 'local',
+        machineId: machineId || undefined,
+        workingDir,
+      });
+    } catch (err) {
+      console.error(`Error spawning terminal for instance ${id}:`, err);
+      return res.status(500).json({
+        success: false,
+        error: machineType === 'remote'
+          ? `Failed to connect to remote machine: ${(err as Error).message}`
+          : 'Failed to spawn terminal'
+      });
+    }
+
+    // Get PID (only available for local instances)
+    const pid = terminalManager.getPid(id);
 
     // Execute startup command if provided (after a small delay for shell to be ready)
     if (startupCommand) {
       setTimeout(() => {
-        if (ptyService.has(id)) {
-          ptyService.write(id, startupCommand + '\n');
+        if (terminalManager.has(id)) {
+          terminalManager.write(id, startupCommand + '\n');
         }
       }, 100);
     }
@@ -184,7 +204,7 @@ router.patch('/:id', (req, res) => {
 });
 
 // DELETE /api/instances/:id - Close instance
-router.delete('/:id', (req, res) => {
+router.delete('/:id', async (req, res) => {
   try {
     const db = getDatabase();
     const { id } = req.params;
@@ -195,8 +215,8 @@ router.delete('/:id', (req, res) => {
       return res.status(404).json({ success: false, error: 'Instance not found' });
     }
 
-    // Kill PTY if running
-    ptyService.kill(id);
+    // Kill terminal backend if running
+    await terminalManager.kill(id);
 
     // Mark as closed in database
     db.prepare(`
@@ -225,11 +245,11 @@ router.post('/:id/input', (req, res) => {
       return res.status(400).json({ success: false, error: 'Data is required' });
     }
 
-    if (!ptyService.has(id)) {
-      return res.status(404).json({ success: false, error: 'Instance PTY not found' });
+    if (!terminalManager.has(id)) {
+      return res.status(404).json({ success: false, error: 'Instance terminal not found' });
     }
 
-    ptyService.write(id, data);
+    terminalManager.write(id, data);
     res.json({ success: true });
   } catch (error) {
     console.error('Error sending input:', error);

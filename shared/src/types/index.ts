@@ -206,6 +206,9 @@ export type WSServerMessageType =
   | 'port:detected'
   | 'port:forwarded'
   | 'port:closed'
+  | 'machine:created'
+  | 'machine:updated'
+  | 'machine:deleted'
   | 'machine:status'
   | 'error';
 
@@ -229,6 +232,8 @@ export interface WSServerMessage {
   fileChange?: FileChangeEvent;
   event?: ActivityEvent;
   portForward?: PortForward;
+  machine?: RemoteMachine;
+  machineId?: string;
   machineStatus?: { machineId: string; status: MachineStatus };
   error?: string;
 }

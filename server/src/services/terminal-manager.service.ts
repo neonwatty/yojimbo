@@ -1,6 +1,8 @@
 import { EventEmitter } from 'events';
 import { TerminalBackend, TerminalBackendType, SpawnConfig, SSHConfig } from './terminal-backend.js';
 import { LocalPTYBackend } from './backends/local-pty.backend.js';
+import { SSHBackend } from './backends/ssh.backend.js';
+import { sshConnectionService } from './ssh-connection.service.js';
 
 /**
  * Configuration for spawning a terminal
@@ -10,7 +12,7 @@ export interface TerminalSpawnOptions extends SpawnConfig {
   type?: TerminalBackendType;
   /** Machine ID for remote backends */
   machineId?: string;
-  /** SSH config (required for ssh type) */
+  /** SSH config (can be provided directly or looked up via machineId) */
   sshConfig?: SSHConfig;
 }
 
@@ -32,9 +34,18 @@ class TerminalManagerService extends EventEmitter {
     if (type === 'local') {
       backend = new LocalPTYBackend(id);
     } else if (type === 'ssh') {
-      // SSH backend will be implemented in Phase 3
-      // For now, throw an error
-      throw new Error('SSH backend not yet implemented');
+      // Get SSH config - either from options or look up by machineId
+      let sshConfig = options.sshConfig;
+
+      if (!sshConfig && options.machineId) {
+        sshConfig = sshConnectionService.getMachineSSHConfig(options.machineId) ?? undefined;
+      }
+
+      if (!sshConfig) {
+        throw new Error('SSH config is required for SSH backend');
+      }
+
+      backend = new SSHBackend(id, sshConfig);
     } else {
       throw new Error(`Unknown backend type: ${type}`);
     }

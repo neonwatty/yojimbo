@@ -2,6 +2,8 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { Server } from 'http';
 import type { WSClientMessage, WSServerMessage } from '@cc-orchestrator/shared';
 import { ptyService } from '../services/pty.service.js';
+import { terminalManager } from '../services/terminal-manager.service.js';
+import { portForwardService } from '../services/port-forward.service.js';
 import { getDatabase } from '../db/connection.js';
 import { CONFIG } from '../config/index.js';
 
@@ -72,7 +74,7 @@ export function initWebSocketServer(server: Server): WebSocketServer {
     });
   });
 
-  // Set up PTY output forwarding
+  // Set up PTY output forwarding (legacy - for backwards compatibility)
   ptyService.on('data', (instanceId: string, data: string) => {
     broadcastToInstance(instanceId, {
       type: 'terminal:output',
@@ -89,6 +91,54 @@ export function initWebSocketServer(server: Server): WebSocketServer {
     });
     // Clean up CWD tracking for this instance
     lastKnownCwds.delete(instanceId);
+    // Clean up port forwards
+    portForwardService.closeInstanceForwards(instanceId);
+  });
+
+  // Set up terminal manager output forwarding (for new backends)
+  terminalManager.on('data', (instanceId: string, data: string) => {
+    broadcastToInstance(instanceId, {
+      type: 'terminal:output',
+      instanceId,
+      data,
+    });
+
+    // Check for port announcements in SSH backend output
+    const backend = terminalManager.getBackend(instanceId);
+    if (backend && backend.type === 'ssh') {
+      const detectedPorts = portForwardService.analyzeOutput(instanceId, data);
+      for (const port of detectedPorts) {
+        // Broadcast port detection
+        broadcast({
+          type: 'port:detected',
+          instanceId,
+          portForward: { remotePort: port } as any,
+        });
+
+        // Auto-forward detected ports
+        portForwardService.createForward(instanceId, port).then((forward) => {
+          if (forward) {
+            broadcast({
+              type: 'port:forwarded',
+              portForward: forward,
+            });
+          }
+        }).catch((err) => {
+          console.error(`Failed to auto-forward port ${port}:`, err);
+        });
+      }
+    }
+  });
+
+  terminalManager.on('exit', (instanceId: string, exitCode: number) => {
+    console.log(`Terminal ${instanceId} exited with code ${exitCode}`);
+    broadcast({
+      type: 'instance:closed',
+      instanceId,
+    });
+    // Clean up CWD tracking and port forwards
+    lastKnownCwds.delete(instanceId);
+    portForwardService.closeInstanceForwards(instanceId);
   });
 
   // Don't start polling immediately - wait for first subscriber
@@ -114,7 +164,14 @@ async function pollCwds(): Promise<void> {
 
   for (const instanceId of activeInstanceIds) {
     try {
-      const cwd = await ptyService.getCwd(instanceId);
+      // Try terminalManager first, fall back to ptyService
+      let cwd: string | null = null;
+      if (terminalManager.has(instanceId)) {
+        cwd = await terminalManager.getCwd(instanceId);
+      } else {
+        cwd = await ptyService.getCwd(instanceId);
+      }
+
       if (cwd) {
         const lastCwd = lastKnownCwds.get(instanceId);
         if (lastCwd !== cwd) {
@@ -163,36 +220,61 @@ function handleMessage(ws: WebSocket, message: WSClientMessage): void {
   switch (message.type) {
     case 'terminal:input':
       if (message.instanceId && message.data) {
-        ptyService.write(message.instanceId, message.data);
+        // Try terminalManager first (new backend), fall back to ptyService (legacy)
+        if (terminalManager.has(message.instanceId)) {
+          terminalManager.write(message.instanceId, message.data);
+        } else {
+          ptyService.write(message.instanceId, message.data);
+        }
       }
       break;
 
     case 'terminal:resize':
       if (message.instanceId && message.cols && message.rows) {
-        ptyService.resize(message.instanceId, message.cols, message.rows);
+        // Try terminalManager first, fall back to ptyService
+        if (terminalManager.has(message.instanceId)) {
+          terminalManager.resize(message.instanceId, message.cols, message.rows);
+        } else {
+          ptyService.resize(message.instanceId, message.cols, message.rows);
+        }
       }
       break;
 
     case 'subscribe':
       if (message.instanceId) {
-        // Check if PTY exists, respawn if not (e.g., after server restart)
-        if (!ptyService.has(message.instanceId)) {
+        // Check if terminal exists in either manager, respawn if not
+        const hasTerminal = terminalManager.has(message.instanceId) || ptyService.has(message.instanceId);
+        if (!hasTerminal) {
           try {
             const db = getDatabase();
-            const row = db.prepare('SELECT working_dir, last_cwd FROM instances WHERE id = ? AND closed_at IS NULL').get(message.instanceId) as { working_dir: string; last_cwd: string | null } | undefined;
+            const row = db.prepare('SELECT working_dir, last_cwd, machine_type, machine_id FROM instances WHERE id = ? AND closed_at IS NULL').get(message.instanceId) as { working_dir: string; last_cwd: string | null; machine_type: string; machine_id: string | null } | undefined;
             if (row) {
               // Use last_cwd if available, otherwise fall back to working_dir
               const spawnDir = row.last_cwd || row.working_dir;
-              console.log(`🔄 Respawning PTY for instance ${message.instanceId} in ${spawnDir}`);
-              ptyService.spawn(message.instanceId, spawnDir);
-              // Update PID in database
-              const pid = ptyService.getPid(message.instanceId);
-              if (pid) {
-                db.prepare('UPDATE instances SET pid = ? WHERE id = ?').run(pid, message.instanceId);
+
+              if (row.machine_type === 'remote' && row.machine_id) {
+                // Respawn SSH backend via terminalManager
+                console.log(`🔄 Respawning SSH terminal for instance ${message.instanceId} in ${spawnDir}`);
+                terminalManager.spawn(message.instanceId, {
+                  type: 'ssh',
+                  machineId: row.machine_id,
+                  workingDir: spawnDir,
+                }).catch((err) => {
+                  console.error(`Failed to respawn SSH terminal for instance ${message.instanceId}:`, err);
+                });
+              } else {
+                // Respawn local PTY
+                console.log(`🔄 Respawning PTY for instance ${message.instanceId} in ${spawnDir}`);
+                ptyService.spawn(message.instanceId, spawnDir);
+                // Update PID in database
+                const pid = ptyService.getPid(message.instanceId);
+                if (pid) {
+                  db.prepare('UPDATE instances SET pid = ? WHERE id = ?').run(pid, message.instanceId);
+                }
               }
             }
           } catch (error) {
-            console.error(`Failed to respawn PTY for instance ${message.instanceId}:`, error);
+            console.error(`Failed to respawn terminal for instance ${message.instanceId}:`, error);
           }
         }
 
@@ -206,7 +288,10 @@ function handleMessage(ws: WebSocket, message: WSClientMessage): void {
         updatePollingState();
 
         // Send terminal history to newly subscribed client
-        const history = ptyService.getHistory(message.instanceId);
+        let history = terminalManager.getHistory(message.instanceId);
+        if (!history) {
+          history = ptyService.getHistory(message.instanceId);
+        }
         if (history) {
           send(ws, {
             type: 'terminal:output',

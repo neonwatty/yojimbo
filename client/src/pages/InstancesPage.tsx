@@ -9,6 +9,7 @@ import { CardLayout } from '../components/instances/CardLayout';
 import { ListLayout } from '../components/instances/ListLayout';
 import { PlansPanel } from '../components/plans';
 import { MockupsPanel } from '../components/mockups/MockupsPanel';
+import { PortForwardsPanel } from '../components/PortForwardsPanel';
 import { StatusDot, StatusBadge } from '../components/common/Status';
 import { EditableName } from '../components/common/EditableName';
 import { ErrorBoundary } from '../components/common/ErrorBoundary';
@@ -264,6 +265,12 @@ export default function InstancesPage() {
               className="text-sm font-medium"
             />
             <StatusBadge status={instance.status} />
+            {instance.machineType === 'remote' && (
+              <span className="flex items-center gap-1 px-2 py-0.5 rounded bg-accent/10 text-accent text-xs">
+                <Icons.wifi />
+                <span>Remote</span>
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-1">
             <button
@@ -300,6 +307,9 @@ export default function InstancesPage() {
             <span className="text-[10px] text-theme-dim font-mono">{instance.workingDir}</span>
           </div>
         </div>
+
+        {/* Port Forwards Panel - only shown for remote instances with active forwards */}
+        <PortForwardsPanel instance={instance} />
 
         {/* Terminal + Plans Panel */}
         <div className="flex-1 flex overflow-hidden">

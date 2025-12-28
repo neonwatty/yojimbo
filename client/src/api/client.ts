@@ -19,6 +19,11 @@ import type {
   ActivityFeedStats,
   GenerateSummaryRequest,
   GenerateSummaryResponse,
+  RemoteMachine,
+  CreateMachineRequest,
+  UpdateMachineRequest,
+  SSHKey,
+  PortForward,
 } from '@cc-orchestrator/shared';
 import { toast } from '../store/toastStore';
 
@@ -212,5 +217,57 @@ export const summariesApi = {
     request<ApiResponse<GenerateSummaryResponse>>('/summaries/generate', {
       method: 'POST',
       body: JSON.stringify(data),
+    }),
+};
+
+// Machines API
+export const machinesApi = {
+  list: () => request<ApiResponse<RemoteMachine[]>>('/machines'),
+
+  get: (id: string) => request<ApiResponse<RemoteMachine>>(`/machines/${id}`),
+
+  create: (data: CreateMachineRequest) =>
+    request<ApiResponse<RemoteMachine>>('/machines', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  update: (id: string, data: UpdateMachineRequest) =>
+    request<ApiResponse<RemoteMachine>>(`/machines/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+
+  delete: (id: string) =>
+    request<ApiResponse<void>>(`/machines/${id}`, {
+      method: 'DELETE',
+    }),
+
+  testConnection: (id: string) =>
+    request<ApiResponse<{ connected: boolean; error?: string; machine: RemoteMachine }>>(
+      `/machines/${id}/test`,
+      { method: 'POST' }
+    ),
+};
+
+// SSH API
+export const sshApi = {
+  listKeys: () => request<ApiResponse<SSHKey[]>>('/ssh/keys'),
+};
+
+// Port Forwards API
+export const portForwardsApi = {
+  list: (instanceId: string) =>
+    request<ApiResponse<PortForward[]>>(`/instances/${instanceId}/ports`),
+
+  create: (instanceId: string, data: { remotePort: number; localPort?: number }) =>
+    request<ApiResponse<PortForward>>(`/instances/${instanceId}/ports`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  close: (instanceId: string, portId: string) =>
+    request<ApiResponse<void>>(`/instances/${instanceId}/ports/${portId}`, {
+      method: 'DELETE',
     }),
 };

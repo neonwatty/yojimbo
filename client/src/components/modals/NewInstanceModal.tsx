@@ -2,11 +2,12 @@ import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSettingsStore } from '../../store/settingsStore';
 import { instancesApi, filesystemApi, sessionsApi } from '../../api/client';
+import { useMachines } from '../../hooks/useMachines';
 import { toast } from '../../store/toastStore';
 import { Icons } from '../common/Icons';
 import { DirectoryPicker } from '../common/DirectoryPicker';
 import { Spinner } from '../common/Spinner';
-import type { InstanceMode, ClaudeCliStatus, Session } from '@cc-orchestrator/shared';
+import type { InstanceMode, ClaudeCliStatus, Session, MachineType } from '@cc-orchestrator/shared';
 
 interface NewInstanceModalProps {
   isOpen: boolean;
@@ -24,9 +25,13 @@ export function NewInstanceModal({ isOpen, onClose }: NewInstanceModalProps) {
     getDefaultAlias,
   } = useSettingsStore();
 
+  const { machines } = useMachines();
+
   const [name, setName] = useState('');
   const [workingDir, setWorkingDir] = useState(lastUsedDirectory || '~');
   const [mode, setMode] = useState<InstanceMode>(lastInstanceMode || 'claude-code');
+  const [machineType, setMachineType] = useState<MachineType>('local');
+  const [selectedMachineId, setSelectedMachineId] = useState<string>('');
   const [selectedAliasId, setSelectedAliasId] = useState<string>(() => {
     const defaultAlias = getDefaultAlias();
     return defaultAlias?.id || '';
@@ -71,6 +76,8 @@ export function NewInstanceModal({ isOpen, onClose }: NewInstanceModalProps) {
       setName('');
       setWorkingDir(lastUsedDirectory || '~');
       setMode(lastInstanceMode || 'terminal');
+      setMachineType('local');
+      setSelectedMachineId('');
       const defaultAlias = getDefaultAlias();
       setSelectedAliasId(defaultAlias?.id || '');
       setAvailableSessions([]);
@@ -109,6 +116,11 @@ export function NewInstanceModal({ isOpen, onClose }: NewInstanceModalProps) {
       return;
     }
 
+    if (machineType === 'remote' && !selectedMachineId) {
+      toast.error('Please select a remote machine');
+      return;
+    }
+
     setIsCreating(true);
     try {
       // Build startup command if Claude Code mode is selected
@@ -128,6 +140,8 @@ export function NewInstanceModal({ isOpen, onClose }: NewInstanceModalProps) {
         name: name.trim(),
         workingDir,
         startupCommand,
+        machineType,
+        machineId: machineType === 'remote' ? selectedMachineId : undefined,
       });
 
       if (response.data) {
@@ -213,6 +227,70 @@ export function NewInstanceModal({ isOpen, onClose }: NewInstanceModalProps) {
               <p className="text-[10px] text-theme-dim mt-1">Select a directory below to auto-fill</p>
             )}
           </div>
+
+          {/* Run On (Local/Remote) */}
+          {machines.length > 0 && (
+            <div>
+              <label className="block text-xs text-theme-dim mb-1">Run On</label>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMachineType('local');
+                    setSelectedMachineId('');
+                  }}
+                  className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-colors
+                    ${machineType === 'local'
+                      ? 'bg-frost-4/30 text-frost-2 border border-frost-4/50'
+                      : 'bg-surface-600 text-theme-dim hover:text-theme-primary hover:bg-surface-500'}`}
+                >
+                  <Icons.computer />
+                  Local
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMachineType('remote')}
+                  className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-colors
+                    ${machineType === 'remote'
+                      ? 'bg-frost-4/30 text-frost-2 border border-frost-4/50'
+                      : 'bg-surface-600 text-theme-dim hover:text-theme-primary hover:bg-surface-500'}`}
+                >
+                  <Icons.server />
+                  Remote
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Machine Selector (when remote) */}
+          {machineType === 'remote' && (
+            <div>
+              <label className="block text-xs text-theme-dim mb-1">Machine</label>
+              <select
+                value={selectedMachineId}
+                onChange={(e) => setSelectedMachineId(e.target.value)}
+                className="w-full bg-surface-800 border border-surface-600 rounded px-3 py-1.5 text-xs text-theme-primary focus:outline-none focus:ring-1 focus:ring-frost-4/50"
+              >
+                <option value="">Select a machine...</option>
+                {machines.map((machine) => (
+                  <option key={machine.id} value={machine.id}>
+                    {machine.name} ({machine.username}@{machine.hostname})
+                    {machine.status === 'online' ? ' - Online' : machine.status === 'offline' ? ' - Offline' : ''}
+                  </option>
+                ))}
+              </select>
+              {machines.length === 0 && (
+                <p className="text-[10px] text-theme-dim mt-1">
+                  No remote machines configured. Add one in Settings.
+                </p>
+              )}
+              {selectedMachineId && (
+                <p className="text-[10px] text-theme-dim mt-1">
+                  Dev server ports will be automatically forwarded to localhost.
+                </p>
+              )}
+            </div>
+          )}
 
           {/* Mode Selector */}
           <div>

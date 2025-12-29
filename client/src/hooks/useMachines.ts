@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { machinesApi, sshApi } from '../api/client';
 import { useWebSocket } from './useWebSocket';
 import { getWsUrl } from '../config';
-import type { RemoteMachine, SSHKey } from '@cc-orchestrator/shared';
+import type { RemoteMachine, SSHKey, UpdateMachineRequest } from '@cc-orchestrator/shared';
 
 export function useMachines() {
   const [machines, setMachines] = useState<RemoteMachine[]>([]);
@@ -127,10 +127,7 @@ export function useMachines() {
 
   // Update machine
   const updateMachine = useCallback(
-    async (
-      id: string,
-      data: { name?: string; hostname?: string; port?: number; username?: string; sshKeyPath?: string }
-    ) => {
+    async (id: string, data: UpdateMachineRequest) => {
       const response = await machinesApi.update(id, data);
       if (response.data) {
         // Will be updated via WebSocket event

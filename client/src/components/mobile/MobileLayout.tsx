@@ -4,8 +4,6 @@ import { useInstancesStore } from '../../store/instancesStore';
 import { useUIStore } from '../../store/uiStore';
 import { useSettingsStore } from '../../store/settingsStore';
 import { useMobileLayout } from '../../hooks/useMobileLayout';
-import { useWebSocket } from '../../hooks/useWebSocket';
-import { getWsUrl } from '../../config';
 import { toast } from '../../store/toastStore';
 import { instancesApi } from '../../api/client';
 import { Terminal, type TerminalRef } from '../terminal';
@@ -150,24 +148,23 @@ function MobileTextInput({
   const [text, setText] = useState('');
   const [isExpanded, setIsExpanded] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const { send } = useWebSocket(getWsUrl());
 
   const handleSend = useCallback(() => {
     if (text.trim()) {
-      // Send text to terminal via WebSocket
-      send('terminal:input', { instanceId, data: text });
+      // Send text to terminal via HTTP API (no WebSocket needed)
+      instancesApi.sendInput(instanceId, text);
       setText('');
       // Keep expanded for continued input
     }
-  }, [text, instanceId, send]);
+  }, [text, instanceId]);
 
   const handleSendWithEnter = useCallback(() => {
     if (text.trim()) {
-      // Send text + carriage return to simulate Enter
-      send('terminal:input', { instanceId, data: text + '\r' });
+      // Send text + carriage return to simulate Enter via HTTP API
+      instancesApi.sendInput(instanceId, text + '\r');
       setText('');
     }
-  }, [text, instanceId, send]);
+  }, [text, instanceId]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     // Cmd/Ctrl + Enter sends with newline

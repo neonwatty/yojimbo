@@ -22,7 +22,7 @@ test.describe('Desktop Layout', () => {
     await expect(sidebar).toBeVisible();
 
     // Sidebar should have the Sessions header
-    await expect(sidebar.getByText('Sessions')).toBeVisible();
+    await expect(sidebar.getByText('Sessions', { exact: true })).toBeVisible();
 
     // New instance button should be visible in sidebar
     await expect(sidebar.getByRole('button', { name: /create new instance/i })).toBeVisible();

@@ -244,6 +244,11 @@ export function LeftSidebar() {
                     </span>
                   )}
                   <StatusDot status={inst.status} size="sm" />
+                  {inst.machineType === 'remote' && (
+                    <span className="text-accent flex-shrink-0" title="Remote instance">
+                      <Icons.wifi />
+                    </span>
+                  )}
                   <EditableName
                     name={inst.name}
                     isEditing={editingId === inst.id}
@@ -295,6 +300,11 @@ export function LeftSidebar() {
                   </span>
                 )}
                 <StatusDot status={inst.status} size="sm" />
+                {inst.machineType === 'remote' && (
+                  <span className="text-accent flex-shrink-0" title="Remote instance">
+                    <Icons.wifi />
+                  </span>
+                )}
                 <EditableName
                   name={inst.name}
                   isEditing={editingId === inst.id}

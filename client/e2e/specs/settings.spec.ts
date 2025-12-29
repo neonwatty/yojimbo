@@ -171,12 +171,19 @@ test.describe('Claude Code Aliases Settings', () => {
     // Click Add Alias button
     await basePage.page.locator('text=Add Alias').click();
 
-    // Fill in the new alias form (using partial placeholder match)
-    await basePage.page.locator('input[placeholder*="Alias name"]').fill('Test Alias');
-    await basePage.page.locator('input[placeholder*="Command"]').fill('claude --verbose');
+    // Wait for the form to appear
+    const addForm = basePage.page.locator('.mb-3.space-y-2').filter({ has: basePage.page.locator('input[placeholder*="Alias name"]') });
+    await expect(addForm).toBeVisible();
 
-    // Click Add button to confirm
-    await basePage.page.locator('button:has-text("Add")').last().click();
+    // Fill in the form
+    await addForm.locator('input[placeholder*="Alias name"]').fill('Test Alias');
+    await addForm.locator('input[placeholder*="Command"]').fill('claude --verbose');
+
+    // Click Add button within the form
+    await addForm.locator('button:has-text("Add")').click();
+
+    // Wait for the form to close (form should disappear)
+    await expect(addForm).not.toBeVisible();
 
     // The new alias should appear in the list
     await expect(basePage.page.locator('text=Test Alias')).toBeVisible();
@@ -189,9 +196,20 @@ test.describe('Claude Code Aliases Settings', () => {
 
     // First add a new alias to delete
     await basePage.page.locator('text=Add Alias').click();
-    await basePage.page.locator('input[placeholder*="Alias name"]').fill('To Delete');
-    await basePage.page.locator('input[placeholder*="Command"]').fill('claude --test');
-    await basePage.page.locator('button:has-text("Add")').last().click();
+
+    // Wait for the form to appear
+    const addForm = basePage.page.locator('.mb-3.space-y-2').filter({ has: basePage.page.locator('input[placeholder*="Alias name"]') });
+    await expect(addForm).toBeVisible();
+
+    // Fill in the form
+    await addForm.locator('input[placeholder*="Alias name"]').fill('To Delete');
+    await addForm.locator('input[placeholder*="Command"]').fill('claude --test');
+
+    // Click Add button within the form
+    await addForm.locator('button:has-text("Add")').click();
+
+    // Wait for the form to close
+    await expect(addForm).not.toBeVisible();
 
     // Verify it was added
     await expect(basePage.page.locator('text=To Delete')).toBeVisible();

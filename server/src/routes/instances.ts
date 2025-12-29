@@ -1,9 +1,10 @@
 import { Router } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { getDatabase } from '../db/connection.js';
-import { ptyService } from '../services/pty.service.js';
+import { terminalManager } from '../services/terminal-manager.service.js';
+import { sshConnectionService } from '../services/ssh-connection.service.js';
 import { broadcast } from '../websocket/server.js';
-import type { Instance, CreateInstanceRequest, UpdateInstanceRequest, InstanceStatus } from '@cc-orchestrator/shared';
+import type { Instance, CreateInstanceRequest, UpdateInstanceRequest, InstanceStatus, MachineType } from '@cc-orchestrator/shared';
 
 const router = Router();
 
@@ -16,6 +17,8 @@ interface InstanceRow {
   is_pinned: number;
   display_order: number;
   pid: number | null;
+  machine_type: MachineType;
+  machine_id: string | null;
   created_at: string;
   updated_at: string;
   closed_at: string | null;
@@ -32,6 +35,8 @@ function rowToInstance(row: InstanceRow): Instance {
     isPinned: Boolean(row.is_pinned),
     displayOrder: row.display_order,
     pid: row.pid,
+    machineType: row.machine_type || 'local',
+    machineId: row.machine_id,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     closedAt: row.closed_at,
@@ -55,12 +60,25 @@ router.get('/', (_req, res) => {
 });
 
 // POST /api/instances - Create new instance
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   try {
-    const { name, workingDir, startupCommand } = req.body as CreateInstanceRequest;
+    const { name, workingDir, startupCommand, machineType = 'local', machineId } = req.body as CreateInstanceRequest;
 
     if (!name || !workingDir) {
       return res.status(400).json({ success: false, error: 'Name and workingDir are required' });
+    }
+
+    // Validate machine type
+    if (machineType === 'remote') {
+      if (!machineId) {
+        return res.status(400).json({ success: false, error: 'machineId is required for remote instances' });
+      }
+
+      // Verify the machine exists and get its config
+      const sshConfig = sshConnectionService.getMachineSSHConfig(machineId);
+      if (!sshConfig) {
+        return res.status(404).json({ success: false, error: 'Remote machine not found' });
+      }
     }
 
     const db = getDatabase();
@@ -70,24 +88,45 @@ router.post('/', (req, res) => {
     const maxOrder = db.prepare('SELECT MAX(display_order) as max FROM instances WHERE closed_at IS NULL').get() as { max: number | null } | undefined;
     const displayOrder = (maxOrder?.max || 0) + 1;
 
-    // Spawn PTY
-    const ptyInstance = ptyService.spawn(id, workingDir);
-    const pid = ptyInstance.pty.pid;
+    // Spawn terminal backend (local PTY or SSH)
+    try {
+      await terminalManager.spawn(id, {
+        type: machineType === 'remote' ? 'ssh' : 'local',
+        machineId: machineId || undefined,
+        workingDir,
+      });
+    } catch (err) {
+      console.error(`Error spawning terminal for instance ${id}:`, err);
+      return res.status(500).json({
+        success: false,
+        error: machineType === 'remote'
+          ? `Failed to connect to remote machine: ${(err as Error).message}`
+          : 'Failed to spawn terminal'
+      });
+    }
 
-    // Execute startup command if provided (after a small delay for shell to be ready)
+    // Get PID (only available for local instances)
+    const pid = terminalManager.getPid(id);
+
+    // Execute startup command if provided (after delay for shell to be ready)
+    // For SSH backends, we need extra time for shell initialization, profile sourcing, and cd command
+    // Note: For remote instances, we wait longer to allow the client to connect and send
+    // the initial resize event, which ensures the PTY has the correct dimensions before
+    // starting interactive TUI programs like Claude Code.
     if (startupCommand) {
+      const delay = machineType === 'remote' ? 1500 : 100;
       setTimeout(() => {
-        if (ptyService.has(id)) {
-          ptyService.write(id, startupCommand + '\n');
+        if (terminalManager.has(id)) {
+          terminalManager.write(id, startupCommand + '\n');
         }
-      }, 100);
+      }, delay);
     }
 
     // Insert into database
     db.prepare(`
-      INSERT INTO instances (id, name, working_dir, status, display_order, pid)
-      VALUES (?, ?, ?, 'idle', ?, ?)
-    `).run(id, name, workingDir, displayOrder, pid);
+      INSERT INTO instances (id, name, working_dir, status, display_order, pid, machine_type, machine_id)
+      VALUES (?, ?, ?, 'idle', ?, ?, ?, ?)
+    `).run(id, name, workingDir, displayOrder, pid, machineType, machineId || null);
 
     const row = db.prepare('SELECT * FROM instances WHERE id = ?').get(id) as InstanceRow;
     const instance = rowToInstance(row);
@@ -170,7 +209,7 @@ router.patch('/:id', (req, res) => {
 });
 
 // DELETE /api/instances/:id - Close instance
-router.delete('/:id', (req, res) => {
+router.delete('/:id', async (req, res) => {
   try {
     const db = getDatabase();
     const { id } = req.params;
@@ -181,8 +220,8 @@ router.delete('/:id', (req, res) => {
       return res.status(404).json({ success: false, error: 'Instance not found' });
     }
 
-    // Kill PTY if running
-    ptyService.kill(id);
+    // Kill terminal backend if running
+    await terminalManager.kill(id);
 
     // Mark as closed in database
     db.prepare(`
@@ -211,11 +250,11 @@ router.post('/:id/input', (req, res) => {
       return res.status(400).json({ success: false, error: 'Data is required' });
     }
 
-    if (!ptyService.has(id)) {
-      return res.status(404).json({ success: false, error: 'Instance PTY not found' });
+    if (!terminalManager.has(id)) {
+      return res.status(404).json({ success: false, error: 'Instance terminal not found' });
     }
 
-    ptyService.write(id, data);
+    terminalManager.write(id, data);
     res.json({ success: true });
   } catch (error) {
     console.error('Error sending input:', error);

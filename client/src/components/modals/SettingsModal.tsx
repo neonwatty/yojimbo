@@ -3,6 +3,7 @@ import { useSettingsStore } from '../../store/settingsStore';
 import { settingsApi } from '../../api/client';
 import { toast } from '../../store/toastStore';
 import { Icons } from '../common/Icons';
+import { RemoteMachinesSection } from '../settings/RemoteMachinesSection';
 import type { ClaudeCodeAlias, ActivityEventType } from '@cc-orchestrator/shared';
 
 interface SettingsModalProps {
@@ -358,6 +359,9 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
               ))}
             </div>
           </div>
+
+          {/* Remote Machines Section */}
+          <RemoteMachinesSection />
 
           {/* Activity Feed Section */}
           <div className="pt-4 mt-4 border-t border-surface-600">

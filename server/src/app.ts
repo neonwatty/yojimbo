@@ -11,6 +11,9 @@ import settingsRouter from './routes/settings.js';
 import filesystemRouter from './routes/filesystem.js';
 import feedRouter from './routes/feed.js';
 import summariesRouter from './routes/summaries.js';
+import machinesRouter from './routes/machines.js';
+import sshRouter from './routes/ssh.js';
+import portForwardsRouter from './routes/port-forwards.js';
 import CONFIG from './config/index.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -46,6 +49,9 @@ app.use('/api/settings', settingsRouter);
 app.use('/api/filesystem', filesystemRouter);
 app.use('/api/feed', feedRouter);
 app.use('/api/summaries', summariesRouter);
+app.use('/api/machines', machinesRouter);
+app.use('/api/ssh', sshRouter);
+app.use('/api/instances', portForwardsRouter);
 
 // Health check
 app.get('/api/health', (_req, res) => {

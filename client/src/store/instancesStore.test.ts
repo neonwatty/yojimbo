@@ -10,6 +10,8 @@ const createMockInstance = (id: string, overrides?: Partial<Instance>): Instance
   isPinned: false,
   displayOrder: 0,
   pid: null,
+  machineType: 'local',
+  machineId: null,
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
   closedAt: null,

@@ -75,7 +75,15 @@ function InstanceDrawer({
         </div>
 
         {/* Instance List */}
-        <div className="flex-1 px-4 pb-4 min-h-0 mobile-scroll">
+        <div
+          className="flex-1 px-4 pb-4 min-h-0"
+          style={{
+            overflowY: 'scroll',
+            WebkitOverflowScrolling: 'touch',
+            touchAction: 'pan-y',
+            overscrollBehavior: 'contain'
+          }}
+        >
           <div className="space-y-2">
             {instances.map(instance => (
               <button
@@ -135,6 +143,7 @@ function SettingsDrawer({
   isIOS,
   isIOSSafari,
   onOpenSettings,
+  onNavigateHome,
 }: {
   isOpen: boolean;
   onClose: () => void;
@@ -146,6 +155,7 @@ function SettingsDrawer({
   isIOS: boolean;
   isIOSSafari: boolean;
   onOpenSettings: () => void;
+  onNavigateHome: () => void;
 }) {
   const touchRef = useRef({ startY: 0 });
 
@@ -274,17 +284,32 @@ function SettingsDrawer({
             </div>
           )}
 
-          {/* Settings button */}
-          <button
-            onClick={() => {
-              onOpenSettings();
-              onClose();
-            }}
-            className="w-full flex items-center justify-center gap-2 py-3 mt-2 bg-surface-600 rounded-xl active:scale-[0.98] transition-transform"
-          >
-            <Icons.settings />
-            <span className="text-sm text-theme-primary">Settings</span>
-          </button>
+          {/* Action buttons */}
+          <div className="flex gap-2 mt-3">
+            {/* Home button */}
+            <button
+              onClick={() => {
+                onNavigateHome();
+                onClose();
+              }}
+              className="flex-1 flex items-center justify-center gap-2 py-3 bg-surface-600 rounded-xl active:scale-[0.98] transition-transform"
+            >
+              <Icons.home />
+              <span className="text-sm text-theme-primary">Home</span>
+            </button>
+
+            {/* Settings button */}
+            <button
+              onClick={() => {
+                onOpenSettings();
+                onClose();
+              }}
+              className="flex-1 flex items-center justify-center gap-2 py-3 bg-surface-600 rounded-xl active:scale-[0.98] transition-transform"
+            >
+              <Icons.settings />
+              <span className="text-sm text-theme-primary">Settings</span>
+            </button>
+          </div>
         </div>
 
         {/* Handle */}
@@ -494,6 +519,7 @@ export function MobileLayout() {
           isIOS={isIOS}
           isIOSSafari={isIOSSafari}
           onOpenSettings={() => setShowSettingsModal(true)}
+          onNavigateHome={() => navigate('/')}
         />
       </div>
     );
@@ -539,6 +565,7 @@ export function MobileLayout() {
         isIOS={isIOS}
         isIOSSafari={isIOSSafari}
         onOpenSettings={() => setShowSettingsModal(true)}
+        onNavigateHome={() => navigate('/')}
       />
     </div>
   );

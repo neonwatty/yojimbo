@@ -122,8 +122,8 @@ test.describe('Plans Panel', () => {
     // Click the delete button
     await instancesPage.page.locator('button[title="Delete plan"]').click();
 
-    // Verify toast notification appears
-    await expect(instancesPage.page.locator('text=Plan deleted')).toBeVisible({ timeout: 5000 });
+    // Verify toast notification appears (use first() in case of multiple toasts)
+    await expect(instancesPage.page.locator('text=Plan deleted').first()).toBeVisible({ timeout: 5000 });
 
     // Verify plan is no longer in the list
     await expect(planFileButton).not.toBeVisible({ timeout: 5000 });
@@ -181,7 +181,7 @@ test.describe('Plans Panel', () => {
     await instancesPage.page.locator('button:has-text("Save")').click();
 
     // Verify toast notification appears
-    await expect(instancesPage.page.locator('text=Plan saved')).toBeVisible({ timeout: 5000 });
+    await expect(instancesPage.page.locator('text=Plan saved').first()).toBeVisible({ timeout: 5000 });
 
     // Verify file was updated
     await instancesPage.page.waitForTimeout(500);
@@ -235,7 +235,7 @@ test.describe('Plans Panel', () => {
     await instancesPage.page.keyboard.press('Meta+s');
 
     // Verify toast notification appears
-    await expect(instancesPage.page.locator('text=Plan saved')).toBeVisible({ timeout: 5000 });
+    await expect(instancesPage.page.locator('text=Plan saved').first()).toBeVisible({ timeout: 5000 });
 
     // Verify file was updated
     await instancesPage.page.waitForTimeout(500);

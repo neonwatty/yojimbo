@@ -21,9 +21,11 @@ test.describe('Desktop Layout', () => {
     const sidebar = basePage.page.locator('aside').first();
     await expect(sidebar).toBeVisible();
 
-    // Navigation links should be visible in sidebar
-    await expect(basePage.page.getByRole('link', { name: /home/i })).toBeVisible();
-    await expect(basePage.page.getByRole('link', { name: /instances/i })).toBeVisible();
+    // Sidebar should have the Sessions header
+    await expect(sidebar.getByText('Sessions')).toBeVisible();
+
+    // New instance button should be visible in sidebar
+    await expect(sidebar.getByRole('button', { name: /create new instance/i })).toBeVisible();
   });
 
   test('header is visible at desktop viewport', async ({ basePage }) => {
@@ -104,9 +106,12 @@ test.describe('Desktop Layout', () => {
     // Navigate to instances page
     await basePage.goto('/instances');
 
-    // Should see both instances
-    await expect(basePage.page.getByText('instance-1')).toBeVisible();
-    await expect(basePage.page.getByText('instance-2')).toBeVisible();
+    // Wait for page to load and instances to appear
+    await basePage.page.waitForLoadState('networkidle');
+
+    // Should see both instances (in sidebar or main content)
+    await expect(basePage.page.getByText('instance-1').first()).toBeVisible({ timeout: 5000 });
+    await expect(basePage.page.getByText('instance-2').first()).toBeVisible({ timeout: 5000 });
   });
 
   test('panels toggle correctly in instance view', async ({ basePage, apiClient }) => {

@@ -321,7 +321,7 @@ function SettingsDrawer({
   );
 }
 
-// Mobile Terminal View with gesture zones
+// Mobile Terminal View - gestures handled by floating buttons instead
 function MobileTerminalView({
   instanceId,
   onTopGesture,
@@ -334,35 +334,10 @@ function MobileTerminalView({
   terminalRef: React.RefObject<TerminalRef>;
 }) {
   const { theme } = useSettingsStore();
-  const touchStartY = useRef(0);
-
-  // Top zone: swipe down to open settings
-  const handleTopTouchStart = useCallback((e: React.TouchEvent) => {
-    touchStartY.current = e.touches[0].clientY;
-  }, []);
-
-  const handleTopTouchEnd = useCallback((e: React.TouchEvent) => {
-    const deltaY = e.changedTouches[0].clientY - touchStartY.current;
-    if (deltaY > 50) {
-      onTopGesture();
-    }
-  }, [onTopGesture]);
-
-  // Bottom zone: swipe up to open instance list
-  const handleBottomTouchStart = useCallback((e: React.TouchEvent) => {
-    touchStartY.current = e.touches[0].clientY;
-  }, []);
-
-  const handleBottomTouchEnd = useCallback((e: React.TouchEvent) => {
-    const deltaY = e.changedTouches[0].clientY - touchStartY.current;
-    if (deltaY < -50) {
-      onBottomGesture();
-    }
-  }, [onBottomGesture]);
 
   return (
     <div className="flex-1 overflow-hidden relative bg-surface-900">
-      {/* Terminal */}
+      {/* Terminal - no touch handlers to interfere with input */}
       <ErrorBoundary
         fallback={
           <div className="flex items-center justify-center h-full">
@@ -382,21 +357,23 @@ function MobileTerminalView({
         />
       </ErrorBoundary>
 
-      {/* Top gesture zone - swipe down for settings */}
-      <div
-        className="absolute top-0 left-0 right-0 h-16 z-10"
-        style={{ touchAction: 'none' }}
-        onTouchStart={handleTopTouchStart}
-        onTouchEnd={handleTopTouchEnd}
-      />
-
-      {/* Bottom gesture zone - swipe up for instances */}
-      <div
-        className="absolute bottom-0 left-0 right-0 h-16 z-10"
-        style={{ touchAction: 'none' }}
-        onTouchStart={handleBottomTouchStart}
-        onTouchEnd={handleBottomTouchEnd}
-      />
+      {/* Floating buttons for navigation instead of gestures */}
+      <div className="absolute top-2 right-2 z-20 flex gap-2">
+        <button
+          onClick={onTopGesture}
+          className="w-10 h-10 rounded-full bg-surface-700/80 backdrop-blur flex items-center justify-center active:scale-95 transition-transform"
+        >
+          <Icons.settings />
+        </button>
+      </div>
+      <div className="absolute bottom-2 right-2 z-20">
+        <button
+          onClick={onBottomGesture}
+          className="w-10 h-10 rounded-full bg-surface-700/80 backdrop-blur flex items-center justify-center active:scale-95 transition-transform"
+        >
+          <Icons.instances />
+        </button>
+      </div>
     </div>
   );
 }

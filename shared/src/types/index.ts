@@ -35,6 +35,7 @@ export interface RemoteMachine {
   port: number;
   username: string;
   sshKeyPath: string | null;
+  forwardCredentials: boolean;
   status: MachineStatus;
   lastConnectedAt: string | null;
   createdAt: string;
@@ -47,6 +48,7 @@ export interface CreateMachineRequest {
   port?: number;
   username: string;
   sshKeyPath?: string;
+  forwardCredentials?: boolean;
 }
 
 export interface UpdateMachineRequest {
@@ -55,6 +57,7 @@ export interface UpdateMachineRequest {
   port?: number;
   username?: string;
   sshKeyPath?: string;
+  forwardCredentials?: boolean;
 }
 
 // Port Forward types

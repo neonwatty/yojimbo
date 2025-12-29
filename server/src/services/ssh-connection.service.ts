@@ -13,6 +13,7 @@ interface RemoteMachineRow {
   port: number;
   username: string;
   ssh_key_path: string | null;
+  forward_credentials: number;
   status: MachineStatus;
   last_connected_at: string | null;
   created_at: string;
@@ -200,7 +201,130 @@ class SSHConnectionService {
       port: row.port,
       username: row.username,
       privateKeyPath: row.ssh_key_path || undefined,
+      forwardCredentials: Boolean(row.forward_credentials),
     };
+  }
+
+  /**
+   * List directories on a remote machine
+   */
+  async listDirectories(
+    machineId: string,
+    remotePath: string
+  ): Promise<{ success: boolean; path?: string; directories?: string[]; error?: string }> {
+    const config = this.getMachineSSHConfig(machineId);
+    if (!config) {
+      return { success: false, error: 'Machine not found' };
+    }
+
+    return new Promise((resolve) => {
+      const client = new Client();
+      const timeout = setTimeout(() => {
+        client.end();
+        resolve({ success: false, error: 'Connection timeout' });
+      }, 15000);
+
+      // Read private key
+      let privateKey: Buffer | undefined;
+      if (config.privateKeyPath) {
+        const keyPath = config.privateKeyPath.replace(/^~/, os.homedir());
+        try {
+          privateKey = fs.readFileSync(keyPath);
+        } catch (err) {
+          clearTimeout(timeout);
+          resolve({ success: false, error: `Failed to read SSH key: ${keyPath}` });
+          return;
+        }
+      } else {
+        // Try default keys
+        const defaultKeys = ['id_ed25519', 'id_rsa', 'id_ecdsa'];
+        for (const keyName of defaultKeys) {
+          const keyPath = `${os.homedir()}/.ssh/${keyName}`;
+          if (fs.existsSync(keyPath)) {
+            try {
+              privateKey = fs.readFileSync(keyPath);
+              break;
+            } catch {
+              // Continue to next key
+            }
+          }
+        }
+      }
+
+      if (!privateKey) {
+        clearTimeout(timeout);
+        resolve({ success: false, error: 'No SSH private key found' });
+        return;
+      }
+
+      client.on('ready', () => {
+        // Expand ~ and get directories
+        // Use a command that:
+        // 1. Expands ~ to home directory
+        // 2. Lists only directories
+        // 3. Outputs the resolved path first, then directories
+        const cmd = `cd ${remotePath} 2>/dev/null && pwd && ls -1d */ 2>/dev/null | sed 's|/$||' || echo ""`;
+
+        client.exec(cmd, (err, stream) => {
+          if (err) {
+            clearTimeout(timeout);
+            client.end();
+            resolve({ success: false, error: err.message });
+            return;
+          }
+
+          let stdout = '';
+          let stderr = '';
+
+          stream.on('data', (data: Buffer) => {
+            stdout += data.toString();
+          });
+
+          stream.stderr.on('data', (data: Buffer) => {
+            stderr += data.toString();
+          });
+
+          stream.on('close', (code: number) => {
+            clearTimeout(timeout);
+            client.end();
+
+            if (code !== 0 && stderr) {
+              resolve({ success: false, error: stderr.trim() || 'Failed to list directories' });
+              return;
+            }
+
+            const lines = stdout.trim().split('\n').filter(Boolean);
+            if (lines.length === 0) {
+              resolve({ success: false, error: 'Directory not found or empty' });
+              return;
+            }
+
+            const resolvedPath = lines[0];
+            const directories = lines.slice(1).sort();
+
+            resolve({
+              success: true,
+              path: resolvedPath,
+              directories,
+            });
+          });
+        });
+      });
+
+      client.on('error', (err) => {
+        clearTimeout(timeout);
+        client.end();
+        resolve({ success: false, error: err.message });
+      });
+
+      client.connect({
+        host: config.host,
+        port: config.port,
+        username: config.username,
+        privateKey,
+        readyTimeout: 10000,
+      });
+    });
   }
 }
 

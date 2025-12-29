@@ -108,13 +108,15 @@ router.post('/', async (req, res) => {
     // Get PID (only available for local instances)
     const pid = terminalManager.getPid(id);
 
-    // Execute startup command if provided (after a small delay for shell to be ready)
+    // Execute startup command if provided (after delay for shell to be ready)
+    // For SSH backends, we need extra time for shell initialization, profile sourcing, and cd command
     if (startupCommand) {
+      const delay = machineType === 'remote' ? 800 : 100;
       setTimeout(() => {
         if (terminalManager.has(id)) {
           terminalManager.write(id, startupCommand + '\n');
         }
-      }, 100);
+      }, delay);
     }
 
     // Insert into database

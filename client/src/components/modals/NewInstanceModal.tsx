@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSettingsStore } from '../../store/settingsStore';
-import { instancesApi, filesystemApi, sessionsApi } from '../../api/client';
+import { instancesApi, filesystemApi, sessionsApi, machinesApi } from '../../api/client';
 import { useMachines } from '../../hooks/useMachines';
 import { toast } from '../../store/toastStore';
 import { Icons } from '../common/Icons';
@@ -42,6 +42,10 @@ export function NewInstanceModal({ isOpen, onClose }: NewInstanceModalProps) {
   const [availableSessions, setAvailableSessions] = useState<Session[]>([]);
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [loadingSessions, setLoadingSessions] = useState(false);
+  const [remoteDirs, setRemoteDirs] = useState<string[]>([]);
+  const [remoteDirPath, setRemoteDirPath] = useState<string>('~');
+  const [loadingRemoteDirs, setLoadingRemoteDirs] = useState(false);
+  const [showRemoteBrowser, setShowRemoteBrowser] = useState(false);
 
   // Check Claude CLI status on mount
   useEffect(() => {
@@ -70,6 +74,26 @@ export function NewInstanceModal({ isOpen, onClose }: NewInstanceModalProps) {
     }
   }, []);
 
+  // Fetch directories on remote machine
+  const fetchRemoteDirectories = useCallback(async (machineId: string, path: string) => {
+    if (!machineId) return;
+    setLoadingRemoteDirs(true);
+    try {
+      const response = await machinesApi.listDirectories(machineId, path);
+      if (response.data) {
+        setRemoteDirPath(response.data.path);
+        setRemoteDirs(response.data.directories);
+        setShowRemoteBrowser(true);
+      }
+    } catch {
+      // Error toast already shown by API client, just reset state
+      setRemoteDirs([]);
+      setShowRemoteBrowser(false);
+    } finally {
+      setLoadingRemoteDirs(false);
+    }
+  }, []);
+
   // Reset form when opening
   useEffect(() => {
     if (isOpen) {
@@ -82,6 +106,9 @@ export function NewInstanceModal({ isOpen, onClose }: NewInstanceModalProps) {
       setSelectedAliasId(defaultAlias?.id || '');
       setAvailableSessions([]);
       setSelectedSessionId(null);
+      setRemoteDirs([]);
+      setRemoteDirPath('~');
+      setShowRemoteBrowser(false);
     }
   }, [isOpen, lastUsedDirectory, lastInstanceMode, getDefaultAlias]);
 
@@ -180,9 +207,9 @@ export function NewInstanceModal({ isOpen, onClose }: NewInstanceModalProps) {
   const selectedAlias = claudeCodeAliases.find((a) => a.id === selectedAliasId);
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 overflow-y-auto py-8" onClick={onClose}>
       <div
-        className="bg-surface-700 rounded shadow-2xl max-w-md w-full mx-4"
+        className="bg-surface-700 rounded shadow-2xl max-w-md w-full mx-4 my-auto"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -249,7 +276,16 @@ export function NewInstanceModal({ isOpen, onClose }: NewInstanceModalProps) {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setMachineType('remote')}
+                  onClick={() => {
+                    setMachineType('remote');
+                    // Reset to home directory when switching to remote
+                    // since local paths won't exist on remote machine
+                    setWorkingDir('~');
+                    setName('');
+                    setShowRemoteBrowser(false);
+                    // Force terminal mode for remote machines
+                    setMode('terminal');
+                  }}
                   className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-colors
                     ${machineType === 'remote'
                       ? 'bg-frost-4/30 text-frost-2 border border-frost-4/50'
@@ -310,7 +346,8 @@ export function NewInstanceModal({ isOpen, onClose }: NewInstanceModalProps) {
               <button
                 type="button"
                 onClick={() => setMode('claude-code')}
-                disabled={!claudeStatus?.installed && !checkingClaude}
+                disabled={machineType === 'remote' || (!claudeStatus?.installed && !checkingClaude)}
+                title={machineType === 'remote' ? 'Claude Code is only available for local machines' : undefined}
                 className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed
                   ${mode === 'claude-code'
                     ? 'bg-frost-4/30 text-frost-2 border border-frost-4/50'
@@ -320,6 +357,11 @@ export function NewInstanceModal({ isOpen, onClose }: NewInstanceModalProps) {
                 Claude Code
               </button>
             </div>
+            {machineType === 'remote' && (
+              <p className="text-[10px] text-theme-dim mt-1">
+                Claude Code is only available for local machines. Use Terminal to run commands on remote machines.
+              </p>
+            )}
           </div>
 
           {/* Claude Code Alias Selector (only when Claude Code mode is selected) */}
@@ -363,24 +405,111 @@ export function NewInstanceModal({ isOpen, onClose }: NewInstanceModalProps) {
                 }}
               />
             ) : (
-              <div>
-                <input
-                  type="text"
-                  value={workingDir}
-                  onChange={(e) => {
-                    setWorkingDir(e.target.value);
-                    // Auto-generate name from directory if name is empty
-                    if (!name.trim()) {
-                      const dirName = e.target.value.split('/').filter(Boolean).pop() || 'New Project';
-                      setName(dirName);
-                    }
-                  }}
-                  placeholder="~/projects/my-app"
-                  className="w-full bg-surface-800 border border-surface-600 rounded px-3 py-1.5 text-xs text-theme-primary placeholder:text-theme-dim focus:outline-none focus:ring-1 focus:ring-frost-4/50 font-mono"
-                />
-                <p className="text-[10px] text-theme-dim mt-1">
-                  Enter the full path on the remote machine (e.g., ~/projects or /home/user/code)
-                </p>
+              <div className="space-y-2">
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={workingDir}
+                    onChange={(e) => {
+                      setWorkingDir(e.target.value);
+                      setShowRemoteBrowser(false);
+                      // Auto-generate name from directory if name is empty
+                      if (!name.trim()) {
+                        const dirName = e.target.value.split('/').filter(Boolean).pop() || 'New Project';
+                        setName(dirName);
+                      }
+                    }}
+                    placeholder="~/projects/my-app"
+                    className="flex-1 bg-surface-800 border border-surface-600 rounded px-3 py-1.5 text-xs text-theme-primary placeholder:text-theme-dim focus:outline-none focus:ring-1 focus:ring-frost-4/50 font-mono"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (showRemoteBrowser) {
+                        setShowRemoteBrowser(false);
+                      } else {
+                        fetchRemoteDirectories(selectedMachineId, workingDir || '~');
+                      }
+                    }}
+                    disabled={!selectedMachineId || loadingRemoteDirs}
+                    className="px-3 py-1.5 rounded text-xs font-medium bg-surface-600 text-theme-muted hover:text-theme-primary hover:bg-surface-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                  >
+                    {loadingRemoteDirs ? (
+                      <Spinner size="sm" />
+                    ) : (
+                      <>
+                        <Icons.folder />
+                        Browse
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {/* Remote Directory Browser */}
+                {showRemoteBrowser && remoteDirs.length >= 0 && (
+                  <div className="bg-surface-800 border border-surface-600 rounded p-2 max-h-48 overflow-y-auto">
+                    {/* Current path and parent navigation */}
+                    <div className="flex items-center gap-2 mb-2 pb-2 border-b border-surface-600">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          // Navigate to parent directory
+                          const parentPath = remoteDirPath.replace(/\/[^/]+\/?$/, '') || '/';
+                          fetchRemoteDirectories(selectedMachineId, parentPath);
+                        }}
+                        disabled={remoteDirPath === '/' || loadingRemoteDirs}
+                        className="p-1 rounded text-theme-muted hover:text-theme-primary hover:bg-surface-700 transition-colors disabled:opacity-50"
+                        title="Go to parent directory"
+                      >
+                        <Icons.chevronLeft />
+                      </button>
+                      <code className="text-[10px] text-theme-dim truncate flex-1">{remoteDirPath}</code>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setWorkingDir(remoteDirPath);
+                          setShowRemoteBrowser(false);
+                          // Auto-generate name from directory if name is empty
+                          if (!name.trim()) {
+                            const dirName = remoteDirPath.split('/').filter(Boolean).pop() || 'New Project';
+                            setName(dirName);
+                          }
+                        }}
+                        className="px-2 py-0.5 rounded text-[10px] font-medium bg-accent text-surface-900 hover:bg-accent-bright transition-colors"
+                      >
+                        Select
+                      </button>
+                    </div>
+
+                    {/* Directory list */}
+                    {remoteDirs.length === 0 ? (
+                      <p className="text-[10px] text-theme-dim text-center py-2">No subdirectories</p>
+                    ) : (
+                      <div className="space-y-0.5">
+                        {remoteDirs.map((dir) => (
+                          <button
+                            key={dir}
+                            type="button"
+                            onClick={() => {
+                              const newPath = remoteDirPath === '/' ? `/${dir}` : `${remoteDirPath}/${dir}`;
+                              fetchRemoteDirectories(selectedMachineId, newPath);
+                            }}
+                            className="w-full flex items-center gap-2 px-2 py-1 rounded text-xs text-theme-primary hover:bg-surface-700 transition-colors text-left"
+                          >
+                            <Icons.folder />
+                            <span className="truncate">{dir}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {!showRemoteBrowser && (
+                  <p className="text-[10px] text-theme-dim">
+                    Enter a path or click Browse to explore the remote machine
+                  </p>
+                )}
               </div>
             )}
           </div>

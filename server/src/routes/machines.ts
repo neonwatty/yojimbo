@@ -15,6 +15,7 @@ interface RemoteMachineRow {
   port: number;
   username: string;
   ssh_key_path: string | null;
+  forward_credentials: number;
   status: MachineStatus;
   last_connected_at: string | null;
   created_at: string;
@@ -30,6 +31,7 @@ function rowToMachine(row: RemoteMachineRow): RemoteMachine {
     port: row.port,
     username: row.username,
     sshKeyPath: row.ssh_key_path,
+    forwardCredentials: Boolean(row.forward_credentials),
     status: row.status,
     lastConnectedAt: row.last_connected_at,
     createdAt: row.created_at,
@@ -56,7 +58,7 @@ router.get('/', (_req, res) => {
 // POST /api/machines - Add a new remote machine
 router.post('/', (req, res) => {
   try {
-    const { name, hostname, port = 22, username, sshKeyPath } = req.body;
+    const { name, hostname, port = 22, username, sshKeyPath, forwardCredentials = false } = req.body;
 
     if (!name || !hostname || !username) {
       return res.status(400).json({
@@ -69,9 +71,9 @@ router.post('/', (req, res) => {
     const id = uuidv4();
 
     db.prepare(`
-      INSERT INTO remote_machines (id, name, hostname, port, username, ssh_key_path, status)
-      VALUES (?, ?, ?, ?, ?, ?, 'unknown')
-    `).run(id, name, hostname, port, username, sshKeyPath || null);
+      INSERT INTO remote_machines (id, name, hostname, port, username, ssh_key_path, forward_credentials, status)
+      VALUES (?, ?, ?, ?, ?, ?, ?, 'unknown')
+    `).run(id, name, hostname, port, username, sshKeyPath || null, forwardCredentials ? 1 : 0);
 
     const row = db.prepare('SELECT * FROM remote_machines WHERE id = ?').get(id) as RemoteMachineRow;
     const machine = rowToMachine(row);
@@ -108,7 +110,7 @@ router.get('/:id', (req, res) => {
 router.patch('/:id', (req, res) => {
   try {
     const db = getDatabase();
-    const { name, hostname, port, username, sshKeyPath } = req.body;
+    const { name, hostname, port, username, sshKeyPath, forwardCredentials } = req.body;
     const { id } = req.params;
 
     // Check if machine exists
@@ -143,6 +145,10 @@ router.patch('/:id', (req, res) => {
     if (sshKeyPath !== undefined) {
       updates.push('ssh_key_path = ?');
       values.push(sshKeyPath || null);
+    }
+    if (forwardCredentials !== undefined) {
+      updates.push('forward_credentials = ?');
+      values.push(forwardCredentials ? 1 : 0);
     }
 
     if (updates.length > 0) {
@@ -247,6 +253,40 @@ router.post('/:id/test', async (req, res) => {
   } catch (error) {
     console.error('Error testing machine connection:', error);
     res.status(500).json({ success: false, error: 'Failed to test connection' });
+  }
+});
+
+// GET /api/machines/:id/directories - List directories on remote machine
+router.get('/:id/directories', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { path = '~' } = req.query;
+
+    const db = getDatabase();
+    const existing = db
+      .prepare('SELECT * FROM remote_machines WHERE id = ?')
+      .get(id) as RemoteMachineRow | undefined;
+
+    if (!existing) {
+      return res.status(404).json({ success: false, error: 'Machine not found' });
+    }
+
+    const result = await sshConnectionService.listDirectories(id, path as string);
+
+    if (result.success) {
+      res.json({
+        success: true,
+        data: {
+          path: result.path,
+          directories: result.directories,
+        },
+      });
+    } else {
+      res.status(400).json({ success: false, error: result.error });
+    }
+  } catch (error) {
+    console.error('Error listing remote directories:', error);
+    res.status(500).json({ success: false, error: 'Failed to list directories' });
   }
 });
 

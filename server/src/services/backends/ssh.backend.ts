@@ -1,8 +1,42 @@
 import { Client, ClientChannel } from 'ssh2';
 import fs from 'fs';
 import os from 'os';
+import { execSync } from 'child_process';
 import { TerminalBackend, SpawnConfig, SSHConfig } from '../terminal-backend.js';
 import { CONFIG } from '../../config/index.js';
+
+/**
+ * Get Anthropic API key from environment or macOS keychain
+ * Returns the access token that can be used for API authentication
+ */
+function getAnthropicApiKey(): string | null {
+  // First check environment variable
+  if (process.env.ANTHROPIC_API_KEY) {
+    return process.env.ANTHROPIC_API_KEY;
+  }
+
+  // Try to read from macOS keychain (Claude Code OAuth credentials)
+  if (process.platform === 'darwin') {
+    try {
+      const username = os.userInfo().username;
+      const credentialsJson = execSync(
+        `security find-generic-password -s "Claude Code-credentials" -a "${username}" -w 2>/dev/null`,
+        { encoding: 'utf8', timeout: 5000 }
+      ).trim();
+
+      if (credentialsJson) {
+        const credentials = JSON.parse(credentialsJson);
+        if (credentials.claudeAiOauth?.accessToken) {
+          return credentials.claudeAiOauth.accessToken;
+        }
+      }
+    } catch {
+      // Keychain access failed or credentials not found
+    }
+  }
+
+  return null;
+}
 
 /**
  * SSH Backend - Remote terminal via SSH
@@ -133,6 +167,7 @@ export class SSHBackend extends TerminalBackend {
 
   /**
    * Start a shell session
+   * Uses exec with login shell (-l) to ensure full environment is loaded
    */
   private startShell(cols = 80, rows = 24): Promise<void> {
     return new Promise((resolve, reject) => {
@@ -143,7 +178,10 @@ export class SSHBackend extends TerminalBackend {
         rows,
       };
 
-      this.client.shell(ptyOptions, { env: { CC_INSTANCE_ID: this.id } }, (err, stream) => {
+      // Use exec with a login shell to ensure proper environment loading
+      // This is more reliable than shell() for getting the full user environment
+      // Using $SHELL -l to respect the user's configured shell
+      this.client.exec('exec $SHELL -l', { pty: ptyOptions }, (err, stream) => {
           if (err) {
             reject(err);
             return;
@@ -167,12 +205,31 @@ export class SSHBackend extends TerminalBackend {
             }
           });
 
-          // Change to working directory
-          if (this.initialWorkingDir) {
-            stream.write(`cd ${this.escapeShellArg(this.initialWorkingDir)}\n`);
-          }
+          // Wait for login shell to be ready before sending commands
+          setTimeout(() => {
+            if (this.channel) {
+              // Conditionally forward credentials from local machine
+              if (this.sshConfig.forwardCredentials) {
+                const apiKey = getAnthropicApiKey();
+                if (apiKey) {
+                  console.log(`[SSH ${this.id}] Forwarding Anthropic API key to remote session`);
+                  this.channel.write(`export ANTHROPIC_API_KEY=${this.escapeShellArg(apiKey)}\n`);
+                } else {
+                  console.log(`[SSH ${this.id}] Forward credentials enabled but no API key found locally`);
+                }
+              }
 
-          resolve();
+              // Change to working directory if specified and not home
+              if (this.initialWorkingDir && this.initialWorkingDir !== '~') {
+                // Handle tilde expansion: paths starting with ~ shouldn't be quoted
+                const cdPath = this.initialWorkingDir.startsWith('~/')
+                  ? `~/${this.escapeShellArg(this.initialWorkingDir.slice(2))}`
+                  : this.escapeShellArg(this.initialWorkingDir);
+                this.channel.write(`cd ${cdPath}\n`);
+              }
+            }
+            resolve();
+          }, 300);
         }
       );
     });

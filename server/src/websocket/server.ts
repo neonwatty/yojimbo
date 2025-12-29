@@ -74,28 +74,9 @@ export function initWebSocketServer(server: Server): WebSocketServer {
     });
   });
 
-  // Set up PTY output forwarding (legacy - for backwards compatibility)
-  ptyService.on('data', (instanceId: string, data: string) => {
-    broadcastToInstance(instanceId, {
-      type: 'terminal:output',
-      instanceId,
-      data,
-    });
-  });
-
-  ptyService.on('exit', (instanceId: string, exitCode: number) => {
-    console.log(`PTY ${instanceId} exited with code ${exitCode}`);
-    broadcast({
-      type: 'instance:closed',
-      instanceId,
-    });
-    // Clean up CWD tracking for this instance
-    lastKnownCwds.delete(instanceId);
-    // Clean up port forwards
-    portForwardService.closeInstanceForwards(instanceId);
-  });
-
-  // Set up terminal manager output forwarding (for new backends)
+  // Set up terminal manager output forwarding
+  // Note: ptyService is now a thin wrapper around terminalManager, so we only
+  // need to listen to terminalManager events to avoid duplicate broadcasts
   terminalManager.on('data', (instanceId: string, data: string) => {
     broadcastToInstance(instanceId, {
       type: 'terminal:output',

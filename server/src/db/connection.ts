@@ -162,6 +162,14 @@ function runMigrations(): void {
   } catch {
     // Index might already exist, ignore
   }
+
+  // Migration: add forward_credentials column to remote_machines
+  const machinesTableInfo = db.prepare("PRAGMA table_info(remote_machines)").all() as { name: string }[];
+  const machineColumns = new Set(machinesTableInfo.map((col) => col.name));
+  if (!machineColumns.has('forward_credentials')) {
+    console.log('🔧 Running migration: adding forward_credentials column to remote_machines');
+    db.exec('ALTER TABLE remote_machines ADD COLUMN forward_credentials INTEGER DEFAULT 0');
+  }
 }
 
 export function cleanupOldActivityEvents(retentionDays: number = 7): void {

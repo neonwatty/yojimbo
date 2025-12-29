@@ -248,6 +248,11 @@ export const machinesApi = {
       `/machines/${id}/test`,
       { method: 'POST' }
     ),
+
+  listDirectories: (id: string, path = '~') =>
+    request<ApiResponse<{ path: string; directories: string[] }>>(
+      `/machines/${id}/directories?path=${encodeURIComponent(path)}`
+    ),
 };
 
 // SSH API

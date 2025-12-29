@@ -66,6 +66,14 @@ export function RemoteMachinesSection() {
     setIsAddModalOpen(true);
   };
 
+  const handleToggleForwardCredentials = async (machine: RemoteMachine) => {
+    try {
+      await updateMachine(machine.id, { forwardCredentials: !machine.forwardCredentials });
+    } catch {
+      // Error toast handled by API layer
+    }
+  };
+
   const handleCloseModal = () => {
     setIsAddModalOpen(false);
     setEditMachine(null);
@@ -112,6 +120,11 @@ export function RemoteMachinesSection() {
               <li>Claude Code installed on the remote machine</li>
               <li>Your SSH key added to ~/.ssh/authorized_keys on remote</li>
             </ul>
+            <p className="font-medium text-theme-muted mt-3">For macOS remotes:</p>
+            <p className="ml-1">
+              Run <code className="bg-surface-700 px-1 rounded text-theme-muted">security unlock-keychain</code> on
+              the remote machine before starting Claude Code to allow keychain access.
+            </p>
           </div>
 
           <div className="text-center">
@@ -170,16 +183,31 @@ export function RemoteMachinesSection() {
                   </button>
                 </div>
               </div>
-              {machine.lastConnectedAt && (
-                <p className="text-[10px] text-theme-dim mt-1">
-                  Last connected: {new Date(machine.lastConnectedAt).toLocaleString()}
-                </p>
-              )}
+              <div className="flex items-center justify-between mt-2 pt-2 border-t border-surface-600">
+                <label className="flex items-center gap-2 cursor-pointer text-xs text-theme-muted">
+                  <input
+                    type="checkbox"
+                    checked={machine.forwardCredentials}
+                    onChange={() => handleToggleForwardCredentials(machine)}
+                    className="w-3.5 h-3.5 rounded border-surface-500 bg-surface-700 text-accent focus:ring-accent focus:ring-offset-0"
+                  />
+                  Forward local credentials
+                </label>
+                {machine.lastConnectedAt && (
+                  <span className="text-[10px] text-theme-dim">
+                    Last connected: {new Date(machine.lastConnectedAt).toLocaleString()}
+                  </span>
+                )}
+              </div>
             </div>
           ))}
 
           <p className="text-[10px] text-theme-dim mt-3 px-1">
             To use: Create a new session and select "Remote" → choose a machine. Dev server ports are automatically forwarded to localhost.
+          </p>
+          <p className="text-[10px] text-theme-dim mt-1 px-1">
+            <strong>macOS tip:</strong> Run <code className="bg-surface-700 px-1 rounded">security unlock-keychain</code> on
+            the remote before starting Claude Code to allow keychain access.
           </p>
         </div>
       )}

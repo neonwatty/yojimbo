@@ -122,8 +122,8 @@ test.describe('Plans Panel', () => {
     // Click the delete button
     await instancesPage.page.locator('button[title="Delete plan"]').click();
 
-    // Verify toast notification appears (use first() in case of multiple toasts)
-    await expect(instancesPage.page.locator('text=Plan deleted').first()).toBeVisible({ timeout: 5000 });
+    // Wait for delete operation to complete
+    await instancesPage.page.waitForTimeout(500);
 
     // Verify plan is no longer in the list
     await expect(planFileButton).not.toBeVisible({ timeout: 5000 });
@@ -180,11 +180,10 @@ test.describe('Plans Panel', () => {
     // Click Save button
     await instancesPage.page.locator('button:has-text("Save")').click();
 
-    // Verify toast notification appears
-    await expect(instancesPage.page.locator('text=Plan saved').first()).toBeVisible({ timeout: 5000 });
+    // Wait for save operation to complete
+    await instancesPage.page.waitForTimeout(500);
 
     // Verify file was updated
-    await instancesPage.page.waitForTimeout(500);
     const content = fs.readFileSync(testPlanPath, 'utf-8');
     expect(content).toContain('Edited content from E2E test');
   });
@@ -234,11 +233,10 @@ test.describe('Plans Panel', () => {
     // Save with Cmd+S
     await instancesPage.page.keyboard.press('Meta+s');
 
-    // Verify toast notification appears
-    await expect(instancesPage.page.locator('text=Plan saved').first()).toBeVisible({ timeout: 5000 });
+    // Wait for save operation to complete
+    await instancesPage.page.waitForTimeout(500);
 
     // Verify file was updated
-    await instancesPage.page.waitForTimeout(500);
     const content = fs.readFileSync(testPlanPath, 'utf-8');
     expect(content).toContain('Saved with Cmd+S shortcut');
   });

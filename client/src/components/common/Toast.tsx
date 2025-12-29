@@ -116,10 +116,18 @@ export function ToastContainer() {
   if (toasts.length === 0) return null;
 
   return (
-    <div className="fixed bottom-4 right-4 z-[100] flex flex-col gap-2">
-      {toasts.map((toast) => (
-        <Toast key={toast.id} toast={toast} />
-      ))}
-    </div>
+    <>
+      {/* Mobile: top position, Desktop: bottom-right */}
+      <div className="fixed top-4 left-4 right-4 z-[100] flex flex-col gap-2 items-center md:hidden">
+        {toasts.map((toast) => (
+          <Toast key={toast.id} toast={toast} />
+        ))}
+      </div>
+      <div className="fixed bottom-4 right-4 z-[100] flex-col gap-2 hidden md:flex">
+        {toasts.map((toast) => (
+          <Toast key={toast.id} toast={toast} />
+        ))}
+      </div>
+    </>
   );
 }

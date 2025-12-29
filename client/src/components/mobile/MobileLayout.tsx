@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useInstancesStore } from '../../store/instancesStore';
 import { useUIStore } from '../../store/uiStore';
@@ -6,10 +6,140 @@ import { useSettingsStore } from '../../store/settingsStore';
 import { useMobileLayout } from '../../hooks/useMobileLayout';
 import { useWebSocket } from '../../hooks/useWebSocket';
 import { getWsUrl } from '../../config';
+import { toast } from '../../store/toastStore';
+import { instancesApi } from '../../api/client';
 import { Terminal, type TerminalRef } from '../terminal';
 import { ErrorBoundary } from '../common/ErrorBoundary';
 import { Icons } from '../common/Icons';
 import type { Instance } from '@cc-orchestrator/shared';
+
+// Hook to detect landscape orientation
+function useOrientation() {
+  const [isLandscape, setIsLandscape] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth > window.innerHeight;
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsLandscape(window.innerWidth > window.innerHeight);
+    };
+
+    // Also listen for orientation change events
+    const handleOrientationChange = () => {
+      // Small delay to let the browser update dimensions
+      setTimeout(handleResize, 100);
+    };
+
+    window.addEventListener('resize', handleResize);
+    window.addEventListener('orientationchange', handleOrientationChange);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('orientationchange', handleOrientationChange);
+    };
+  }, []);
+
+  return isLandscape;
+}
+
+// Connection Status Indicator
+function ConnectionStatus({ isConnected }: { isConnected: boolean }) {
+  return (
+    <div className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-xs ${
+      isConnected ? 'bg-state-working/20 text-state-working' : 'bg-state-error/20 text-state-error'
+    }`}>
+      <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-state-working' : 'bg-state-error'}`} />
+      <span>{isConnected ? 'Connected' : 'Disconnected'}</span>
+    </div>
+  );
+}
+
+// Offline Indicator for PWA
+function OfflineIndicator() {
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  if (isOnline) return null;
+
+  return (
+    <div className="fixed top-0 left-0 right-0 bg-state-awaiting text-surface-900 text-xs text-center py-1 z-[200]">
+      You're offline - some features may be unavailable
+    </div>
+  );
+}
+
+// Long-press action sheet for instances
+function InstanceActionSheet({
+  isOpen,
+  onClose,
+  instance,
+  onDelete,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  instance: Instance | null;
+  onDelete: (id: string) => void;
+}) {
+  if (!isOpen || !instance) return null;
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 bg-black/60 z-[60]"
+        onClick={onClose}
+      />
+
+      {/* Action Sheet */}
+      <div
+        className="fixed left-2 right-2 bottom-2 bg-surface-700 rounded-2xl z-[60] overflow-hidden"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom, 0)' }}
+      >
+        <div className="p-4 border-b border-surface-600">
+          <h3 className="font-medium text-theme-primary">{instance.name}</h3>
+          <p className="text-xs text-theme-dim truncate">{instance.workingDir}</p>
+        </div>
+
+        <div className="p-2">
+          <button
+            onClick={() => {
+              onDelete(instance.id);
+              onClose();
+            }}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-state-error active:bg-surface-600"
+          >
+            <Icons.trash />
+            <span>Delete Instance</span>
+          </button>
+        </div>
+
+        <div className="p-2 border-t border-surface-600">
+          <button
+            onClick={onClose}
+            className="w-full py-3 rounded-xl text-theme-primary font-medium active:bg-surface-600"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </>
+  );
+}
 
 // Mobile Text Input - workaround for iOS speech-to-text issues with xterm.js
 function MobileTextInput({
@@ -58,11 +188,11 @@ function MobileTextInput({
     setText('');
   }, []);
 
-  // Collapsed state - just a microphone/keyboard button
+  // Collapsed state - just a microphone/keyboard button (right side for right-handed users)
   if (!isExpanded) {
     return (
       <div
-        className="absolute bottom-16 left-2 z-20"
+        className="absolute bottom-16 right-2 z-20"
         style={{ paddingBottom: 'env(safe-area-inset-bottom, 0)' }}
       >
         <button
@@ -161,6 +291,140 @@ function MobileTextInput({
   );
 }
 
+// Landscape Sidebar - persistent left sidebar for landscape mode
+function LandscapeSidebar({
+  instances,
+  selectedId,
+  onSelect,
+  onNewInstance,
+  onOpenSettings,
+  onLongPress,
+  isConnected,
+}: {
+  instances: Instance[];
+  selectedId: string | null;
+  onSelect: (id: string) => void;
+  onNewInstance: () => void;
+  onOpenSettings: () => void;
+  onLongPress: (instance: Instance) => void;
+  isConnected: boolean;
+}) {
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressTriggeredRef = useRef(false);
+
+  const handleInstanceTouchStart = (instance: Instance) => {
+    longPressTriggeredRef.current = false;
+    longPressTimerRef.current = setTimeout(() => {
+      longPressTriggeredRef.current = true;
+      onLongPress(instance);
+    }, 500);
+  };
+
+  const handleInstanceTouchEnd = (instance: Instance) => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+    if (!longPressTriggeredRef.current) {
+      onSelect(instance.id);
+    }
+  };
+
+  const handleInstanceTouchMove = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  };
+
+  return (
+    <div
+      className="h-full flex flex-col bg-surface-800 border-r border-surface-600"
+      style={{
+        width: '200px',
+        minWidth: '200px',
+        paddingTop: 'env(safe-area-inset-top, 0)',
+        paddingBottom: 'env(safe-area-inset-bottom, 0)',
+        paddingLeft: 'env(safe-area-inset-left, 0)',
+      }}
+    >
+      {/* Header */}
+      <div className="flex items-center justify-between p-3 border-b border-surface-600">
+        <h2 className="text-sm font-semibold text-theme-primary">Instances</h2>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onOpenSettings}
+            className="p-1.5 text-theme-dim hover:text-theme-primary rounded-lg hover:bg-surface-600 transition-colors"
+            aria-label="Settings"
+          >
+            <Icons.settings />
+          </button>
+        </div>
+      </div>
+
+      {/* Connection status */}
+      <div className="px-3 py-2 border-b border-surface-600/50">
+        <div className={`flex items-center gap-1.5 text-xs ${
+          isConnected ? 'text-state-working' : 'text-state-error'
+        }`}>
+          <div className={`w-1.5 h-1.5 rounded-full ${isConnected ? 'bg-state-working' : 'bg-state-error'}`} />
+          <span>{isConnected ? 'Connected' : 'Disconnected'}</span>
+        </div>
+      </div>
+
+      {/* Instance list */}
+      <div className="flex-1 overflow-y-auto py-2">
+        {instances.length === 0 ? (
+          <p className="text-xs text-theme-dim text-center py-4 px-3">No instances yet</p>
+        ) : (
+          <div className="flex flex-col gap-1 px-2">
+            {instances.map((instance) => (
+              <button
+                key={instance.id}
+                onTouchStart={() => handleInstanceTouchStart(instance)}
+                onTouchEnd={() => handleInstanceTouchEnd(instance)}
+                onTouchMove={handleInstanceTouchMove}
+                onClick={() => onSelect(instance.id)}
+                className={`w-full text-left p-2 rounded-lg transition-colors ${
+                  selectedId === instance.id
+                    ? 'bg-accent/20 border border-accent/50'
+                    : 'hover:bg-surface-600 active:bg-surface-500'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                    instance.status === 'working' ? 'bg-state-working' :
+                    instance.status === 'awaiting' ? 'bg-state-awaiting' :
+                    instance.status === 'error' ? 'bg-state-error' :
+                    'bg-surface-500'
+                  }`} />
+                  <span className="text-xs font-medium text-theme-primary truncate">
+                    {instance.name}
+                  </span>
+                </div>
+                <p className="text-[10px] text-theme-dim truncate mt-0.5 pl-4">
+                  {instance.workingDir.split('/').pop()}
+                </p>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* New Instance button */}
+      <div className="p-2 border-t border-surface-600">
+        <button
+          onClick={onNewInstance}
+          className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-accent text-surface-900 rounded-lg text-xs font-medium active:scale-95 transition-transform"
+        >
+          <Icons.plus />
+          New Instance
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // Instance Drawer (bottom, swipe up)
 function InstanceDrawer({
   isOpen,
@@ -169,6 +433,7 @@ function InstanceDrawer({
   selectedId,
   onSelect,
   onNewInstance,
+  onLongPress,
 }: {
   isOpen: boolean;
   onClose: () => void;
@@ -176,8 +441,11 @@ function InstanceDrawer({
   selectedId: string | null;
   onSelect: (id: string) => void;
   onNewInstance: () => void;
+  onLongPress: (instance: Instance) => void;
 }) {
   const touchRef = useRef({ startY: 0 });
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressTriggeredRef = useRef(false);
 
   const handleTouchStart = (e: React.TouchEvent) => {
     touchRef.current.startY = e.touches[0].clientY;
@@ -186,6 +454,34 @@ function InstanceDrawer({
   const handleTouchEnd = (e: React.TouchEvent) => {
     const deltaY = e.changedTouches[0].clientY - touchRef.current.startY;
     if (deltaY > 80) onClose();
+  };
+
+  const handleInstanceTouchStart = (instance: Instance) => {
+    longPressTriggeredRef.current = false;
+    longPressTimerRef.current = setTimeout(() => {
+      longPressTriggeredRef.current = true;
+      onLongPress(instance);
+    }, 500); // 500ms for long press
+  };
+
+  const handleInstanceTouchEnd = (instance: Instance) => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+    // Only trigger select if it wasn't a long press
+    if (!longPressTriggeredRef.current) {
+      onSelect(instance.id);
+      onClose();
+    }
+  };
+
+  const handleInstanceTouchMove = () => {
+    // Cancel long press if user moves finger
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
   };
 
   return (
@@ -226,6 +522,11 @@ function InstanceDrawer({
           </button>
         </div>
 
+        {/* Hint for long-press */}
+        {instances.length > 0 && (
+          <p className="text-xs text-theme-dim text-center pb-2">Long-press for options</p>
+        )}
+
         {/* Instance List */}
         <div
           className="flex-1 px-4 pb-4 min-h-0"
@@ -238,13 +539,12 @@ function InstanceDrawer({
         >
           <div className="space-y-2">
             {instances.map(instance => (
-              <button
+              <div
                 key={instance.id}
-                onClick={() => {
-                  onSelect(instance.id);
-                  onClose();
-                }}
-                className={`w-full p-4 rounded-xl text-left active:scale-[0.98] transition-all ${
+                onTouchStart={() => handleInstanceTouchStart(instance)}
+                onTouchEnd={() => handleInstanceTouchEnd(instance)}
+                onTouchMove={handleInstanceTouchMove}
+                className={`w-full p-4 rounded-xl text-left active:scale-[0.98] transition-all select-none ${
                   selectedId === instance.id
                     ? 'bg-surface-500 ring-2 ring-accent'
                     : 'bg-surface-600 active:bg-surface-500'
@@ -267,7 +567,7 @@ function InstanceDrawer({
                   )}
                 </div>
                 <p className="text-sm text-theme-dim mt-1 truncate pl-5">{instance.workingDir}</p>
-              </button>
+              </div>
             ))}
 
             {instances.length === 0 && (
@@ -294,6 +594,7 @@ function SettingsDrawer({
   fullscreenSupported,
   isIOS,
   isIOSSafari,
+  isConnected,
   onOpenSettings,
   onNavigateHome,
 }: {
@@ -306,6 +607,7 @@ function SettingsDrawer({
   fullscreenSupported: boolean;
   isIOS: boolean;
   isIOSSafari: boolean;
+  isConnected: boolean;
   onOpenSettings: () => void;
   onNavigateHome: () => void;
 }) {
@@ -365,6 +667,11 @@ function SettingsDrawer({
               No instance selected
             </div>
           )}
+
+          {/* Connection Status */}
+          <div className="flex justify-center py-2">
+            <ConnectionStatus isConnected={isConnected} />
+          </div>
 
           {/* Fullscreen / Add to Home Screen */}
           {!isStandalone && fullscreenSupported && (
@@ -473,7 +780,7 @@ function SettingsDrawer({
   );
 }
 
-// Mobile Terminal View - gestures handled by floating buttons instead
+// Mobile Terminal View - edge swipe gestures for navigation
 function MobileTerminalView({
   instanceId,
   onTopGesture,
@@ -486,48 +793,97 @@ function MobileTerminalView({
   terminalRef: React.RefObject<TerminalRef>;
 }) {
   const { theme } = useSettingsStore();
+  const containerRef = useRef<HTMLDivElement>(null);
+  const touchRef = useRef({ startY: 0, startX: 0, zone: null as string | null });
+
+  // Edge zone detection and gesture handling
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    const container = containerRef.current;
+    if (!container) return;
+
+    const rect = container.getBoundingClientRect();
+    const relativeY = touch.clientY - rect.top;
+    const height = rect.height;
+
+    // Determine which zone the touch started in
+    let zone: string | null = null;
+    if (relativeY < 60) {
+      zone = 'top';
+    } else if (relativeY > height - 60) {
+      zone = 'bottom';
+    }
+
+    touchRef.current = {
+      startY: touch.clientY,
+      startX: touch.clientX,
+      zone,
+    };
+  }, []);
+
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    const touch = e.changedTouches[0];
+    const { startY, startX, zone } = touchRef.current;
+
+    if (!zone) return; // Not started in an edge zone
+
+    const deltaY = touch.clientY - startY;
+    const deltaX = Math.abs(touch.clientX - startX);
+
+    // Must be primarily vertical swipe (not horizontal scroll)
+    if (deltaX > Math.abs(deltaY)) return;
+
+    // Minimum swipe distance
+    const minSwipe = 50;
+
+    if (zone === 'top' && deltaY > minSwipe) {
+      // Swipe down from top edge → open settings
+      onTopGesture();
+    } else if (zone === 'bottom' && deltaY < -minSwipe) {
+      // Swipe up from bottom edge → open instances
+      onBottomGesture();
+    }
+  }, [onTopGesture, onBottomGesture]);
 
   return (
-    <div className="flex-1 overflow-hidden relative bg-surface-900">
-      {/* Terminal - no touch handlers to interfere with input */}
-      <ErrorBoundary
-        fallback={
-          <div className="flex items-center justify-center h-full">
-            <div className="text-center p-6">
-              <span className="text-red-400 scale-150 inline-block mb-2">
-                <Icons.alertCircle />
-              </span>
-              <p className="text-theme-muted text-sm">Terminal failed to load</p>
+    <div
+      ref={containerRef}
+      className="flex-1 overflow-hidden relative bg-surface-900 w-full max-w-full"
+      style={{ maxWidth: '100vw' }}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
+      {/* Terminal - constrained to viewport width */}
+      <div className="absolute inset-0 overflow-hidden">
+        <ErrorBoundary
+          fallback={
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center p-6">
+                <span className="text-red-400 scale-150 inline-block mb-2">
+                  <Icons.alertCircle />
+                </span>
+                <p className="text-theme-muted text-sm">Terminal failed to load</p>
+              </div>
             </div>
-          </div>
-        }
-      >
-        <Terminal
-          ref={terminalRef}
-          instanceId={instanceId}
-          theme={theme === 'dark' ? 'dark' : 'light'}
-        />
-      </ErrorBoundary>
+          }
+        >
+          <Terminal
+            ref={terminalRef}
+            instanceId={instanceId}
+            theme={theme === 'dark' ? 'dark' : 'light'}
+          />
+        </ErrorBoundary>
+      </div>
 
       {/* Mobile Text Input - for speech-to-text workaround */}
       <MobileTextInput instanceId={instanceId} />
 
-      {/* Floating buttons for navigation instead of gestures */}
-      <div className="absolute top-2 right-2 z-20 flex gap-2">
-        <button
-          onClick={onTopGesture}
-          className="w-10 h-10 rounded-full bg-surface-700/80 backdrop-blur flex items-center justify-center active:scale-95 transition-transform"
-        >
-          <Icons.settings />
-        </button>
+      {/* Visual hint indicators (non-interactive) */}
+      <div className="absolute top-1 left-1/2 -translate-x-1/2 pointer-events-none z-10">
+        <div className="w-10 h-1 bg-surface-500/50 rounded-full" />
       </div>
-      <div className="absolute bottom-2 right-2 z-20">
-        <button
-          onClick={onBottomGesture}
-          className="w-10 h-10 rounded-full bg-surface-700/80 backdrop-blur flex items-center justify-center active:scale-95 transition-transform"
-        >
-          <Icons.instances />
-        </button>
+      <div className="absolute bottom-1 left-1/2 -translate-x-1/2 pointer-events-none z-10">
+        <div className="w-10 h-1 bg-surface-500/50 rounded-full" />
       </div>
     </div>
   );
@@ -600,12 +956,14 @@ function EmptyState({
 export function MobileLayout() {
   const navigate = useNavigate();
   const { id } = useParams();
-  const { instances, setActiveInstanceId } = useInstancesStore();
-  const { setShowSettingsModal, setShowNewInstanceModal } = useUIStore();
+  const { instances, setActiveInstanceId, removeInstance } = useInstancesStore();
+  const { setShowSettingsModal, setShowNewInstanceModal, isConnected } = useUIStore();
   const { isFullscreen, isStandalone, fullscreenSupported, isIOS, isIOSSafari, toggleFullscreen } = useMobileLayout();
+  const isLandscape = useOrientation();
 
   const [bottomDrawerOpen, setBottomDrawerOpen] = useState(false);
   const [topDrawerOpen, setTopDrawerOpen] = useState(false);
+  const [actionSheetInstance, setActionSheetInstance] = useState<Instance | null>(null);
 
   const terminalRefs = useRef<Map<string, TerminalRef>>(new Map());
 
@@ -613,9 +971,13 @@ export function MobileLayout() {
 
   // Handle instance selection
   const handleSelectInstance = useCallback((instanceId: string) => {
+    const instance = instances.find(i => i.id === instanceId);
     setActiveInstanceId(instanceId);
     navigate(`/instances/${instanceId}`);
-  }, [navigate, setActiveInstanceId]);
+    if (instance) {
+      toast.info(`Switched to ${instance.name}`, 2000);
+    }
+  }, [navigate, setActiveInstanceId, instances]);
 
   // Handle new instance
   const handleNewInstance = useCallback(() => {
@@ -623,83 +985,211 @@ export function MobileLayout() {
     setShowNewInstanceModal(true);
   }, [setShowNewInstanceModal]);
 
+  // Handle long-press on instance
+  const handleInstanceLongPress = useCallback((instance: Instance) => {
+    setActionSheetInstance(instance);
+  }, []);
+
+  // Handle instance deletion
+  const handleDeleteInstance = useCallback(async (instanceId: string) => {
+    try {
+      await instancesApi.close(instanceId);
+      removeInstance(instanceId);
+      toast.success('Instance deleted');
+      // Navigate away if we deleted the current instance
+      if (id === instanceId) {
+        navigate('/instances');
+      }
+    } catch {
+      toast.error('Failed to delete instance');
+    }
+  }, [id, navigate, removeInstance]);
+
   // If we have an ID but no matching instance, show empty state
   if (id && !currentInstance) {
+    // Landscape empty state
+    if (isLandscape) {
+      return (
+        <>
+          <OfflineIndicator />
+          <div className="h-full flex flex-row bg-surface-900">
+            <LandscapeSidebar
+              instances={instances}
+              selectedId={null}
+              onSelect={handleSelectInstance}
+              onNewInstance={handleNewInstance}
+              onOpenSettings={() => setShowSettingsModal(true)}
+              onLongPress={handleInstanceLongPress}
+              isConnected={isConnected}
+            />
+            <div className="flex-1 flex items-center justify-center">
+              <div className="text-center text-theme-dim">
+                <p className="text-sm">Instance not found</p>
+                <p className="text-xs mt-1">Select another instance from the sidebar</p>
+              </div>
+            </div>
+            <InstanceActionSheet
+              isOpen={!!actionSheetInstance}
+              onClose={() => setActionSheetInstance(null)}
+              instance={actionSheetInstance}
+              onDelete={handleDeleteInstance}
+            />
+          </div>
+        </>
+      );
+    }
+
+    // Portrait empty state
     return (
+      <>
+        <OfflineIndicator />
+        <div className="h-full flex flex-col bg-surface-900">
+          <EmptyState
+            onNewInstance={handleNewInstance}
+            onTopGesture={() => setTopDrawerOpen(true)}
+            onBottomGesture={() => setBottomDrawerOpen(true)}
+          />
+          <InstanceDrawer
+            isOpen={bottomDrawerOpen}
+            onClose={() => setBottomDrawerOpen(false)}
+            instances={instances}
+            selectedId={null}
+            onSelect={handleSelectInstance}
+            onNewInstance={handleNewInstance}
+            onLongPress={handleInstanceLongPress}
+          />
+          <SettingsDrawer
+            isOpen={topDrawerOpen}
+            onClose={() => setTopDrawerOpen(false)}
+            currentInstance={null}
+            onFullscreen={toggleFullscreen}
+            isFullscreen={isFullscreen}
+            isStandalone={isStandalone}
+            fullscreenSupported={fullscreenSupported}
+            isIOS={isIOS}
+            isIOSSafari={isIOSSafari}
+            isConnected={isConnected}
+            onOpenSettings={() => setShowSettingsModal(true)}
+            onNavigateHome={() => navigate('/')}
+          />
+          <InstanceActionSheet
+            isOpen={!!actionSheetInstance}
+            onClose={() => setActionSheetInstance(null)}
+            instance={actionSheetInstance}
+            onDelete={handleDeleteInstance}
+          />
+        </div>
+      </>
+    );
+  }
+
+  // Landscape layout: side-by-side with persistent sidebar
+  if (isLandscape) {
+    return (
+      <>
+        <OfflineIndicator />
+        <div className="h-full flex flex-row bg-surface-900">
+          {/* Left sidebar with instances */}
+          <LandscapeSidebar
+            instances={instances}
+            selectedId={currentInstance?.id || null}
+            onSelect={handleSelectInstance}
+            onNewInstance={handleNewInstance}
+            onOpenSettings={() => setShowSettingsModal(true)}
+            onLongPress={handleInstanceLongPress}
+            isConnected={isConnected}
+          />
+
+          {/* Main content area */}
+          <div className="flex-1 flex flex-col min-w-0">
+            {currentInstance ? (
+              <MobileTerminalView
+                key={currentInstance.id}
+                instanceId={currentInstance.id}
+                onTopGesture={() => {}} // No top gesture in landscape - settings in sidebar
+                onBottomGesture={() => {}} // No bottom gesture in landscape - list in sidebar
+                terminalRef={{ current: terminalRefs.current.get(currentInstance.id) || null } as React.RefObject<TerminalRef>}
+              />
+            ) : (
+              <div className="flex-1 flex items-center justify-center">
+                <div className="text-center text-theme-dim">
+                  <p className="text-sm">Select an instance from the sidebar</p>
+                  <p className="text-xs mt-1">or create a new one</p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Long-press action sheet */}
+          <InstanceActionSheet
+            isOpen={!!actionSheetInstance}
+            onClose={() => setActionSheetInstance(null)}
+            instance={actionSheetInstance}
+            onDelete={handleDeleteInstance}
+          />
+        </div>
+      </>
+    );
+  }
+
+  // Portrait layout: full-screen with drawer gestures
+  return (
+    <>
+      <OfflineIndicator />
       <div className="h-full flex flex-col bg-surface-900">
-        <EmptyState
-          onNewInstance={handleNewInstance}
-          onTopGesture={() => setTopDrawerOpen(true)}
-          onBottomGesture={() => setBottomDrawerOpen(true)}
-        />
+        {/* Main content */}
+        {currentInstance ? (
+          <MobileTerminalView
+            key={currentInstance.id}
+            instanceId={currentInstance.id}
+            onTopGesture={() => setTopDrawerOpen(true)}
+            onBottomGesture={() => setBottomDrawerOpen(true)}
+            terminalRef={{ current: terminalRefs.current.get(currentInstance.id) || null } as React.RefObject<TerminalRef>}
+          />
+        ) : (
+          <EmptyState
+            onNewInstance={handleNewInstance}
+            onTopGesture={() => setTopDrawerOpen(true)}
+            onBottomGesture={() => setBottomDrawerOpen(true)}
+          />
+        )}
+
+        {/* Bottom drawer - Instance list */}
         <InstanceDrawer
           isOpen={bottomDrawerOpen}
           onClose={() => setBottomDrawerOpen(false)}
           instances={instances}
-          selectedId={null}
+          selectedId={currentInstance?.id || null}
           onSelect={handleSelectInstance}
           onNewInstance={handleNewInstance}
+          onLongPress={handleInstanceLongPress}
         />
+
+        {/* Top drawer - Settings */}
         <SettingsDrawer
           isOpen={topDrawerOpen}
           onClose={() => setTopDrawerOpen(false)}
-          currentInstance={null}
+          currentInstance={currentInstance}
           onFullscreen={toggleFullscreen}
           isFullscreen={isFullscreen}
           isStandalone={isStandalone}
           fullscreenSupported={fullscreenSupported}
           isIOS={isIOS}
           isIOSSafari={isIOSSafari}
+          isConnected={isConnected}
           onOpenSettings={() => setShowSettingsModal(true)}
           onNavigateHome={() => navigate('/')}
         />
+
+        {/* Long-press action sheet */}
+        <InstanceActionSheet
+          isOpen={!!actionSheetInstance}
+          onClose={() => setActionSheetInstance(null)}
+          instance={actionSheetInstance}
+          onDelete={handleDeleteInstance}
+        />
       </div>
-    );
-  }
-
-  return (
-    <div className="h-full flex flex-col bg-surface-900">
-      {/* Main content */}
-      {currentInstance ? (
-        <MobileTerminalView
-          instanceId={currentInstance.id}
-          onTopGesture={() => setTopDrawerOpen(true)}
-          onBottomGesture={() => setBottomDrawerOpen(true)}
-          terminalRef={{ current: terminalRefs.current.get(currentInstance.id) || null } as React.RefObject<TerminalRef>}
-        />
-      ) : (
-        <EmptyState
-          onNewInstance={handleNewInstance}
-          onTopGesture={() => setTopDrawerOpen(true)}
-          onBottomGesture={() => setBottomDrawerOpen(true)}
-        />
-      )}
-
-      {/* Bottom drawer - Instance list */}
-      <InstanceDrawer
-        isOpen={bottomDrawerOpen}
-        onClose={() => setBottomDrawerOpen(false)}
-        instances={instances}
-        selectedId={currentInstance?.id || null}
-        onSelect={handleSelectInstance}
-        onNewInstance={handleNewInstance}
-      />
-
-      {/* Top drawer - Settings */}
-      <SettingsDrawer
-        isOpen={topDrawerOpen}
-        onClose={() => setTopDrawerOpen(false)}
-        currentInstance={currentInstance}
-        onFullscreen={toggleFullscreen}
-        isFullscreen={isFullscreen}
-        isStandalone={isStandalone}
-        fullscreenSupported={fullscreenSupported}
-        isIOS={isIOS}
-        isIOSSafari={isIOSSafari}
-        onOpenSettings={() => setShowSettingsModal(true)}
-        onNavigateHome={() => navigate('/')}
-      />
-    </div>
+    </>
   );
 }
 

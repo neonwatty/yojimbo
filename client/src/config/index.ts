@@ -1,15 +1,11 @@
 // Runtime configuration fetched from server
 interface AppConfig {
-  host: string;
   serverPort: number;
-  wsUrl: string;
 }
 
 // Default config (used before fetch completes or if fetch fails)
 let config: AppConfig = {
-  host: '127.0.0.1',
   serverPort: 3456,
-  wsUrl: `ws://${window.location.hostname}:3456/ws`,
 };
 
 let initialized = false;
@@ -39,9 +35,13 @@ export async function initConfig(): Promise<void> {
 
 /**
  * Get the WebSocket URL for connecting to the server.
+ * Uses window.location.hostname to work from any device on the network.
  */
 export function getWsUrl(): string {
-  return config.wsUrl;
+  // Use the same hostname the browser used to load the page
+  // This ensures it works when accessed locally or from another device
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  return `${protocol}//${window.location.hostname}:${config.serverPort}/ws`;
 }
 
 /**

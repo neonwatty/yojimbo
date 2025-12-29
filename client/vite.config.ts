@@ -32,9 +32,13 @@ function loadConfig(): AppConfig {
 }
 
 const config = loadConfig();
-const serverHost = config.host || '127.0.0.1';
+const configHost = config.host || '127.0.0.1';
 const serverPort = config.serverPort || 3456;
 const clientPort = config.clientPort || 5173;
+
+// For Vite's proxy, always use localhost since it's connecting locally
+// even when the server is bound to 0.0.0.0
+const proxyTarget = '127.0.0.1';
 
 // Load version from package.json
 const packageJson = JSON.parse(fs.readFileSync(path.resolve(__dirname, './package.json'), 'utf-8'));
@@ -51,9 +55,11 @@ export default defineConfig({
   },
   server: {
     port: clientPort,
+    // Bind to all interfaces when host is 0.0.0.0 to allow access from other devices
+    host: configHost === '0.0.0.0' ? true : configHost,
     proxy: {
       '/api': {
-        target: `http://${serverHost}:${serverPort}`,
+        target: `http://${proxyTarget}:${serverPort}`,
         changeOrigin: true,
         // Disable buffering for SSE streaming endpoints
         configure: (proxy) => {
@@ -67,7 +73,7 @@ export default defineConfig({
         },
       },
       '/ws': {
-        target: `ws://${serverHost}:${serverPort}`,
+        target: `ws://${proxyTarget}:${serverPort}`,
         ws: true,
       },
     },

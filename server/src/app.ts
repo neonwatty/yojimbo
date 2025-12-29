@@ -31,11 +31,11 @@ app.use(cors({
 app.use(express.json());
 
 // Config endpoint - provides runtime config to client
+// Note: We only return the port - the client uses window.location.hostname
+// to determine the host, which allows access from any device on the network
 app.get('/api/config', (_req, res) => {
   res.json({
-    host: CONFIG.host,
     serverPort: CONFIG.port,
-    wsUrl: `ws://${CONFIG.host}:${CONFIG.port}/ws`,
   });
 });
 

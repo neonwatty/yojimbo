@@ -110,8 +110,11 @@ router.post('/', async (req, res) => {
 
     // Execute startup command if provided (after delay for shell to be ready)
     // For SSH backends, we need extra time for shell initialization, profile sourcing, and cd command
+    // Note: For remote instances, we wait longer to allow the client to connect and send
+    // the initial resize event, which ensures the PTY has the correct dimensions before
+    // starting interactive TUI programs like Claude Code.
     if (startupCommand) {
-      const delay = machineType === 'remote' ? 800 : 100;
+      const delay = machineType === 'remote' ? 1500 : 100;
       setTimeout(() => {
         if (terminalManager.has(id)) {
           terminalManager.write(id, startupCommand + '\n');

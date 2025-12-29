@@ -207,9 +207,9 @@ export function NewInstanceModal({ isOpen, onClose }: NewInstanceModalProps) {
   const selectedAlias = claudeCodeAliases.find((a) => a.id === selectedAliasId);
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 overflow-y-auto py-8" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 overflow-y-auto py-8 sm:py-8" onClick={onClose}>
       <div
-        className="bg-surface-700 rounded shadow-2xl max-w-md w-full mx-4 my-auto"
+        className="bg-surface-700 shadow-2xl w-full mx-0 sm:mx-4 sm:my-auto sm:max-w-md sm:rounded max-sm:min-h-full max-sm:rounded-none max-sm:flex max-sm:flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -224,7 +224,7 @@ export function NewInstanceModal({ isOpen, onClose }: NewInstanceModalProps) {
         </div>
 
         {/* Content */}
-        <div className="px-4 py-3 space-y-3">
+        <div className="px-4 py-3 space-y-3 max-sm:overflow-y-auto max-sm:flex-1 mobile-scroll">
           {/* Claude CLI Warning */}
           {!checkingClaude && claudeStatus && !claudeStatus.installed && (
             <div className="flex items-start gap-2 p-2 bg-state-awaiting/10 border border-state-awaiting/20 rounded">
@@ -247,7 +247,7 @@ export function NewInstanceModal({ isOpen, onClose }: NewInstanceModalProps) {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="My Project"
-              className="w-full bg-surface-800 border border-surface-600 rounded px-3 py-1.5 text-xs text-theme-primary placeholder:text-theme-dim focus:outline-none focus:ring-1 focus:ring-frost-4/50"
+              className="w-full bg-surface-800 border border-surface-600 rounded px-3 py-3 sm:py-1.5 text-base sm:text-xs text-theme-primary placeholder:text-theme-dim focus:outline-none focus:ring-1 focus:ring-frost-4/50"
               autoFocus
             />
             {!name.trim() && (

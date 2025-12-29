@@ -5,7 +5,9 @@ import { useUIStore } from './store/uiStore';
 import { useInstancesStore } from './store/instancesStore';
 import { useInstances } from './hooks/useInstances';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
+import { useMobileLayout } from './hooks/useMobileLayout';
 import MainLayout from './components/layout/MainLayout';
+import { MobileLayout } from './components/mobile';
 import HomePage from './pages/HomePage';
 import InstancesPage from './pages/InstancesPage';
 import HistoryPage from './pages/HistoryPage';
@@ -20,6 +22,7 @@ function App() {
   const location = useLocation();
   const { theme } = useSettingsStore();
   const { instances, setActiveInstanceId } = useInstancesStore();
+  const { isMobile } = useMobileLayout();
   const {
     showShortcutsModal,
     showSettingsModal,
@@ -193,6 +196,31 @@ function App() {
     setShowCommandPalette,
   ]);
 
+  // Mobile layout - simplified full-screen terminal with gesture-based navigation
+  if (isMobile) {
+    return (
+      <>
+        <ErrorBoundary>
+          <Routes>
+            <Route path="/" element={<MobileLayout />} />
+            <Route path="/instances" element={<MobileLayout />} />
+            <Route path="/instances/:id" element={<MobileLayout />} />
+            {/* Redirect other routes to instances on mobile */}
+            <Route path="*" element={<Navigate to="/instances" replace />} />
+          </Routes>
+        </ErrorBoundary>
+
+        {/* Global Modals - still needed on mobile */}
+        <NewInstanceModal isOpen={showNewInstanceModal} onClose={() => setShowNewInstanceModal(false)} />
+        <SettingsModal isOpen={showSettingsModal} onClose={() => setShowSettingsModal(false)} />
+
+        {/* Toast Notifications */}
+        <ToastContainer />
+      </>
+    );
+  }
+
+  // Desktop layout - full featured with sidebar and panels
   return (
     <>
       <ErrorBoundary>

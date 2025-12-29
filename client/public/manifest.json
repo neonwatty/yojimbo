@@ -1,0 +1,18 @@
+{
+  "name": "Yojimbo - Claude Code Orchestrator",
+  "short_name": "Yojimbo",
+  "description": "Manage multiple Claude Code instances from a single interface",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1a1a2e",
+  "theme_color": "#1a1a2e",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

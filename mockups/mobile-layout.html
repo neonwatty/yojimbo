@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#0a0a0b">
+  <!-- PWA Manifest for Add to Home Screen -->
+  <link rel="manifest" href="data:application/json,{&quot;name&quot;:&quot;Yojimbo&quot;,&quot;short_name&quot;:&quot;Yojimbo&quot;,&quot;start_url&quot;:&quot;.&quot;,&quot;display&quot;:&quot;standalone&quot;,&quot;background_color&quot;:&quot;%230a0a0b&quot;,&quot;theme_color&quot;:&quot;%230a0a0b&quot;}">
+  <title>Yojimbo Mobile</title>
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      overflow: hidden;
+      touch-action: none;
+    }
+
+    #root {
+      height: 100dvh;
+      width: 100vw;
+      overflow: hidden;
+    }
+
+    body {
+      position: fixed;
+      width: 100%;
+      overscroll-behavior: none;
+    }
+
+    .drawer-transition {
+      transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+    }
+
+    .backdrop-transition {
+      transition: opacity 0.2s ease-out;
+    }
+
+    .terminal-text {
+      font-size: 13px;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    .safe-top {
+      padding-top: env(safe-area-inset-top, 0);
+    }
+
+    .safe-bottom {
+      padding-bottom: env(safe-area-inset-bottom, 0);
+    }
+
+    @keyframes pulse-handle {
+      0%, 100% { opacity: 0.4; }
+      50% { opacity: 0.7; }
+    }
+
+    .handle-pulse {
+      animation: pulse-handle 2s ease-in-out infinite;
+    }
+
+    .touch-active:active {
+      transform: scale(0.98);
+      opacity: 0.9;
+    }
+
+    /* Fullscreen button pulse */
+    @keyframes glow-pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4); }
+      50% { box-shadow: 0 0 0 8px rgba(245, 158, 11, 0); }
+    }
+
+    .glow-pulse {
+      animation: glow-pulse 2s ease-in-out infinite;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useRef, useCallback, useEffect } = React;
+
+    // ============================================
+    // THEME DEFINITIONS
+    // ============================================
+    const themes = {
+      // Theme 1: Original Dark (Midnight)
+      midnight: {
+        name: 'Midnight',
+        font: "'IBM Plex Sans', system-ui, sans-serif",
+        mono: "'JetBrains Mono', monospace",
+        colors: {
+          bg: '#0a0a0b',
+          surface: '#121214',
+          surfaceHover: '#1a1a1e',
+          surfaceActive: '#232328',
+          border: '#2d2d33',
+          text: '#e8e8e8',
+          textMuted: '#6b7280',
+          accent: '#f59e0b',
+          accentText: '#000000',
+          success: '#22c55e',
+          stopped: '#6b7280',
+        },
+        radius: '0.75rem',
+        drawerRadius: '1.5rem',
+      },
+
+      // Theme 2: Ocean Blue
+      ocean: {
+        name: 'Ocean',
+        font: "'Inter', system-ui, sans-serif",
+        mono: "'JetBrains Mono', monospace",
+        colors: {
+          bg: '#0c1222',
+          surface: '#131c31',
+          surfaceHover: '#1a2744',
+          surfaceActive: '#243555',
+          border: '#2d4263',
+          text: '#e2e8f0',
+          textMuted: '#64748b',
+          accent: '#0ea5e9',
+          accentText: '#ffffff',
+          success: '#10b981',
+          stopped: '#64748b',
+        },
+        radius: '0.5rem',
+        drawerRadius: '1.25rem',
+      },
+
+      // Theme 3: Warm Earth
+      earth: {
+        name: 'Earth',
+        font: "'Space Grotesk', system-ui, sans-serif",
+        mono: "'JetBrains Mono', monospace",
+        colors: {
+          bg: '#1a1512',
+          surface: '#241e19',
+          surfaceHover: '#2e2620',
+          surfaceActive: '#3a302a',
+          border: '#4a3f35',
+          text: '#f5f0eb',
+          textMuted: '#8b7b6b',
+          accent: '#d97706',
+          accentText: '#000000',
+          success: '#65a30d',
+          stopped: '#78716c',
+        },
+        radius: '0.375rem',
+        drawerRadius: '1rem',
+      },
+
+      // Theme 4: Neon Cyber
+      cyber: {
+        name: 'Cyber',
+        font: "'Space Grotesk', system-ui, sans-serif",
+        mono: "'JetBrains Mono', monospace",
+        colors: {
+          bg: '#0d0d0d',
+          surface: '#141414',
+          surfaceHover: '#1f1f1f',
+          surfaceActive: '#2a2a2a',
+          border: '#333333',
+          text: '#ffffff',
+          textMuted: '#666666',
+          accent: '#00ff88',
+          accentText: '#000000',
+          success: '#00ff88',
+          stopped: '#555555',
+        },
+        radius: '0px',
+        drawerRadius: '0px',
+      },
+
+      // Theme 5: Soft Purple
+      purple: {
+        name: 'Violet',
+        font: "'Inter', system-ui, sans-serif",
+        mono: "'JetBrains Mono', monospace",
+        colors: {
+          bg: '#13111c',
+          surface: '#1c1826',
+          surfaceHover: '#262033',
+          surfaceActive: '#322a45',
+          border: '#3d3455',
+          text: '#eee8ff',
+          textMuted: '#8b7fa8',
+          accent: '#a855f7',
+          accentText: '#ffffff',
+          success: '#4ade80',
+          stopped: '#6b7280',
+        },
+        radius: '1rem',
+        drawerRadius: '1.75rem',
+      },
+
+      // Theme 6: Minimal Light
+      light: {
+        name: 'Light',
+        font: "'Inter', system-ui, sans-serif",
+        mono: "'JetBrains Mono', monospace",
+        colors: {
+          bg: '#f8fafc',
+          surface: '#ffffff',
+          surfaceHover: '#f1f5f9',
+          surfaceActive: '#e2e8f0',
+          border: '#e2e8f0',
+          text: '#0f172a',
+          textMuted: '#64748b',
+          accent: '#0ea5e9',
+          accentText: '#ffffff',
+          success: '#22c55e',
+          stopped: '#94a3b8',
+        },
+        radius: '0.75rem',
+        drawerRadius: '1.5rem',
+      },
+    };
+
+    // ============================================
+    // MOCK DATA
+    // ============================================
+    const mockInstances = [
+      { id: '1', name: 'cc-hard-core', status: 'running', machineType: 'local', lastMessage: 'Working on mobile layout...' },
+      { id: '2', name: 'api-backend', status: 'running', machineType: 'remote', machineName: 'Mac Mini 1', lastMessage: 'Tests passing' },
+      { id: '3', name: 'docs-site', status: 'stopped', machineType: 'local', lastMessage: 'Build complete' },
+      { id: '4', name: 'data-pipeline', status: 'running', machineType: 'remote', machineName: 'Mac Mini 2', lastMessage: 'Processing batch...' },
+    ];
+
+    const mockTerminalOutput = `\x1b[36m╭─\x1b[0m cc-hard-core \x1b[90m(main)\x1b[0m
+\x1b[36m╰─\x1b[0m\x1b[33m$\x1b[0m claude
+
+\x1b[1;35m Claude Code\x1b[0m v1.0.0
+
+\x1b[32m●\x1b[0m Connected to Claude
+
+\x1b[90m> I'll help you create the mobile mockup. Let me start by setting up
+  the basic structure with a full-screen terminal view and gesture-
+  based navigation.\x1b[0m
+
+\x1b[36m╭─\x1b[0m Working on mockups/mobile-layout.html
+\x1b[36m│\x1b[0m  Creating React components for mobile layout...
+\x1b[36m│\x1b[0m  • MobileApp - Main container with gesture zones
+\x1b[36m│\x1b[0m  • TerminalView - Full-screen terminal display
+\x1b[36m│\x1b[0m  • InstanceDrawer - Bottom swipe-up drawer
+\x1b[36m│\x1b[0m  • SettingsDrawer - Top swipe-down drawer
+\x1b[36m╰─\x1b[0m
+
+\x1b[32m✓\x1b[0m Created mockups/mobile-layout.html
+
+\x1b[90m> The mockup includes touch gesture support. Want me to add more?
+\x1b[0m
+\x1b[36m╭─\x1b[0m cc-hard-core \x1b[90m(main)\x1b[0m
+\x1b[36m╰─\x1b[0m\x1b[33m$\x1b[0m `;
+
+    // ============================================
+    // ANSI PARSER
+    // ============================================
+    function parseAnsi(text, theme) {
+      const parts = [];
+      const regex = /\x1b\[([0-9;]*)m/g;
+      let lastIndex = 0;
+      let currentStyle = {};
+      let match;
+
+      const colorMap = {
+        '30': '#000', '31': '#f43f5e', '32': theme.colors.success, '33': theme.colors.accent,
+        '34': '#3b82f6', '35': '#a855f7', '36': '#06b6d4', '37': theme.colors.text,
+        '90': theme.colors.textMuted, '91': '#fb7185', '92': '#4ade80', '93': '#fbbf24',
+        '94': '#60a5fa', '95': '#c084fc', '96': '#22d3ee', '97': '#f8fafc',
+      };
+
+      while ((match = regex.exec(text)) !== null) {
+        if (match.index > lastIndex) {
+          parts.push({ text: text.slice(lastIndex, match.index), style: { ...currentStyle } });
+        }
+
+        const codes = match[1].split(';');
+        for (const code of codes) {
+          if (code === '0' || code === '') {
+            currentStyle = {};
+          } else if (code === '1') {
+            currentStyle.fontWeight = 'bold';
+          } else if (colorMap[code]) {
+            currentStyle.color = colorMap[code];
+          }
+        }
+
+        lastIndex = match.index + match[0].length;
+      }
+
+      if (lastIndex < text.length) {
+        parts.push({ text: text.slice(lastIndex), style: currentStyle });
+      }
+
+      return parts;
+    }
+
+    // ============================================
+    // FULLSCREEN HELPER
+    // ============================================
+    function useFullscreen() {
+      const [isFullscreen, setIsFullscreen] = useState(false);
+      const [isStandalone, setIsStandalone] = useState(false);
+
+      useEffect(() => {
+        // Check if running as PWA
+        const standalone = window.matchMedia('(display-mode: standalone)').matches
+          || window.navigator.standalone === true;
+        setIsStandalone(standalone);
+
+        const handleChange = () => {
+          setIsFullscreen(!!document.fullscreenElement);
+        };
+
+        document.addEventListener('fullscreenchange', handleChange);
+        return () => document.removeEventListener('fullscreenchange', handleChange);
+      }, []);
+
+      const toggleFullscreen = useCallback(async () => {
+        try {
+          if (!document.fullscreenElement) {
+            await document.documentElement.requestFullscreen();
+          } else {
+            await document.exitFullscreen();
+          }
+        } catch (err) {
+          console.log('Fullscreen not supported:', err);
+        }
+      }, []);
+
+      return { isFullscreen, isStandalone, toggleFullscreen };
+    }
+
+    // ============================================
+    // COMPONENTS
+    // ============================================
+
+    function TerminalView({ onTopGesture, onBottomGesture, theme }) {
+      const terminalRef = useRef(null);
+      const touchRef = useRef({ startY: 0, startTime: 0, zone: null });
+
+      const handleTouchStart = useCallback((e) => {
+        const touch = e.touches[0];
+        const rect = e.currentTarget.getBoundingClientRect();
+        const relativeY = touch.clientY - rect.top;
+        const height = rect.height;
+
+        let zone = 'middle';
+        if (relativeY < 60) zone = 'top';
+        else if (relativeY > height - 60) zone = 'bottom';
+
+        touchRef.current = {
+          startY: touch.clientY,
+          startTime: Date.now(),
+          zone
+        };
+      }, []);
+
+      const handleTouchEnd = useCallback((e) => {
+        const touch = e.changedTouches[0];
+        const { startY, startTime, zone } = touchRef.current;
+        const deltaY = touch.clientY - startY;
+        const deltaTime = Date.now() - startTime;
+        const velocity = Math.abs(deltaY) / deltaTime;
+
+        const minDistance = 50;
+        const minVelocity = 0.3;
+
+        if (Math.abs(deltaY) > minDistance || velocity > minVelocity) {
+          if (zone === 'top' && deltaY > 0) {
+            onTopGesture?.();
+          } else if (zone === 'bottom' && deltaY < 0) {
+            onBottomGesture?.();
+          }
+        }
+      }, [onTopGesture, onBottomGesture]);
+
+      const parsedOutput = parseAnsi(mockTerminalOutput, theme);
+
+      return (
+        <div
+          ref={terminalRef}
+          className="flex-1 overflow-hidden relative"
+          style={{ background: theme.colors.bg }}
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+        >
+          <div className="h-full overflow-y-auto p-4 touch-pan-y">
+            <div className="terminal-text" style={{ fontFamily: theme.mono, color: theme.colors.text }}>
+              {parsedOutput.map((part, i) => (
+                <span key={i} style={part.style}>{part.text}</span>
+              ))}
+              <span
+                className="inline-block w-2 h-4 animate-pulse ml-0.5"
+                style={{ background: theme.colors.accent }}
+              />
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function InstanceCard({ instance, isSelected, onSelect, theme }) {
+      const statusColor = instance.status === 'running' ? theme.colors.success : theme.colors.stopped;
+
+      return (
+        <button
+          onClick={() => onSelect(instance.id)}
+          className="w-full p-4 text-left touch-active transition-colors"
+          style={{
+            background: isSelected ? theme.colors.surfaceActive : theme.colors.surfaceHover,
+            borderRadius: theme.radius,
+            border: isSelected ? `2px solid ${theme.colors.accent}` : '2px solid transparent',
+          }}
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-2.5 h-2.5 rounded-full" style={{ background: statusColor }} />
+            <span className="font-medium flex-1 truncate" style={{ color: theme.colors.text }}>{instance.name}</span>
+            {instance.machineType === 'remote' && (
+              <span
+                className="text-xs px-2 py-0.5"
+                style={{
+                  background: theme.colors.surfaceActive,
+                  color: theme.colors.textMuted,
+                  borderRadius: theme.radius,
+                }}
+              >
+                {instance.machineName}
+              </span>
+            )}
+          </div>
+          <p className="text-sm mt-1 truncate pl-5" style={{ color: theme.colors.textMuted }}>{instance.lastMessage}</p>
+        </button>
+      );
+    }
+
+    function InstanceDrawer({ isOpen, onClose, instances, selectedId, onSelect, onNewInstance, theme }) {
+      const touchRef = useRef({ startY: 0 });
+
+      const handleTouchStart = (e) => {
+        touchRef.current.startY = e.touches[0].clientY;
+      };
+
+      const handleTouchEnd = (e) => {
+        const deltaY = e.changedTouches[0].clientY - touchRef.current.startY;
+        if (deltaY > 80) onClose();
+      };
+
+      return (
+        <>
+          <div
+            className={`fixed inset-0 backdrop-blur-sm backdrop-transition z-40 ${
+              isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+            }`}
+            style={{ background: 'rgba(0,0,0,0.6)' }}
+            onClick={onClose}
+          />
+
+          <div
+            className={`fixed left-0 right-0 bottom-0 z-50 drawer-transition safe-bottom ${
+              isOpen ? 'translate-y-0' : 'translate-y-full'
+            }`}
+            style={{
+              background: theme.colors.surface,
+              borderTopLeftRadius: theme.drawerRadius,
+              borderTopRightRadius: theme.drawerRadius,
+              maxHeight: '70vh',
+            }}
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
+          >
+            <div className="flex justify-center pt-3 pb-2">
+              <div className="w-10 h-1 rounded-full" style={{ background: theme.colors.border }} />
+            </div>
+
+            <div className="flex items-center justify-between px-5 pb-3">
+              <h2 className="text-lg font-semibold" style={{ color: theme.colors.text, fontFamily: theme.font }}>Instances</h2>
+              <button
+                onClick={onNewInstance}
+                className="flex items-center gap-2 px-4 py-2 font-medium touch-active"
+                style={{
+                  background: theme.colors.accent,
+                  color: theme.colors.accentText,
+                  borderRadius: theme.radius,
+                  fontFamily: theme.font,
+                }}
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path d="M12 5v14M5 12h14" />
+                </svg>
+                New
+              </button>
+            </div>
+
+            <div className="px-4 pb-6 overflow-y-auto" style={{ maxHeight: 'calc(70vh - 80px)' }}>
+              <div className="space-y-2">
+                {instances.map(instance => (
+                  <InstanceCard
+                    key={instance.id}
+                    instance={instance}
+                    isSelected={selectedId === instance.id}
+                    onSelect={(id) => {
+                      onSelect(id);
+                      onClose();
+                    }}
+                    theme={theme}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+        </>
+      );
+    }
+
+    function SettingsDrawer({ isOpen, onClose, currentInstance, theme, onThemeChange, currentTheme, onFullscreen, isFullscreen, isStandalone }) {
+      const touchRef = useRef({ startY: 0 });
+
+      const handleTouchStart = (e) => {
+        touchRef.current.startY = e.touches[0].clientY;
+      };
+
+      const handleTouchEnd = (e) => {
+        const deltaY = e.changedTouches[0].clientY - touchRef.current.startY;
+        if (deltaY < -80) onClose();
+      };
+
+      const themeKeys = Object.keys(themes);
+
+      return (
+        <>
+          <div
+            className={`fixed inset-0 backdrop-blur-sm backdrop-transition z-40 ${
+              isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+            }`}
+            style={{ background: 'rgba(0,0,0,0.6)' }}
+            onClick={onClose}
+          />
+
+          <div
+            className={`fixed left-0 right-0 top-0 z-50 drawer-transition safe-top ${
+              isOpen ? 'translate-y-0' : '-translate-y-full'
+            }`}
+            style={{
+              background: theme.colors.surface,
+              borderBottomLeftRadius: theme.drawerRadius,
+              borderBottomRightRadius: theme.drawerRadius,
+            }}
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
+          >
+            <div className="pt-2 px-5 pb-4" style={{ fontFamily: theme.font }}>
+              <div className="flex items-center justify-between py-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-2.5 h-2.5 rounded-full" style={{ background: theme.colors.success }} />
+                  <span className="font-semibold" style={{ color: theme.colors.text }}>
+                    {currentInstance?.name || 'No instance'}
+                  </span>
+                </div>
+                <span className="text-sm" style={{ color: theme.colors.textMuted }}>
+                  {currentInstance?.machineType === 'remote' ? currentInstance.machineName : 'Local'}
+                </span>
+              </div>
+
+              {/* Theme selector */}
+              <div className="py-3">
+                <label className="text-xs font-medium mb-2 block" style={{ color: theme.colors.textMuted }}>Theme</label>
+                <div className="flex gap-2 overflow-x-auto pb-2">
+                  {themeKeys.map(key => (
+                    <button
+                      key={key}
+                      onClick={() => onThemeChange(key)}
+                      className="flex-shrink-0 px-3 py-2 text-sm font-medium touch-active transition-all"
+                      style={{
+                        background: currentTheme === key ? theme.colors.accent : theme.colors.surfaceHover,
+                        color: currentTheme === key ? theme.colors.accentText : theme.colors.text,
+                        borderRadius: theme.radius,
+                      }}
+                    >
+                      {themes[key].name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Fullscreen button */}
+              {!isStandalone && (
+                <div className="py-2">
+                  <button
+                    onClick={onFullscreen}
+                    className="w-full flex items-center justify-center gap-2 py-3 touch-active"
+                    style={{
+                      background: theme.colors.surfaceHover,
+                      borderRadius: theme.radius,
+                      color: theme.colors.text,
+                    }}
+                  >
+                    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      {isFullscreen ? (
+                        <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3" />
+                      ) : (
+                        <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
+                      )}
+                    </svg>
+                    <span className="text-sm">{isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}</span>
+                  </button>
+                </div>
+              )}
+
+              {isStandalone && (
+                <div className="py-2 px-3 text-xs text-center" style={{ color: theme.colors.textMuted }}>
+                  Running as standalone app
+                </div>
+              )}
+
+              {/* Quick actions */}
+              <div className="flex gap-2 pt-2">
+                {[
+                  { icon: <path d="M9 3v18M3 9h6M3 15h6" />, label: 'Terminal', rect: true },
+                  { icon: <path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83" />, label: 'Settings', circle: true },
+                  { icon: <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M16 13H8M16 17H8M10 9H8" />, label: 'Files' },
+                ].map((item, i) => (
+                  <button
+                    key={i}
+                    className="flex-1 flex items-center justify-center gap-2 py-3 touch-active"
+                    style={{ background: theme.colors.surfaceHover, borderRadius: theme.radius }}
+                  >
+                    <svg className="w-5 h-5" style={{ color: theme.colors.textMuted }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      {item.rect && <rect x="3" y="3" width="18" height="18" rx="2" />}
+                      {item.circle && <circle cx="12" cy="12" r="3" />}
+                      {item.icon}
+                    </svg>
+                    <span className="text-sm" style={{ color: theme.colors.text }}>{item.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex justify-center pb-3">
+              <div className="w-10 h-1 rounded-full" style={{ background: theme.colors.border }} />
+            </div>
+          </div>
+        </>
+      );
+    }
+
+    function NewInstanceSheet({ isOpen, onClose, theme }) {
+      const [name, setName] = useState('');
+      const [mode, setMode] = useState('claude-code');
+      const [machineType, setMachineType] = useState('local');
+      const touchRef = useRef({ startY: 0 });
+
+      const handleTouchStart = (e) => {
+        touchRef.current.startY = e.touches[0].clientY;
+      };
+
+      const handleTouchEnd = (e) => {
+        const deltaY = e.changedTouches[0].clientY - touchRef.current.startY;
+        if (deltaY > 100) onClose();
+      };
+
+      if (!isOpen) return null;
+
+      const ToggleButton = ({ active, onClick, children }) => (
+        <button
+          onClick={onClick}
+          className="py-3 px-4 font-medium touch-active"
+          style={{
+            background: active ? theme.colors.accent : theme.colors.surfaceHover,
+            color: active ? theme.colors.accentText : theme.colors.text,
+            borderRadius: theme.radius,
+            fontFamily: theme.font,
+          }}
+        >
+          {children}
+        </button>
+      );
+
+      return (
+        <>
+          <div
+            className="fixed inset-0 backdrop-blur-sm z-50"
+            style={{ background: 'rgba(0,0,0,0.7)' }}
+            onClick={onClose}
+          />
+
+          <div
+            className="fixed left-0 right-0 bottom-0 z-50 safe-bottom"
+            style={{
+              background: theme.colors.surface,
+              borderTopLeftRadius: theme.drawerRadius,
+              borderTopRightRadius: theme.drawerRadius,
+              maxHeight: '85vh',
+              fontFamily: theme.font,
+            }}
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
+          >
+            <div className="flex justify-center pt-3 pb-2">
+              <div className="w-10 h-1 rounded-full" style={{ background: theme.colors.border }} />
+            </div>
+
+            <div className="flex items-center justify-between px-5 pb-4">
+              <h2 className="text-xl font-semibold" style={{ color: theme.colors.text }}>New Instance</h2>
+              <button onClick={onClose} className="p-2 touch-active" style={{ color: theme.colors.textMuted }}>
+                <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M18 6L6 18M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="px-5 pb-8 space-y-6">
+              <div>
+                <label className="block text-sm font-medium mb-2" style={{ color: theme.colors.textMuted }}>Name</label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="my-project"
+                  className="w-full px-4 py-3 focus:outline-none"
+                  style={{
+                    background: theme.colors.surfaceHover,
+                    border: `1px solid ${theme.colors.border}`,
+                    borderRadius: theme.radius,
+                    color: theme.colors.text,
+                  }}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2" style={{ color: theme.colors.textMuted }}>Mode</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <ToggleButton active={mode === 'claude-code'} onClick={() => setMode('claude-code')}>
+                    Claude Code
+                  </ToggleButton>
+                  <ToggleButton active={mode === 'terminal'} onClick={() => setMode('terminal')}>
+                    Terminal
+                  </ToggleButton>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2" style={{ color: theme.colors.textMuted }}>Run On</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <ToggleButton active={machineType === 'local'} onClick={() => setMachineType('local')}>
+                    Local
+                  </ToggleButton>
+                  <ToggleButton active={machineType === 'remote'} onClick={() => setMachineType('remote')}>
+                    Remote
+                  </ToggleButton>
+                </div>
+              </div>
+
+              {machineType === 'remote' && (
+                <div>
+                  <label className="block text-sm font-medium mb-2" style={{ color: theme.colors.textMuted }}>Machine</label>
+                  <select
+                    className="w-full px-4 py-3 appearance-none"
+                    style={{
+                      background: theme.colors.surfaceHover,
+                      border: `1px solid ${theme.colors.border}`,
+                      borderRadius: theme.radius,
+                      color: theme.colors.text,
+                    }}
+                  >
+                    <option>Mac Mini 1</option>
+                    <option>Mac Mini 2</option>
+                  </select>
+                </div>
+              )}
+
+              <button
+                className="w-full py-4 font-semibold text-lg touch-active"
+                style={{
+                  background: theme.colors.accent,
+                  color: theme.colors.accentText,
+                  borderRadius: theme.radius,
+                }}
+              >
+                Create Instance
+              </button>
+            </div>
+          </div>
+        </>
+      );
+    }
+
+    // Fullscreen prompt for non-PWA mobile users
+    function FullscreenPrompt({ theme, onFullscreen, onDismiss }) {
+      return (
+        <div className="fixed inset-0 z-[100] flex items-end justify-center p-4" style={{ background: 'rgba(0,0,0,0.8)' }}>
+          <div
+            className="w-full max-w-sm p-6 space-y-4"
+            style={{
+              background: theme.colors.surface,
+              borderRadius: theme.drawerRadius,
+              fontFamily: theme.font,
+            }}
+          >
+            <div className="text-center">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center" style={{ background: theme.colors.surfaceHover }}>
+                <svg className="w-8 h-8" style={{ color: theme.colors.accent }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-semibold mb-2" style={{ color: theme.colors.text }}>Go Fullscreen?</h3>
+              <p className="text-sm" style={{ color: theme.colors.textMuted }}>
+                For the best experience, tap below to enter fullscreen mode. You can also add this app to your home screen.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <button
+                onClick={onFullscreen}
+                className="w-full py-3 font-medium touch-active glow-pulse"
+                style={{
+                  background: theme.colors.accent,
+                  color: theme.colors.accentText,
+                  borderRadius: theme.radius,
+                }}
+              >
+                Enter Fullscreen
+              </button>
+              <button
+                onClick={onDismiss}
+                className="w-full py-3 font-medium touch-active"
+                style={{
+                  background: theme.colors.surfaceHover,
+                  color: theme.colors.textMuted,
+                  borderRadius: theme.radius,
+                }}
+              >
+                Maybe Later
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ============================================
+    // MAIN APP
+    // ============================================
+    function MobileApp() {
+      const [currentTheme, setCurrentTheme] = useState('midnight');
+      const [selectedInstanceId, setSelectedInstanceId] = useState('1');
+      const [bottomDrawerOpen, setBottomDrawerOpen] = useState(false);
+      const [topDrawerOpen, setTopDrawerOpen] = useState(false);
+      const [newInstanceOpen, setNewInstanceOpen] = useState(false);
+      const [showFullscreenPrompt, setShowFullscreenPrompt] = useState(false);
+
+      const { isFullscreen, isStandalone, toggleFullscreen } = useFullscreen();
+      const theme = themes[currentTheme];
+      const currentInstance = mockInstances.find(i => i.id === selectedInstanceId);
+
+      // Show fullscreen prompt on mobile (but not if already standalone)
+      useEffect(() => {
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        if (isMobile && !isStandalone && !isFullscreen) {
+          const timer = setTimeout(() => setShowFullscreenPrompt(true), 1000);
+          return () => clearTimeout(timer);
+        }
+      }, [isStandalone, isFullscreen]);
+
+      // Apply theme to document
+      useEffect(() => {
+        document.body.style.background = theme.colors.bg;
+        document.body.style.color = theme.colors.text;
+        document.body.style.fontFamily = theme.font;
+
+        // Update theme-color meta tag
+        const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+        if (metaThemeColor) {
+          metaThemeColor.setAttribute('content', theme.colors.bg);
+        }
+      }, [theme]);
+
+      return (
+        <div className="h-full flex flex-col" style={{ background: theme.colors.bg }}>
+          <TerminalView
+            onTopGesture={() => setTopDrawerOpen(true)}
+            onBottomGesture={() => setBottomDrawerOpen(true)}
+            theme={theme}
+          />
+
+          <InstanceDrawer
+            isOpen={bottomDrawerOpen}
+            onClose={() => setBottomDrawerOpen(false)}
+            instances={mockInstances}
+            selectedId={selectedInstanceId}
+            onSelect={setSelectedInstanceId}
+            onNewInstance={() => {
+              setBottomDrawerOpen(false);
+              setNewInstanceOpen(true);
+            }}
+            theme={theme}
+          />
+
+          <SettingsDrawer
+            isOpen={topDrawerOpen}
+            onClose={() => setTopDrawerOpen(false)}
+            currentInstance={currentInstance}
+            theme={theme}
+            currentTheme={currentTheme}
+            onThemeChange={setCurrentTheme}
+            onFullscreen={toggleFullscreen}
+            isFullscreen={isFullscreen}
+            isStandalone={isStandalone}
+          />
+
+          <NewInstanceSheet
+            isOpen={newInstanceOpen}
+            onClose={() => setNewInstanceOpen(false)}
+            theme={theme}
+          />
+
+          {showFullscreenPrompt && !isFullscreen && !isStandalone && (
+            <FullscreenPrompt
+              theme={theme}
+              onFullscreen={() => {
+                toggleFullscreen();
+                setShowFullscreenPrompt(false);
+              }}
+              onDismiss={() => setShowFullscreenPrompt(false)}
+            />
+          )}
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<MobileApp />);
+  </script>
+</body>
+</html>

@@ -146,24 +146,24 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/50 flex items-start sm:items-center justify-center z-50 overflow-y-auto" onClick={onClose}>
       <div
-        className="bg-surface-700 rounded-xl shadow-2xl max-w-lg w-full mx-4 animate-in max-h-[85vh] flex flex-col"
+        className="bg-surface-700 shadow-2xl w-full mx-0 sm:mx-4 sm:my-auto sm:max-w-lg sm:rounded-xl max-sm:min-h-full max-sm:rounded-none flex flex-col max-h-full sm:max-h-[85vh]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-surface-600">
-          <h2 className="text-lg font-semibold text-theme-primary">Settings</h2>
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-surface-600">
+          <h2 className="text-base sm:text-lg font-semibold text-theme-primary">Settings</h2>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-theme-muted hover:text-theme-primary hover:bg-surface-600 transition-colors"
+            className="p-2 sm:p-1.5 rounded-lg text-theme-muted hover:text-theme-primary hover:bg-surface-600 transition-colors"
           >
             <Icons.close />
           </button>
         </div>
 
         {/* Content */}
-        <div className="px-6 py-4 space-y-4 overflow-y-auto flex-1">
+        <div className="px-4 sm:px-6 py-4 space-y-4 overflow-y-auto flex-1 mobile-scroll">
           <h3 className="text-xs font-semibold text-theme-muted uppercase tracking-wider">Appearance</h3>
 
           {/* Theme Selector */}
@@ -568,9 +568,9 @@ Write a {{type}} work summary:`}
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-3 border-t border-surface-600 flex items-center justify-between">
+        <div className="px-4 sm:px-6 py-3 border-t border-surface-600 flex items-center justify-between" style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
           <span className="text-xs text-theme-muted">v{__APP_VERSION__}</span>
-          <span className="text-xs text-theme-muted">
+          <span className="text-xs text-theme-muted hidden sm:inline">
             Press{' '}
             <kbd className="px-1.5 py-0.5 bg-surface-800 border border-surface-500 rounded text-xs font-mono">
               Esc

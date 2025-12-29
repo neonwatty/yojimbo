@@ -135,7 +135,7 @@ export function LeftSidebar() {
   // Collapsed sidebar
   if (!leftSidebarOpen) {
     return (
-      <div className="w-12 bg-surface-800 border-r border-surface-600 flex flex-col items-center py-3 gap-2 flex-shrink-0">
+      <aside className="w-12 bg-surface-800 border-r border-surface-600 flex flex-col items-center py-3 gap-2 flex-shrink-0">
         <Tooltip text="Expand sidebar (⌘B)" position="right">
           <button
             onClick={toggleLeftSidebar}
@@ -181,13 +181,13 @@ export function LeftSidebar() {
             <Icons.plus />
           </button>
         </Tooltip>
-      </div>
+      </aside>
     );
   }
 
   // Expanded sidebar
   return (
-    <div
+    <aside
       style={{ width: leftSidebarWidth }}
       className="bg-surface-800 border-r border-surface-600 flex flex-col flex-shrink-0 relative"
     >
@@ -392,6 +392,6 @@ export function LeftSidebar() {
         className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-accent transition-colors"
         onMouseDown={handleResizeStart}
       />
-    </div>
+    </aside>
   );
 }

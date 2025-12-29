@@ -156,7 +156,7 @@ function LandscapeSidebar({
   };
 
   return (
-    <div
+    <aside
       className="h-full flex flex-col bg-surface-800 border-r border-surface-600"
       style={{
         width: '200px',
@@ -239,7 +239,7 @@ function LandscapeSidebar({
           New Instance
         </button>
       </div>
-    </div>
+    </aside>
   );
 }
 

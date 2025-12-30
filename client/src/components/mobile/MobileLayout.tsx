@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { useInstancesStore } from '../../store/instancesStore';
 import { useUIStore } from '../../store/uiStore';
 import { useSettingsStore } from '../../store/settingsStore';
@@ -11,6 +11,7 @@ import { Terminal, type TerminalRef } from '../terminal';
 import { ErrorBoundary } from '../common/ErrorBoundary';
 import { Icons } from '../common/Icons';
 import { MobileTextInput } from './MobileTextInput';
+import { MobileHomeView } from './MobileHomeView';
 import type { Instance } from '@cc-orchestrator/shared';
 
 // Connection Status Indicator
@@ -773,8 +774,12 @@ function EmptyState({
 // Main Mobile Layout
 export function MobileLayout() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { id } = useParams();
   const { instances, setActiveInstanceId, removeInstance } = useInstancesStore();
+
+  // Check if we're on the home page
+  const isHomePage = location.pathname === '/';
   const { setShowSettingsModal, setShowNewInstanceModal, isConnected } = useUIStore();
   const { isFullscreen, isStandalone, fullscreenSupported, isIOS, isIOSSafari, toggleFullscreen } = useMobileLayout();
   const isLandscape = useOrientation();
@@ -920,7 +925,13 @@ export function MobileLayout() {
 
           {/* Main content area */}
           <div className="flex-1 flex flex-col min-w-0">
-            {currentInstance ? (
+            {isHomePage ? (
+              <MobileHomeView
+                onTopGesture={() => {}} // No gestures in landscape - sidebar handles navigation
+                onBottomGesture={() => {}}
+                onViewAllInstances={() => {}} // In landscape, sidebar is always visible
+              />
+            ) : currentInstance ? (
               <MobileTerminalView
                 key={currentInstance.id}
                 instanceId={currentInstance.id}
@@ -956,7 +967,13 @@ export function MobileLayout() {
       <OfflineIndicator />
       <div className="h-full flex flex-col bg-surface-900">
         {/* Main content */}
-        {currentInstance ? (
+        {isHomePage ? (
+          <MobileHomeView
+            onTopGesture={() => setTopDrawerOpen(true)}
+            onBottomGesture={() => setBottomDrawerOpen(true)}
+            onViewAllInstances={() => setBottomDrawerOpen(true)}
+          />
+        ) : currentInstance ? (
           <MobileTerminalView
             key={currentInstance.id}
             instanceId={currentInstance.id}

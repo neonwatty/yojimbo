@@ -156,7 +156,7 @@ export function MobileHomeView({ onTopGesture, onBottomGesture, onViewAllInstanc
           <div className="mb-4">
             <h3 className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-theme-dim mb-2">
               <span className="text-accent">
-                <Icons.star filled />
+                {Icons.star(true)}
               </span>
               Pinned
             </h3>

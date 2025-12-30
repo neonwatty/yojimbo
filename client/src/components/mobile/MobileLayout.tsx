@@ -13,6 +13,7 @@ import { Icons } from '../common/Icons';
 import { MobileTextInput } from './MobileTextInput';
 import { MobileHomeView } from './MobileHomeView';
 import { MobileHistoryView } from './MobileHistoryView';
+import { MobileActivityView } from './MobileActivityView';
 import type { Instance } from '@cc-orchestrator/shared';
 
 // Connection Status Indicator
@@ -418,6 +419,7 @@ function SettingsDrawer({
   onOpenSettings,
   onNavigateHome,
   onNavigateHistory,
+  onNavigateActivity,
 }: {
   isOpen: boolean;
   onClose: () => void;
@@ -432,6 +434,7 @@ function SettingsDrawer({
   onOpenSettings: () => void;
   onNavigateHome: () => void;
   onNavigateHistory: () => void;
+  onNavigateActivity: () => void;
 }) {
   const touchRef = useRef({ startY: 0 });
 
@@ -566,7 +569,7 @@ function SettingsDrawer({
           )}
 
           {/* Action buttons */}
-          <div className="grid grid-cols-3 gap-2 mt-3">
+          <div className="grid grid-cols-4 gap-2 mt-3">
             {/* Home button */}
             <button
               onClick={() => {
@@ -576,7 +579,7 @@ function SettingsDrawer({
               className="flex flex-col items-center justify-center gap-1 py-3 bg-surface-600 rounded-xl active:scale-[0.98] transition-transform"
             >
               <Icons.home />
-              <span className="text-xs text-theme-primary">Home</span>
+              <span className="text-[10px] text-theme-primary">Home</span>
             </button>
 
             {/* History button */}
@@ -588,7 +591,19 @@ function SettingsDrawer({
               className="flex flex-col items-center justify-center gap-1 py-3 bg-surface-600 rounded-xl active:scale-[0.98] transition-transform"
             >
               <Icons.history />
-              <span className="text-xs text-theme-primary">History</span>
+              <span className="text-[10px] text-theme-primary">History</span>
+            </button>
+
+            {/* Activity button */}
+            <button
+              onClick={() => {
+                onNavigateActivity();
+                onClose();
+              }}
+              className="flex flex-col items-center justify-center gap-1 py-3 bg-surface-600 rounded-xl active:scale-[0.98] transition-transform"
+            >
+              <Icons.activity />
+              <span className="text-[10px] text-theme-primary">Activity</span>
             </button>
 
             {/* Settings button */}
@@ -600,7 +615,7 @@ function SettingsDrawer({
               className="flex flex-col items-center justify-center gap-1 py-3 bg-surface-600 rounded-xl active:scale-[0.98] transition-transform"
             >
               <Icons.settings />
-              <span className="text-xs text-theme-primary">Settings</span>
+              <span className="text-[10px] text-theme-primary">Settings</span>
             </button>
           </div>
         </div>
@@ -793,9 +808,10 @@ export function MobileLayout() {
   const { id } = useParams();
   const { instances, setActiveInstanceId, removeInstance } = useInstancesStore();
 
-  // Check if we're on the home page or history page
+  // Check if we're on the home page, history page, or activity page
   const isHomePage = location.pathname === '/';
   const isHistoryPage = location.pathname === '/history';
+  const isActivityPage = location.pathname === '/activity';
   const { setShowSettingsModal, setShowNewInstanceModal, isConnected } = useUIStore();
   const { isFullscreen, isStandalone, fullscreenSupported, isIOS, isIOSSafari, toggleFullscreen } = useMobileLayout();
   const isLandscape = useOrientation();
@@ -911,6 +927,7 @@ export function MobileLayout() {
             onOpenSettings={() => setShowSettingsModal(true)}
             onNavigateHome={() => navigate('/')}
             onNavigateHistory={() => navigate('/history')}
+            onNavigateActivity={() => navigate('/activity')}
           />
           <InstanceActionSheet
             isOpen={!!actionSheetInstance}
@@ -950,6 +967,11 @@ export function MobileLayout() {
               />
             ) : isHistoryPage ? (
               <MobileHistoryView
+                onTopGesture={() => {}}
+                onBottomGesture={() => {}}
+              />
+            ) : isActivityPage ? (
+              <MobileActivityView
                 onTopGesture={() => {}}
                 onBottomGesture={() => {}}
               />
@@ -1000,6 +1022,11 @@ export function MobileLayout() {
             onTopGesture={() => setTopDrawerOpen(true)}
             onBottomGesture={() => setBottomDrawerOpen(true)}
           />
+        ) : isActivityPage ? (
+          <MobileActivityView
+            onTopGesture={() => setTopDrawerOpen(true)}
+            onBottomGesture={() => setBottomDrawerOpen(true)}
+          />
         ) : currentInstance ? (
           <MobileTerminalView
             key={currentInstance.id}
@@ -1042,6 +1069,7 @@ export function MobileLayout() {
           onOpenSettings={() => setShowSettingsModal(true)}
           onNavigateHome={() => navigate('/')}
           onNavigateHistory={() => navigate('/history')}
+          onNavigateActivity={() => navigate('/activity')}
         />
 
         {/* Long-press action sheet */}

@@ -641,12 +641,14 @@ body {
     height: 100%;
     overflow: hidden;
     overscroll-behavior: none;
+    touch-action: none;
   }
 
   #root {
     height: 100dvh;
     width: 100vw;
     overflow: hidden;
+    touch-action: none;
   }
 
   /* Disable text selection on touch */
@@ -659,6 +661,12 @@ body {
     overflow-y: auto !important;
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
+    touch-action: pan-y !important;
+  }
+
+  /* Allow touch interaction for interactive elements */
+  button, a, input, textarea, [role="button"] {
+    touch-action: manipulation !important;
   }
 
   /* Touch-friendly active states */

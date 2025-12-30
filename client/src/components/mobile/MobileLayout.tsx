@@ -12,6 +12,7 @@ import { ErrorBoundary } from '../common/ErrorBoundary';
 import { Icons } from '../common/Icons';
 import { MobileTextInput } from './MobileTextInput';
 import { MobileHomeView } from './MobileHomeView';
+import { MobileHistoryView } from './MobileHistoryView';
 import type { Instance } from '@cc-orchestrator/shared';
 
 // Connection Status Indicator
@@ -416,6 +417,7 @@ function SettingsDrawer({
   isConnected,
   onOpenSettings,
   onNavigateHome,
+  onNavigateHistory,
 }: {
   isOpen: boolean;
   onClose: () => void;
@@ -429,6 +431,7 @@ function SettingsDrawer({
   isConnected: boolean;
   onOpenSettings: () => void;
   onNavigateHome: () => void;
+  onNavigateHistory: () => void;
 }) {
   const touchRef = useRef({ startY: 0 });
 
@@ -563,17 +566,29 @@ function SettingsDrawer({
           )}
 
           {/* Action buttons */}
-          <div className="flex gap-2 mt-3">
+          <div className="grid grid-cols-3 gap-2 mt-3">
             {/* Home button */}
             <button
               onClick={() => {
                 onNavigateHome();
                 onClose();
               }}
-              className="flex-1 flex items-center justify-center gap-2 py-3 bg-surface-600 rounded-xl active:scale-[0.98] transition-transform"
+              className="flex flex-col items-center justify-center gap-1 py-3 bg-surface-600 rounded-xl active:scale-[0.98] transition-transform"
             >
               <Icons.home />
-              <span className="text-sm text-theme-primary">Home</span>
+              <span className="text-xs text-theme-primary">Home</span>
+            </button>
+
+            {/* History button */}
+            <button
+              onClick={() => {
+                onNavigateHistory();
+                onClose();
+              }}
+              className="flex flex-col items-center justify-center gap-1 py-3 bg-surface-600 rounded-xl active:scale-[0.98] transition-transform"
+            >
+              <Icons.history />
+              <span className="text-xs text-theme-primary">History</span>
             </button>
 
             {/* Settings button */}
@@ -582,10 +597,10 @@ function SettingsDrawer({
                 onOpenSettings();
                 onClose();
               }}
-              className="flex-1 flex items-center justify-center gap-2 py-3 bg-surface-600 rounded-xl active:scale-[0.98] transition-transform"
+              className="flex flex-col items-center justify-center gap-1 py-3 bg-surface-600 rounded-xl active:scale-[0.98] transition-transform"
             >
               <Icons.settings />
-              <span className="text-sm text-theme-primary">Settings</span>
+              <span className="text-xs text-theme-primary">Settings</span>
             </button>
           </div>
         </div>
@@ -778,8 +793,9 @@ export function MobileLayout() {
   const { id } = useParams();
   const { instances, setActiveInstanceId, removeInstance } = useInstancesStore();
 
-  // Check if we're on the home page
+  // Check if we're on the home page or history page
   const isHomePage = location.pathname === '/';
+  const isHistoryPage = location.pathname === '/history';
   const { setShowSettingsModal, setShowNewInstanceModal, isConnected } = useUIStore();
   const { isFullscreen, isStandalone, fullscreenSupported, isIOS, isIOSSafari, toggleFullscreen } = useMobileLayout();
   const isLandscape = useOrientation();
@@ -894,6 +910,7 @@ export function MobileLayout() {
             isConnected={isConnected}
             onOpenSettings={() => setShowSettingsModal(true)}
             onNavigateHome={() => navigate('/')}
+            onNavigateHistory={() => navigate('/history')}
           />
           <InstanceActionSheet
             isOpen={!!actionSheetInstance}
@@ -930,6 +947,11 @@ export function MobileLayout() {
                 onTopGesture={() => {}} // No gestures in landscape - sidebar handles navigation
                 onBottomGesture={() => {}}
                 onViewAllInstances={() => {}} // In landscape, sidebar is always visible
+              />
+            ) : isHistoryPage ? (
+              <MobileHistoryView
+                onTopGesture={() => {}}
+                onBottomGesture={() => {}}
               />
             ) : currentInstance ? (
               <MobileTerminalView
@@ -973,6 +995,11 @@ export function MobileLayout() {
             onBottomGesture={() => setBottomDrawerOpen(true)}
             onViewAllInstances={() => setBottomDrawerOpen(true)}
           />
+        ) : isHistoryPage ? (
+          <MobileHistoryView
+            onTopGesture={() => setTopDrawerOpen(true)}
+            onBottomGesture={() => setBottomDrawerOpen(true)}
+          />
         ) : currentInstance ? (
           <MobileTerminalView
             key={currentInstance.id}
@@ -1014,6 +1041,7 @@ export function MobileLayout() {
           isConnected={isConnected}
           onOpenSettings={() => setShowSettingsModal(true)}
           onNavigateHome={() => navigate('/')}
+          onNavigateHistory={() => navigate('/history')}
         />
 
         {/* Long-press action sheet */}

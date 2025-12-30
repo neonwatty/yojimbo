@@ -1,6 +1,8 @@
 import { useEffect, useRef, useCallback, forwardRef, useImperativeHandle } from 'react';
 import { useTerminal } from '../../hooks/useTerminal';
 import { useWebSocket } from '../../hooks/useWebSocket';
+import { useInstancesStore } from '../../store/instancesStore';
+import { toast } from '../../store/toastStore';
 import { getWsUrl } from '../../config';
 import '@xterm/xterm/css/xterm.css';
 
@@ -19,6 +21,9 @@ export const Terminal = forwardRef<TerminalRef, TerminalProps>(
   ({ instanceId, theme = 'dark', onStatusChange }, ref) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const isSubscribedRef = useRef(false);
+    const inputLockStatus = useInstancesStore((state) => state.inputLockStatus);
+    const setInputLockStatus = useInstancesStore((state) => state.setInputLockStatus);
+    const clearInputLockStatus = useInstancesStore((state) => state.clearInputLockStatus);
 
     const { send, subscribe, isConnected } = useWebSocket(getWsUrl(), {
       onOpen: () => {
@@ -31,9 +36,15 @@ export const Terminal = forwardRef<TerminalRef, TerminalProps>(
 
     const handleData = useCallback(
       (data: string) => {
+        const lockStatus = inputLockStatus[instanceId];
+        // If we don't have the lock (and lock status exists), show toast and discard input
+        if (lockStatus && !lockStatus.hasLock) {
+          toast.info(`Input locked by ${lockStatus.lockHolder || 'another device'}`);
+          return;
+        }
         send('terminal:input', { instanceId, data });
       },
-      [instanceId, send]
+      [instanceId, send, inputLockStatus]
     );
 
     const handleResize = useCallback(
@@ -101,13 +112,53 @@ export const Terminal = forwardRef<TerminalRef, TerminalProps>(
       }
     });
 
+    // Handle lock events - these come from this WebSocket's subscribe
+    const unsubscribeLockGranted = subscribe('input:lockGranted', (data: unknown) => {
+      const { instanceId: msgInstanceId } = data as { instanceId: string };
+      if (msgInstanceId === instanceId) {
+        setInputLockStatus(instanceId, true);
+      }
+    });
+
+    const unsubscribeLockReleased = subscribe('input:lockReleased', (data: unknown) => {
+      const { instanceId: msgInstanceId } = data as { instanceId: string };
+      if (msgInstanceId === instanceId) {
+        clearInputLockStatus(instanceId);
+      }
+    });
+
+    const unsubscribeLockStatus = subscribe('input:lockStatus', (data: unknown) => {
+      const { instanceId: msgInstanceId, hasLock, lockHolder } = data as {
+        instanceId: string;
+        hasLock: boolean;
+        lockHolder?: string;
+      };
+      if (msgInstanceId === instanceId) {
+        setInputLockStatus(instanceId, hasLock, lockHolder);
+      }
+    });
+
+    const unsubscribeLockDenied = subscribe('input:lockDenied', (data: unknown) => {
+      const { instanceId: msgInstanceId, lockHolder } = data as {
+        instanceId: string;
+        lockHolder?: string;
+      };
+      if (msgInstanceId === instanceId) {
+        toast.info(`Input locked by ${lockHolder || 'another device'}`);
+      }
+    });
+
     return () => {
       unsubscribeOutput();
       unsubscribeStatus();
+      unsubscribeLockGranted();
+      unsubscribeLockReleased();
+      unsubscribeLockStatus();
+      unsubscribeLockDenied();
       send('unsubscribe', { instanceId });
       isSubscribedRef.current = false;
     };
-  }, [isConnected, instanceId, send, subscribe, write, onStatusChange]);
+  }, [isConnected, instanceId, send, subscribe, write, onStatusChange, setInputLockStatus, clearInputLockStatus]);
 
   // Refit on visibility change (e.g., tab switch)
   useEffect(() => {

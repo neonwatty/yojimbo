@@ -26,6 +26,7 @@ describe('instancesStore', () => {
       activeInstanceId: null,
       expandedInstanceId: null,
       currentCwds: {},
+      inputLockStatus: {},
     });
   });
 
@@ -209,6 +210,63 @@ describe('instancesStore', () => {
 
       expect(useInstancesStore.getState().currentCwds['1']).toBe('/path/one');
       expect(useInstancesStore.getState().currentCwds['2']).toBe('/path/two');
+    });
+  });
+
+  describe('setInputLockStatus', () => {
+    it('sets lock status with hasLock true', () => {
+      useInstancesStore.getState().setInputLockStatus('1', true);
+
+      const lockStatus = useInstancesStore.getState().inputLockStatus['1'];
+      expect(lockStatus).toEqual({ hasLock: true, lockHolder: undefined });
+    });
+
+    it('sets lock status with hasLock false and lockHolder', () => {
+      useInstancesStore.getState().setInputLockStatus('1', false, 'client-2');
+
+      const lockStatus = useInstancesStore.getState().inputLockStatus['1'];
+      expect(lockStatus).toEqual({ hasLock: false, lockHolder: 'client-2' });
+    });
+
+    it('updates existing lock status', () => {
+      useInstancesStore.getState().setInputLockStatus('1', true);
+      useInstancesStore.getState().setInputLockStatus('1', false, 'client-3');
+
+      const lockStatus = useInstancesStore.getState().inputLockStatus['1'];
+      expect(lockStatus).toEqual({ hasLock: false, lockHolder: 'client-3' });
+    });
+
+    it('preserves lock status for other instances', () => {
+      useInstancesStore.getState().setInputLockStatus('1', true);
+      useInstancesStore.getState().setInputLockStatus('2', false, 'client-1');
+
+      expect(useInstancesStore.getState().inputLockStatus['1']).toEqual({ hasLock: true, lockHolder: undefined });
+      expect(useInstancesStore.getState().inputLockStatus['2']).toEqual({ hasLock: false, lockHolder: 'client-1' });
+    });
+  });
+
+  describe('clearInputLockStatus', () => {
+    it('clears lock status for an instance', () => {
+      useInstancesStore.getState().setInputLockStatus('1', true);
+      useInstancesStore.getState().clearInputLockStatus('1');
+
+      expect(useInstancesStore.getState().inputLockStatus['1']).toBeUndefined();
+    });
+
+    it('preserves lock status for other instances', () => {
+      useInstancesStore.getState().setInputLockStatus('1', true);
+      useInstancesStore.getState().setInputLockStatus('2', false, 'client-1');
+
+      useInstancesStore.getState().clearInputLockStatus('1');
+
+      expect(useInstancesStore.getState().inputLockStatus['1']).toBeUndefined();
+      expect(useInstancesStore.getState().inputLockStatus['2']).toEqual({ hasLock: false, lockHolder: 'client-1' });
+    });
+
+    it('handles clearing non-existent lock status', () => {
+      useInstancesStore.getState().clearInputLockStatus('nonexistent');
+
+      expect(useInstancesStore.getState().inputLockStatus).toEqual({});
     });
   });
 });

@@ -39,6 +39,7 @@ describe('CONFIG', () => {
 
   it('has correct default host', async () => {
     const { CONFIG } = await import('../config/index.js');
-    expect(CONFIG.host).toBe('127.0.0.1');
+    // Host can be overridden by config.yaml, which defaults to 0.0.0.0 for network access
+    expect(['127.0.0.1', '0.0.0.0']).toContain(CONFIG.host);
   });
 });

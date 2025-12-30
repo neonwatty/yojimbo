@@ -642,6 +642,7 @@ function MobileTerminalView({
   terminalRef: React.RefObject<TerminalRef>;
 }) {
   const { theme } = useSettingsStore();
+  const inputLockStatus = useInstancesStore((state) => state.inputLockStatus);
   const containerRef = useRef<HTMLDivElement>(null);
   const touchRef = useRef({ startY: 0, startX: 0, zone: null as string | null });
 
@@ -734,6 +735,20 @@ function MobileTerminalView({
       <div className="absolute bottom-1 left-1/2 -translate-x-1/2 pointer-events-none z-10">
         <div className="w-10 h-1 bg-surface-500/50 rounded-full" />
       </div>
+
+      {/* Lock Status Indicator */}
+      {inputLockStatus[instanceId] && (
+        <div
+          className={`absolute top-2 right-2 flex items-center gap-1 px-2 py-1 rounded-full text-xs z-10 ${
+            inputLockStatus[instanceId].hasLock
+              ? 'bg-aurora-green/20 text-aurora-green'
+              : 'bg-aurora-red/20 text-aurora-red'
+          }`}
+        >
+          <Icons.lock />
+          <span>{inputLockStatus[instanceId].hasLock ? 'Active' : 'View Only'}</span>
+        </div>
+      )}
     </div>
   );
 }

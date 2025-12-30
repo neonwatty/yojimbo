@@ -205,6 +205,8 @@ function App() {
             <Route path="/" element={<MobileLayout />} />
             <Route path="/instances" element={<MobileLayout />} />
             <Route path="/instances/:id" element={<MobileLayout />} />
+            <Route path="/history" element={<MobileLayout />} />
+            <Route path="/activity" element={<MobileLayout />} />
             {/* Redirect other routes to instances on mobile */}
             <Route path="*" element={<Navigate to="/instances" replace />} />
           </Routes>

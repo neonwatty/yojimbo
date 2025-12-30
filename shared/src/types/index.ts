@@ -184,7 +184,9 @@ export type WSClientMessageType =
   | 'terminal:input'
   | 'terminal:resize'
   | 'subscribe'
-  | 'unsubscribe';
+  | 'unsubscribe'
+  | 'input:requestLock'
+  | 'input:releaseLock';
 
 export interface WSClientMessage {
   type: WSClientMessageType;
@@ -213,6 +215,10 @@ export type WSServerMessageType =
   | 'machine:updated'
   | 'machine:deleted'
   | 'machine:status'
+  | 'input:lockGranted'
+  | 'input:lockReleased'
+  | 'input:lockDenied'
+  | 'input:lockStatus'
   | 'error';
 
 export interface FileChangeEvent {
@@ -239,6 +245,9 @@ export interface WSServerMessage {
   machineId?: string;
   machineStatus?: { machineId: string; status: MachineStatus };
   error?: string;
+  // Input lock fields
+  hasLock?: boolean;
+  lockHolder?: string;
 }
 
 // API response types

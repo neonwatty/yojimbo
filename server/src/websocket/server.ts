@@ -12,6 +12,22 @@ let wss: WebSocketServer;
 // Client subscriptions: instanceId -> Set of clients
 const subscriptions = new Map<string, Set<WebSocket>>();
 
+// Input lock tracking: instanceId -> WebSocket that holds lock
+const inputLocks = new Map<string, WebSocket>();
+
+// Client ID tracking for lock holder identification
+const clientIds = new WeakMap<WebSocket, string>();
+let clientIdCounter = 0;
+
+function getClientId(ws: WebSocket): string {
+  let id = clientIds.get(ws);
+  if (!id) {
+    id = `client-${++clientIdCounter}`;
+    clientIds.set(ws, id);
+  }
+  return id;
+}
+
 // Track last known CWD per instance for change detection
 const lastKnownCwds = new Map<string, string>();
 
@@ -61,6 +77,45 @@ export function initWebSocketServer(server: Server): WebSocketServer {
 
     ws.on('close', () => {
       console.log('🔌 WebSocket client disconnected');
+
+      // Check if this client held any input locks and release them
+      for (const [instanceId, lockHolder] of inputLocks.entries()) {
+        if (lockHolder === ws) {
+          inputLocks.delete(instanceId);
+          console.log(`🔓 Released input lock for instance ${instanceId} (client disconnected)`);
+
+          // Auto-grant lock to next subscriber if any
+          const subscribers = subscriptions.get(instanceId);
+          if (subscribers && subscribers.size > 0) {
+            const nextClient = subscribers.values().next().value;
+            if (nextClient && nextClient.readyState === WebSocket.OPEN) {
+              inputLocks.set(instanceId, nextClient);
+              const newHolderId = getClientId(nextClient);
+              console.log(`🔒 Auto-granted input lock for instance ${instanceId} to ${newHolderId}`);
+
+              // Notify the new lock holder
+              send(nextClient, {
+                type: 'input:lockGranted',
+                instanceId,
+                hasLock: true,
+              });
+
+              // Notify other subscribers about the new lock holder
+              for (const client of subscribers) {
+                if (client !== nextClient && client.readyState === WebSocket.OPEN) {
+                  send(client, {
+                    type: 'input:lockStatus',
+                    instanceId,
+                    hasLock: false,
+                    lockHolder: newHolderId,
+                  });
+                }
+              }
+            }
+          }
+        }
+      }
+
       // Remove from all subscriptions
       for (const clients of subscriptions.values()) {
         clients.delete(ws);
@@ -201,6 +256,19 @@ function handleMessage(ws: WebSocket, message: WSClientMessage): void {
   switch (message.type) {
     case 'terminal:input':
       if (message.instanceId && message.data) {
+        // Check if this client holds the input lock
+        const lockHolder = inputLocks.get(message.instanceId);
+        if (lockHolder && lockHolder !== ws) {
+          // Client doesn't have the lock - deny input
+          send(ws, {
+            type: 'input:lockDenied',
+            instanceId: message.instanceId,
+            hasLock: false,
+            lockHolder: getClientId(lockHolder),
+          });
+          break;
+        }
+
         // Try terminalManager first (new backend), fall back to ptyService (legacy)
         if (terminalManager.has(message.instanceId)) {
           terminalManager.write(message.instanceId, message.data);
@@ -281,6 +349,29 @@ function handleMessage(ws: WebSocket, message: WSClientMessage): void {
           });
           console.log(`📜 Sent ${history.length} bytes of terminal history to client`);
         }
+
+        // Handle input lock: auto-grant to first subscriber
+        const existingLock = inputLocks.get(message.instanceId);
+        if (!existingLock) {
+          // No lock exists, grant to this client
+          inputLocks.set(message.instanceId, ws);
+          const clientId = getClientId(ws);
+          console.log(`🔒 Auto-granted input lock for instance ${message.instanceId} to ${clientId}`);
+          send(ws, {
+            type: 'input:lockGranted',
+            instanceId: message.instanceId,
+            hasLock: true,
+          });
+        } else {
+          // Lock exists, inform this client they don't have it
+          const lockHolderId = getClientId(existingLock);
+          send(ws, {
+            type: 'input:lockStatus',
+            instanceId: message.instanceId,
+            hasLock: false,
+            lockHolder: lockHolderId,
+          });
+        }
       }
       break;
 
@@ -290,6 +381,86 @@ function handleMessage(ws: WebSocket, message: WSClientMessage): void {
         console.log(`Client unsubscribed from instance ${message.instanceId}`);
         // Stop polling if no active subscribers remain
         updatePollingState();
+
+        // Release lock if this client held it
+        const unsubLockHolder = inputLocks.get(message.instanceId);
+        if (unsubLockHolder === ws) {
+          inputLocks.delete(message.instanceId);
+          console.log(`🔓 Released input lock for instance ${message.instanceId} (client unsubscribed)`);
+        }
+      }
+      break;
+
+    case 'input:requestLock':
+      if (message.instanceId) {
+        const currentLock = inputLocks.get(message.instanceId);
+        if (!currentLock) {
+          // No lock exists, grant to requester
+          inputLocks.set(message.instanceId, ws);
+          const clientId = getClientId(ws);
+          console.log(`🔒 Granted input lock for instance ${message.instanceId} to ${clientId}`);
+
+          // Notify the requester
+          send(ws, {
+            type: 'input:lockGranted',
+            instanceId: message.instanceId,
+            hasLock: true,
+          });
+
+          // Notify other subscribers
+          const reqSubscribers = subscriptions.get(message.instanceId);
+          if (reqSubscribers) {
+            for (const client of reqSubscribers) {
+              if (client !== ws && client.readyState === WebSocket.OPEN) {
+                send(client, {
+                  type: 'input:lockStatus',
+                  instanceId: message.instanceId,
+                  hasLock: false,
+                  lockHolder: clientId,
+                });
+              }
+            }
+          }
+        } else if (currentLock === ws) {
+          // Already holds the lock, no-op but confirm
+          send(ws, {
+            type: 'input:lockGranted',
+            instanceId: message.instanceId,
+            hasLock: true,
+          });
+        } else {
+          // Lock held by another client
+          send(ws, {
+            type: 'input:lockDenied',
+            instanceId: message.instanceId,
+            hasLock: false,
+            lockHolder: getClientId(currentLock),
+          });
+        }
+      }
+      break;
+
+    case 'input:releaseLock':
+      if (message.instanceId) {
+        const relLockHolder = inputLocks.get(message.instanceId);
+        if (relLockHolder === ws) {
+          inputLocks.delete(message.instanceId);
+          console.log(`🔓 Released input lock for instance ${message.instanceId}`);
+
+          // Notify all subscribers that lock is released
+          const relSubscribers = subscriptions.get(message.instanceId);
+          if (relSubscribers) {
+            for (const client of relSubscribers) {
+              if (client.readyState === WebSocket.OPEN) {
+                send(client, {
+                  type: 'input:lockReleased',
+                  instanceId: message.instanceId,
+                  hasLock: false,
+                });
+              }
+            }
+          }
+        }
       }
       break;
 

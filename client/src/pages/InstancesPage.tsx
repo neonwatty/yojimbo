@@ -20,7 +20,7 @@ import type { Instance } from '@cc-orchestrator/shared';
 export default function InstancesPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { instances, setActiveInstanceId, updateInstance, removeInstance, reorderInstances, currentCwds } = useInstancesStore();
+  const { instances, setActiveInstanceId, updateInstance, removeInstance, reorderInstances, currentCwds, inputLockStatus } = useInstancesStore();
   const {
     layout,
     editorPanelOpen, toggleEditorPanel, setEditorPanelOpen,
@@ -269,6 +269,24 @@ export default function InstancesPage() {
               <span className="flex items-center gap-1 px-2 py-0.5 rounded bg-accent/10 text-accent text-xs">
                 <Icons.wifi />
                 <span>Remote</span>
+              </span>
+            )}
+            {/* Input Lock Status Indicator */}
+            {inputLockStatus[instance.id] && (
+              <span
+                className={`flex items-center gap-1 px-2 py-0.5 rounded text-xs ${
+                  inputLockStatus[instance.id].hasLock
+                    ? 'bg-aurora-green/10 text-aurora-green'
+                    : 'bg-aurora-red/10 text-aurora-red'
+                }`}
+                title={
+                  inputLockStatus[instance.id].hasLock
+                    ? 'You have input control'
+                    : `Input locked by ${inputLockStatus[instance.id].lockHolder || 'another device'}`
+                }
+              >
+                <Icons.lock />
+                <span>{inputLockStatus[instance.id].hasLock ? 'Active' : 'View Only'}</span>
               </span>
             )}
           </div>

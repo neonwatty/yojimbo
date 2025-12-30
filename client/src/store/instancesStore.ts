@@ -1,11 +1,17 @@
 import { create } from 'zustand';
 import type { Instance } from '@cc-orchestrator/shared';
 
+interface InputLockStatus {
+  hasLock: boolean;
+  lockHolder?: string;
+}
+
 interface InstancesState {
   instances: Instance[];
   activeInstanceId: string | null;
   expandedInstanceId: string | null;
   currentCwds: Record<string, string>; // instanceId -> current working directory
+  inputLockStatus: Record<string, InputLockStatus>; // instanceId -> lock status
 
   setInstances: (instances: Instance[]) => void;
   addInstance: (instance: Instance) => void;
@@ -15,6 +21,8 @@ interface InstancesState {
   setExpandedInstanceId: (id: string | null) => void;
   reorderInstances: (instanceIds: string[]) => void;
   setCurrentCwd: (instanceId: string, cwd: string) => void;
+  setInputLockStatus: (instanceId: string, hasLock: boolean, lockHolder?: string) => void;
+  clearInputLockStatus: (instanceId: string) => void;
 }
 
 export const useInstancesStore = create<InstancesState>((set) => ({
@@ -22,6 +30,7 @@ export const useInstancesStore = create<InstancesState>((set) => ({
   activeInstanceId: null,
   expandedInstanceId: null,
   currentCwds: {},
+  inputLockStatus: {},
 
   setInstances: (instances) => set({ instances }),
 
@@ -65,4 +74,18 @@ export const useInstancesStore = create<InstancesState>((set) => ({
     set((state) => ({
       currentCwds: { ...state.currentCwds, [instanceId]: cwd },
     })),
+
+  setInputLockStatus: (instanceId, hasLock, lockHolder) =>
+    set((state) => ({
+      inputLockStatus: {
+        ...state.inputLockStatus,
+        [instanceId]: { hasLock, lockHolder },
+      },
+    })),
+
+  clearInputLockStatus: (instanceId) =>
+    set((state) => {
+      const { [instanceId]: _, ...remaining } = state.inputLockStatus;
+      return { inputLockStatus: remaining };
+    }),
 }));

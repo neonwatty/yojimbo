@@ -136,10 +136,111 @@ export abstract class TerminalBackend extends EventEmitter implements ITerminalB
   }
 
   /**
-   * Append data to history buffer
+   * Append data to history buffer with ANSI escape sequence handling.
+   * Processes cursor movement and line clearing sequences to properly handle
+   * spinner/progress animations that update in place.
+   *
+   * Handled sequences:
+   * - \r (carriage return) - move to start of current line
+   * - \x1b[nA (cursor up n lines)
+   * - \x1b[2K (clear entire line)
+   * - \x1b[G or \x1b[1G (cursor to column 1)
    */
   protected appendHistory(data: string): void {
-    this.history += data;
+    // Split history into lines for manipulation
+    const lines = this.history.split('\n');
+    let currentLineIndex = lines.length - 1;
+
+    let i = 0;
+    while (i < data.length) {
+      // Check for escape sequences
+      if (data[i] === '\x1b' && data[i + 1] === '[') {
+        // Parse ANSI escape sequence
+        let j = i + 2;
+        let params = '';
+        while (j < data.length && /[0-9;]/.test(data[j])) {
+          params += data[j];
+          j++;
+        }
+        const command = data[j];
+
+        if (command === 'A') {
+          // Cursor up - \x1b[nA (default n=1)
+          const n = parseInt(params) || 1;
+          currentLineIndex = Math.max(0, currentLineIndex - n);
+          i = j + 1;
+          continue;
+        } else if (command === 'K') {
+          // Clear line - \x1b[2K clears entire line, \x1b[K clears to end
+          if (params === '2' || params === '') {
+            // Clear entire line or clear to end - just clear the current line
+            if (currentLineIndex < lines.length) {
+              lines[currentLineIndex] = '';
+            }
+          }
+          i = j + 1;
+          continue;
+        } else if (command === 'G') {
+          // Cursor to column - \x1b[nG (move to column n, default 1)
+          // For history purposes, treat as move to start of line (clear line content after cursor)
+          // We'll just skip this as it's handled with clear line
+          i = j + 1;
+          continue;
+        } else if (command === 'J') {
+          // Clear screen - skip for history
+          i = j + 1;
+          continue;
+        } else {
+          // Other escape sequence - keep in output but don't process
+          // Append the escape sequence as-is
+          if (currentLineIndex < lines.length) {
+            lines[currentLineIndex] += data.slice(i, j + 1);
+          }
+          i = j + 1;
+          continue;
+        }
+      }
+
+      // Check for carriage return
+      if (data[i] === '\r') {
+        if (data[i + 1] === '\n') {
+          // \r\n - newline
+          currentLineIndex++;
+          if (currentLineIndex >= lines.length) {
+            lines.push('');
+          }
+          i += 2;
+          continue;
+        } else {
+          // Standalone \r - move to start of line, clear it for overwrite
+          if (currentLineIndex < lines.length) {
+            lines[currentLineIndex] = '';
+          }
+          i++;
+          continue;
+        }
+      }
+
+      // Check for newline
+      if (data[i] === '\n') {
+        currentLineIndex++;
+        if (currentLineIndex >= lines.length) {
+          lines.push('');
+        }
+        i++;
+        continue;
+      }
+
+      // Regular character - append to current line
+      if (currentLineIndex >= lines.length) {
+        lines.push('');
+      }
+      lines[currentLineIndex] += data[i];
+      i++;
+    }
+
+    // Rejoin lines
+    this.history = lines.join('\n');
 
     // Trim history if it exceeds max size (keep most recent)
     if (this.history.length > this.maxHistorySize) {

@@ -86,10 +86,10 @@ export const instancesApi = {
       body: JSON.stringify(data),
     }),
 
-  sendInput: (id: string, input: string) =>
+  sendInput: (id: string, data: string) =>
     request<ApiResponse<void>>(`/instances/${id}/input`, {
       method: 'POST',
-      body: JSON.stringify({ input }),
+      body: JSON.stringify({ data }),
     }),
 };
 

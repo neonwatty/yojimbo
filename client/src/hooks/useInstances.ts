@@ -1,14 +1,13 @@
 import { useEffect, useCallback } from 'react';
 import { useInstancesStore } from '../store/instancesStore';
 import { useFeedStore } from '../store/feedStore';
-import { toast } from '../store/toastStore';
 import { instancesApi, feedApi } from '../api/client';
 import { useWebSocket } from './useWebSocket';
 import { getWsUrl } from '../config';
 import type { Instance, ActivityEvent } from '@cc-orchestrator/shared';
 
 export function useInstances() {
-  const { instances, setInstances, addInstance, updateInstance, removeInstance, setCurrentCwd, setInputLockStatus, clearInputLockStatus } = useInstancesStore();
+  const { instances, setInstances, addInstance, updateInstance, removeInstance, setCurrentCwd } = useInstancesStore();
   const { addEvent, setStats } = useFeedStore();
 
   const { subscribe, isConnected } = useWebSocket(getWsUrl(), {
@@ -76,27 +75,6 @@ export function useInstances() {
       }
     });
 
-    // Input lock events
-    const unsubscribeLockGranted = subscribe('input:lockGranted', (data: unknown) => {
-      const { instanceId } = data as { instanceId: string };
-      setInputLockStatus(instanceId, true);
-    });
-
-    const unsubscribeLockReleased = subscribe('input:lockReleased', (data: unknown) => {
-      const { instanceId } = data as { instanceId: string };
-      clearInputLockStatus(instanceId);
-    });
-
-    const unsubscribeLockStatus = subscribe('input:lockStatus', (data: unknown) => {
-      const { instanceId, hasLock, lockHolder } = data as { instanceId: string; hasLock: boolean; lockHolder?: string };
-      setInputLockStatus(instanceId, hasLock, lockHolder);
-    });
-
-    const unsubscribeLockDenied = subscribe('input:lockDenied', (data: unknown) => {
-      const { lockHolder } = data as { instanceId: string; lockHolder?: string };
-      toast.info(`Input locked by ${lockHolder || 'another device'}`);
-    });
-
     // Re-fetch instances after WebSocket connects to catch any status updates
     // that occurred before we subscribed (fixes race condition)
     fetchInstances();
@@ -116,12 +94,8 @@ export function useInstances() {
       unsubscribeCwd();
       unsubscribeFeedNew();
       unsubscribeFeedUpdated();
-      unsubscribeLockGranted();
-      unsubscribeLockReleased();
-      unsubscribeLockStatus();
-      unsubscribeLockDenied();
     };
-  }, [isConnected, subscribe, addInstance, updateInstance, removeInstance, setCurrentCwd, fetchInstances, addEvent, setStats, setInputLockStatus, clearInputLockStatus]);
+  }, [isConnected, subscribe, addInstance, updateInstance, removeInstance, setCurrentCwd, fetchInstances, addEvent, setStats]);
 
   // Fetch instances on mount
   useEffect(() => {

@@ -199,10 +199,10 @@ class HookInstallerService {
     const baseUrl = orchestratorUrl.replace(/\/$/, '');
 
     // Create curl commands for each hook
-    // Note: Use double quotes for the -d argument so $CWD gets expanded by the shell
-    const statusWorkingCmd = `curl -s -X POST "${baseUrl}/api/hooks/status" -H "Content-Type: application/json" -d "{\\"event\\":\\"working\\",\\"projectDir\\":\\"$CWD\\",\\"instanceId\\":\\"${instanceId}\\"}"`;
-    const stopCmd = `curl -s -X POST "${baseUrl}/api/hooks/stop" -H "Content-Type: application/json" -d "{\\"projectDir\\":\\"$CWD\\",\\"instanceId\\":\\"${instanceId}\\"}"`;
-    const notificationCmd = `curl -s -X POST "${baseUrl}/api/hooks/notification" -H "Content-Type: application/json" -d "{\\"projectDir\\":\\"$CWD\\",\\"instanceId\\":\\"${instanceId}\\"}"`;
+    // Shell quoting: 'literal'"$VAR"'literal' concatenates single-quoted and double-quoted parts
+    const statusWorkingCmd = `curl -s -X POST "${baseUrl}/api/hooks/status" -H "Content-Type: application/json" -d '{"event":"working","projectDir":"'"$CWD"'","instanceId":"${instanceId}"}'`;
+    const stopCmd = `curl -s -X POST "${baseUrl}/api/hooks/stop" -H "Content-Type: application/json" -d '{"projectDir":"'"$CWD"'","instanceId":"${instanceId}"}'`;
+    const notificationCmd = `curl -s -X POST "${baseUrl}/api/hooks/notification" -H "Content-Type: application/json" -d '{"projectDir":"'"$CWD"'","instanceId":"${instanceId}"}'`;
 
     // Helper to create a hook entry in the new format
     const createHookEntry = (command: string) => ({

@@ -193,9 +193,9 @@ class HookInstallerService {
 
   /**
    * Generate the hooks configuration object
+   * Uses the new Claude Code hook format with matchers
    */
   private generateHooksConfig(instanceId: string, orchestratorUrl: string): object {
-    // Escape the URL for shell usage
     const baseUrl = orchestratorUrl.replace(/\/$/, '');
 
     // Create curl commands for each hook
@@ -203,18 +203,19 @@ class HookInstallerService {
     const stopCmd = `curl -s -X POST "${baseUrl}/api/hooks/stop" -H "Content-Type: application/json" -d '{"projectDir":"$CWD","instanceId":"${instanceId}"}'`;
     const notificationCmd = `curl -s -X POST "${baseUrl}/api/hooks/notification" -H "Content-Type: application/json" -d '{"projectDir":"$CWD","instanceId":"${instanceId}"}'`;
 
+    // Helper to create a hook entry in the new format
+    const createHookEntry = (command: string) => ({
+      matcher: ".",
+      hooks: [{ type: "command", command }]
+    });
+
     return {
       hooks: {
-        UserPromptSubmit: [statusWorkingCmd],
-        PreToolUse: [statusWorkingCmd],
-        PostToolUse: [statusWorkingCmd],
-        Stop: [stopCmd],
-        Notification: [
-          {
-            matcher: ".",
-            hooks: [notificationCmd]
-          }
-        ]
+        UserPromptSubmit: [createHookEntry(statusWorkingCmd)],
+        PreToolUse: [createHookEntry(statusWorkingCmd)],
+        PostToolUse: [createHookEntry(statusWorkingCmd)],
+        Stop: [createHookEntry(stopCmd)],
+        Notification: [createHookEntry(notificationCmd)]
       }
     };
   }
@@ -491,3 +492,4 @@ PYTHON_SCRIPT
 }
 
 export const hookInstallerService = new HookInstallerService();
+export { HookInstallerService };

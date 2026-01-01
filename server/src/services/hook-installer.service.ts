@@ -15,7 +15,7 @@ interface RemoteMachineRow {
 interface InstanceRow {
   id: string;
   working_dir: string;
-  remote_machine_id: string | null;
+  machine_id: string | null;
 }
 
 interface HookInstallResult {
@@ -40,7 +40,7 @@ class HookInstallerService {
 
     // Get instance details
     const instance = db.prepare(`
-      SELECT id, working_dir, remote_machine_id
+      SELECT id, working_dir, machine_id
       FROM instances
       WHERE id = ?
     `).get(instanceId) as InstanceRow | undefined;
@@ -49,7 +49,7 @@ class HookInstallerService {
       return { success: false, message: 'Instance not found', error: 'Instance not found' };
     }
 
-    if (!instance.remote_machine_id) {
+    if (!instance.machine_id) {
       return { success: false, message: 'Instance is not a remote instance', error: 'Not a remote instance' };
     }
 
@@ -58,7 +58,7 @@ class HookInstallerService {
       SELECT id, hostname, port, username, ssh_key_path
       FROM remote_machines
       WHERE id = ?
-    `).get(instance.remote_machine_id) as RemoteMachineRow | undefined;
+    `).get(instance.machine_id) as RemoteMachineRow | undefined;
 
     if (!machine) {
       return { success: false, message: 'Remote machine not found', error: 'Machine not found' };
@@ -286,7 +286,7 @@ PYTHON_SCRIPT
 
     // Get instance details
     const instance = db.prepare(`
-      SELECT id, working_dir, remote_machine_id
+      SELECT id, working_dir, machine_id
       FROM instances
       WHERE id = ?
     `).get(instanceId) as InstanceRow | undefined;
@@ -295,7 +295,7 @@ PYTHON_SCRIPT
       return { success: false, message: 'Instance not found', error: 'Instance not found' };
     }
 
-    if (!instance.remote_machine_id) {
+    if (!instance.machine_id) {
       return { success: false, message: 'Instance is not a remote instance', error: 'Not a remote instance' };
     }
 
@@ -304,7 +304,7 @@ PYTHON_SCRIPT
       SELECT id, hostname, port, username, ssh_key_path
       FROM remote_machines
       WHERE id = ?
-    `).get(instance.remote_machine_id) as RemoteMachineRow | undefined;
+    `).get(instance.machine_id) as RemoteMachineRow | undefined;
 
     if (!machine) {
       return { success: false, message: 'Remote machine not found', error: 'Machine not found' };

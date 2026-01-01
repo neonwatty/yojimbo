@@ -8,7 +8,7 @@ interface ActivityEvent {
   id: string;
   instanceId: string | null;
   instanceName: string;
-  eventType: 'completed' | 'awaiting' | 'error' | 'started';
+  eventType: 'completed' | 'error' | 'started';
   message: string;
   createdAt: string;
   readAt: string | null;

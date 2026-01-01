@@ -59,7 +59,8 @@ export function useMachines() {
 
       for (const machine of currentMachines) {
         try {
-          await machinesApi.testConnection(machine.id);
+          // Use silent mode to avoid toast spam during background health checks
+          await machinesApi.testConnection(machine.id, { silent: true });
         } catch {
           // Ignore errors - status will be updated in DB
         }

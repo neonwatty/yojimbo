@@ -62,8 +62,6 @@ export default function ActivityPage() {
     switch (eventType) {
       case 'completed':
         return <Icons.check className="w-4 h-4 text-green-400" />;
-      case 'awaiting':
-        return <Icons.notification className="w-4 h-4 text-yellow-400" />;
       case 'error':
         return <Icons.alert className="w-4 h-4 text-red-400" />;
       case 'started':
@@ -77,8 +75,6 @@ export default function ActivityPage() {
     switch (eventType) {
       case 'completed':
         return 'Completed';
-      case 'awaiting':
-        return 'Awaiting';
       case 'error':
         return 'Error';
       case 'started':
@@ -102,7 +98,6 @@ export default function ActivityPage() {
   const filterOptions: { value: FilterType; label: string }[] = [
     { value: 'all', label: 'All' },
     { value: 'completed', label: 'Completed' },
-    { value: 'awaiting', label: 'Awaiting' },
     { value: 'error', label: 'Error' },
     { value: 'started', label: 'Started' },
   ];
@@ -200,7 +195,6 @@ export default function ActivityPage() {
                     </span>
                     <span className={`text-xs px-1.5 py-0.5 rounded ${
                       event.eventType === 'completed' ? 'bg-green-500/20 text-green-400' :
-                      event.eventType === 'awaiting' ? 'bg-yellow-500/20 text-yellow-400' :
                       event.eventType === 'error' ? 'bg-red-500/20 text-red-400' :
                       'bg-blue-500/20 text-blue-400'
                     }`}>

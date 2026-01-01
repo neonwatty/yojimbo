@@ -49,7 +49,7 @@ function OfflineIndicator() {
   if (isOnline) return null;
 
   return (
-    <div className="fixed top-0 left-0 right-0 bg-state-awaiting text-surface-900 text-xs text-center py-1 z-[200]">
+    <div className="fixed top-0 left-0 right-0 bg-yellow-500 text-surface-900 text-xs text-center py-1 z-[200]">
       You're offline - some features may be unavailable
     </div>
   );
@@ -216,7 +216,6 @@ function LandscapeSidebar({
                 <div className="flex items-center gap-2">
                   <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
                     instance.status === 'working' ? 'bg-state-working' :
-                    instance.status === 'awaiting' ? 'bg-state-awaiting' :
                     instance.status === 'error' ? 'bg-state-error' :
                     'bg-surface-500'
                   }`} />
@@ -376,7 +375,6 @@ function InstanceDrawer({
                   <div
                     className={`w-2.5 h-2.5 rounded-full ${
                       instance.status === 'working' ? 'bg-state-working' :
-                      instance.status === 'awaiting' ? 'bg-state-awaiting' :
                       instance.status === 'error' ? 'bg-state-error' :
                       'bg-state-idle'
                     }`}
@@ -479,7 +477,6 @@ function SettingsDrawer({
                 <div
                   className={`w-2.5 h-2.5 rounded-full ${
                     currentInstance.status === 'working' ? 'bg-state-working pulse-working' :
-                    currentInstance.status === 'awaiting' ? 'bg-state-awaiting' :
                     currentInstance.status === 'error' ? 'bg-state-error' :
                     'bg-state-idle'
                   }`}

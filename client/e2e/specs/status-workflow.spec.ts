@@ -51,7 +51,7 @@ test.describe('Status Workflow', () => {
     await expect(statusBadge(instancesPage.page, 'Working')).toBeVisible({ timeout: 5000 });
   });
 
-  test('status changes to awaiting when notification hook is called', async ({ instancesPage }) => {
+  test('notification hook sets status to idle', async ({ instancesPage }) => {
     await instancesPage.gotoInstances();
     await instancesPage.createNewInstance();
 
@@ -66,7 +66,16 @@ test.describe('Status Workflow', () => {
     const instance = data.data.find((i: any) => i.id === instanceId);
     const workingDir = instance?.workingDir || '~';
 
-    // Call the notification hook to simulate Claude awaiting input
+    // First set to working
+    await fetch(`${API_BASE}/hooks/status`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ event: 'working', projectDir: workingDir, instanceId }),
+    });
+    await instancesPage.page.waitForTimeout(500);
+    await expect(statusBadge(instancesPage.page, 'Working')).toBeVisible({ timeout: 5000 });
+
+    // Call the notification hook - now sets to idle
     await fetch(`${API_BASE}/hooks/notification`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -76,8 +85,8 @@ test.describe('Status Workflow', () => {
     // Wait for WebSocket update
     await instancesPage.page.waitForTimeout(500);
 
-    // Should now see awaiting status badge
-    await expect(statusBadge(instancesPage.page, 'Awaiting')).toBeVisible({ timeout: 5000 });
+    // Should now see idle status badge (notification now sets idle)
+    await expect(statusBadge(instancesPage.page, 'Idle')).toBeVisible({ timeout: 5000 });
   });
 
   test('status changes back to idle when stop hook is called', async ({ instancesPage }) => {
@@ -116,7 +125,7 @@ test.describe('Status Workflow', () => {
     await expect(statusBadge(instancesPage.page, 'Idle')).toBeVisible({ timeout: 5000 });
   });
 
-  test('full status cycle: idle → working → awaiting → idle', async ({ instancesPage }) => {
+  test('full status cycle: idle → working → idle', async ({ instancesPage }) => {
     await instancesPage.gotoInstances();
     await instancesPage.createNewInstance();
 
@@ -143,16 +152,7 @@ test.describe('Status Workflow', () => {
     await instancesPage.page.waitForTimeout(500);
     await expect(statusBadge(instancesPage.page, 'Working')).toBeVisible({ timeout: 5000 });
 
-    // 3. Transition to awaiting
-    await fetch(`${API_BASE}/hooks/notification`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ projectDir: workingDir, instanceId }),
-    });
-    await instancesPage.page.waitForTimeout(500);
-    await expect(statusBadge(instancesPage.page, 'Awaiting')).toBeVisible({ timeout: 5000 });
-
-    // 4. Back to idle
+    // 3. Back to idle via stop hook
     await fetch(`${API_BASE}/hooks/stop`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

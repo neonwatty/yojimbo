@@ -29,28 +29,36 @@ import { toast } from '../store/toastStore';
 
 const API_BASE = '/api';
 
-async function request<T>(url: string, options?: RequestInit): Promise<T> {
+interface RequestOptions extends RequestInit {
+  silent?: boolean; // Don't show toast on error
+}
+
+async function request<T>(url: string, options?: RequestOptions): Promise<T> {
+  const { silent, ...fetchOptions } = options || {};
+
   try {
     const response = await fetch(`${API_BASE}${url}`, {
       headers: {
         'Content-Type': 'application/json',
-        ...options?.headers,
+        ...fetchOptions?.headers,
       },
-      ...options,
+      ...fetchOptions,
     });
 
     const data = await response.json();
 
     if (!response.ok) {
       const errorMessage = data.error || 'Request failed';
-      toast.error(errorMessage);
+      if (!silent) {
+        toast.error(errorMessage);
+      }
       throw new Error(errorMessage);
     }
 
     return data;
   } catch (error) {
     // Network errors (fetch failed, no connection, etc.)
-    if (error instanceof TypeError) {
+    if (error instanceof TypeError && !silent) {
       toast.error('Network error - check your connection');
     }
     throw error;
@@ -90,6 +98,17 @@ export const instancesApi = {
     request<ApiResponse<void>>(`/instances/${id}/input`, {
       method: 'POST',
       body: JSON.stringify({ data }),
+    }),
+
+  installHooks: (id: string, orchestratorUrl: string) =>
+    request<ApiResponse<{ message: string }>>(`/instances/${id}/install-hooks`, {
+      method: 'POST',
+      body: JSON.stringify({ orchestratorUrl }),
+    }),
+
+  uninstallHooks: (id: string) =>
+    request<ApiResponse<{ message: string }>>(`/instances/${id}/uninstall-hooks`, {
+      method: 'POST',
     }),
 };
 
@@ -243,10 +262,10 @@ export const machinesApi = {
       method: 'DELETE',
     }),
 
-  testConnection: (id: string) =>
+  testConnection: (id: string, options?: { silent?: boolean }) =>
     request<ApiResponse<{ connected: boolean; error?: string; machine: RemoteMachine }>>(
       `/machines/${id}/test`,
-      { method: 'POST' }
+      { method: 'POST', silent: options?.silent }
     ),
 
   listDirectories: (id: string, path = '~') =>
@@ -279,6 +298,7 @@ export const portForwardsApi = {
 
 // Keychain API (macOS only)
 export const keychainApi = {
+  // Local keychain operations
   unlock: (password: string) =>
     request<ApiResponse<{ message: string }>>('/keychain/unlock', {
       method: 'POST',
@@ -287,4 +307,24 @@ export const keychainApi = {
 
   status: () =>
     request<ApiResponse<{ locked: boolean; message: string }>>('/keychain/status'),
+
+  // Remote keychain password storage (stores in LOCAL keychain)
+  saveRemotePassword: (machineId: string, password: string) =>
+    request<ApiResponse<{ message: string }>>(`/keychain/remote/${machineId}/save`, {
+      method: 'POST',
+      body: JSON.stringify({ password }),
+    }),
+
+  hasRemotePassword: (machineId: string) =>
+    request<ApiResponse<{ hasPassword: boolean }>>(`/keychain/remote/${machineId}/has-password`),
+
+  deleteRemotePassword: (machineId: string) =>
+    request<ApiResponse<{ message: string }>>(`/keychain/remote/${machineId}`, {
+      method: 'DELETE',
+    }),
+
+  autoUnlockRemote: (instanceId: string) =>
+    request<ApiResponse<{ message: string }>>(`/keychain/remote/${instanceId}/auto-unlock`, {
+      method: 'POST',
+    }),
 };

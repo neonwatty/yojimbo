@@ -1,0 +1,126 @@
+import { getDatabase } from '../db/connection.js';
+import { broadcast } from '../websocket/server.js';
+import { createActivityEvent } from './feed.service.js';
+import type { InstanceStatus } from '@cc-orchestrator/shared';
+
+// Timeout for resetting status to idle (30 seconds)
+const ACTIVITY_TIMEOUT_MS = 30000;
+
+// Check interval (10 seconds)
+const CHECK_INTERVAL_MS = 10000;
+
+interface InstanceActivity {
+  lastActivityAt: number;
+  status: InstanceStatus;
+}
+
+/**
+ * Status Timeout Service
+ * Tracks instance activity and resets status to 'idle' after inactivity timeout.
+ * This handles the case where Claude Code stops working but doesn't send an idle event.
+ */
+class StatusTimeoutService {
+  private activityMap = new Map<string, InstanceActivity>();
+  private intervalId: ReturnType<typeof setInterval> | null = null;
+
+  /**
+   * Start the timeout checker
+   */
+  start(): void {
+    if (this.intervalId) return;
+
+    console.log('⏱️ Status timeout service started');
+    this.intervalId = setInterval(() => this.checkTimeouts(), CHECK_INTERVAL_MS);
+  }
+
+  /**
+   * Stop the timeout checker
+   */
+  stop(): void {
+    if (this.intervalId) {
+      clearInterval(this.intervalId);
+      this.intervalId = null;
+      console.log('⏱️ Status timeout service stopped');
+    }
+  }
+
+  /**
+   * Record activity for an instance (called when hooks receive events)
+   */
+  recordActivity(instanceId: string, status: InstanceStatus): void {
+    this.activityMap.set(instanceId, {
+      lastActivityAt: Date.now(),
+      status,
+    });
+  }
+
+  /**
+   * Remove tracking for an instance (called when instance is closed)
+   */
+  removeInstance(instanceId: string): void {
+    this.activityMap.delete(instanceId);
+  }
+
+  /**
+   * Check all tracked instances for timeout
+   */
+  private checkTimeouts(): void {
+    const now = Date.now();
+    const db = getDatabase();
+
+    for (const [instanceId, activity] of this.activityMap.entries()) {
+      // Only check instances that are currently working
+      if (activity.status !== 'working') continue;
+
+      const timeSinceActivity = now - activity.lastActivityAt;
+
+      if (timeSinceActivity >= ACTIVITY_TIMEOUT_MS) {
+        // Reset to idle
+        this.resetToIdle(instanceId, db);
+      }
+    }
+  }
+
+  /**
+   * Reset an instance status to idle
+   */
+  private resetToIdle(instanceId: string, db: ReturnType<typeof getDatabase>): void {
+    // Get instance info
+    const instance = db
+      .prepare('SELECT id, name, status FROM instances WHERE id = ? AND closed_at IS NULL')
+      .get(instanceId) as { id: string; name: string; status: InstanceStatus } | undefined;
+
+    if (!instance || instance.status !== 'working') {
+      // Instance doesn't exist, is closed, or already not working
+      this.activityMap.delete(instanceId);
+      return;
+    }
+
+    // Update database
+    db.prepare(`
+      UPDATE instances
+      SET status = 'idle', updated_at = datetime('now')
+      WHERE id = ?
+    `).run(instanceId);
+
+    // Update tracking
+    this.activityMap.set(instanceId, {
+      lastActivityAt: Date.now(),
+      status: 'idle',
+    });
+
+    // Broadcast status change
+    broadcast({
+      type: 'status:changed',
+      instanceId,
+      status: 'idle',
+    });
+
+    console.log(`⏱️ Instance ${instanceId} timed out, reset to idle`);
+
+    // Create activity event
+    createActivityEvent(instanceId, instance.name, 'completed', `${instance.name} finished working`);
+  }
+}
+
+export const statusTimeoutService = new StatusTimeoutService();

@@ -3,6 +3,7 @@ import os from 'os';
 import { getDatabase } from '../db/connection.js';
 import { broadcast } from '../websocket/server.js';
 import { createActivityEvent } from '../services/feed.service.js';
+import { statusTimeoutService } from '../services/status-timeout.service.js';
 import type { HookStatusEvent, HookNotificationEvent, HookStopEvent, InstanceStatus } from '@cc-orchestrator/shared';
 
 const router = Router();
@@ -75,6 +76,9 @@ function updateInstanceStatus(instanceId: string, status: InstanceStatus): void 
 
   const previousStatus = instance.status;
 
+  // Record activity for timeout tracking
+  statusTimeoutService.recordActivity(instanceId, status);
+
   // Update database
   db.prepare(`
     UPDATE instances
@@ -94,8 +98,6 @@ function updateInstanceStatus(instanceId: string, status: InstanceStatus): void 
   // Create activity events for significant transitions
   if (status === 'idle' && previousStatus === 'working') {
     createActivityEvent(instanceId, instance.name, 'completed', `${instance.name} finished working`);
-  } else if (status === 'awaiting' && previousStatus !== 'awaiting') {
-    createActivityEvent(instanceId, instance.name, 'awaiting', `${instance.name} needs attention`);
   } else if (status === 'error' && previousStatus !== 'error') {
     createActivityEvent(instanceId, instance.name, 'error', `${instance.name} encountered an error`);
   } else if (status === 'working' && previousStatus === 'idle') {
@@ -137,7 +139,8 @@ router.post('/status', (req, res) => {
   }
 });
 
-// POST /api/hooks/notification - Receive notification events (awaiting input)
+// POST /api/hooks/notification - Receive notification events
+// Note: We no longer distinguish 'awaiting' status - notifications just confirm activity
 router.post('/notification', (req, res) => {
   try {
     const { projectDir, instanceId } = req.body as HookNotificationEvent & { instanceId?: string };
@@ -156,7 +159,8 @@ router.post('/notification', (req, res) => {
     }
 
     if (instance) {
-      updateInstanceStatus(instance.id, 'awaiting');
+      // Notification events now set to idle (Claude is done working, waiting for user)
+      updateInstanceStatus(instance.id, 'idle');
     } else if (instanceId) {
       console.log(`⚠️ No instance found with ID: ${instanceId}`);
     } else {

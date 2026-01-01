@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { getDatabase } from '../db/connection.js';
 import { terminalManager } from '../services/terminal-manager.service.js';
 import { sshConnectionService } from '../services/ssh-connection.service.js';
+import { hookInstallerService } from '../services/hook-installer.service.js';
 import { broadcast } from '../websocket/server.js';
 import type { Instance, CreateInstanceRequest, UpdateInstanceRequest, InstanceStatus, MachineType } from '@cc-orchestrator/shared';
 
@@ -286,6 +287,50 @@ router.post('/reorder', (req, res) => {
   } catch (error) {
     console.error('Error reordering instances:', error);
     res.status(500).json({ success: false, error: 'Failed to reorder instances' });
+  }
+});
+
+// POST /api/instances/:id/install-hooks - Install Claude Code hooks on remote machine
+router.post('/:id/install-hooks', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { orchestratorUrl } = req.body;
+
+    if (!orchestratorUrl) {
+      return res.status(400).json({
+        success: false,
+        error: 'orchestratorUrl is required (the URL the remote machine can use to reach this server)',
+      });
+    }
+
+    const result = await hookInstallerService.installHooksForInstance(id, orchestratorUrl);
+
+    if (result.success) {
+      res.json({ success: true, data: { message: result.message } });
+    } else {
+      res.status(400).json({ success: false, error: result.message, details: result.error });
+    }
+  } catch (error) {
+    console.error('Error installing hooks:', error);
+    res.status(500).json({ success: false, error: 'Failed to install hooks' });
+  }
+});
+
+// POST /api/instances/:id/uninstall-hooks - Uninstall Claude Code hooks from remote machine
+router.post('/:id/uninstall-hooks', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const result = await hookInstallerService.uninstallHooksForInstance(id);
+
+    if (result.success) {
+      res.json({ success: true, data: { message: result.message } });
+    } else {
+      res.status(400).json({ success: false, error: result.message, details: result.error });
+    }
+  } catch (error) {
+    console.error('Error uninstalling hooks:', error);
+    res.status(500).json({ success: false, error: 'Failed to uninstall hooks' });
   }
 });
 

@@ -396,7 +396,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
               <span className="text-theme-primary text-sm">Event types to display</span>
               <p className="text-xs text-theme-muted mt-0.5 mb-2">Select which event types appear in the activity feed</p>
               <div className="space-y-2">
-                {(['completed', 'awaiting', 'error', 'started'] as ActivityEventType[]).map((eventType) => (
+                {(['completed', 'error', 'started'] as ActivityEventType[]).map((eventType) => (
                   <label key={eventType} className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox"
@@ -407,7 +407,6 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                     <span className="text-sm text-theme-primary capitalize">{eventType}</span>
                     <span className="text-xs text-theme-muted">
                       {eventType === 'completed' && '- Instance finished working'}
-                      {eventType === 'awaiting' && '- Instance needs attention'}
                       {eventType === 'error' && '- Instance encountered an error'}
                       {eventType === 'started' && '- Instance started working'}
                     </span>

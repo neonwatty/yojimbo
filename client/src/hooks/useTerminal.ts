@@ -3,6 +3,15 @@ import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
 
+// Debounce helper
+function debounce<T extends (...args: unknown[]) => void>(fn: T, delay: number): T {
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+  return ((...args: unknown[]) => {
+    if (timeoutId) clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => fn(...args), delay);
+  }) as T;
+}
+
 interface UseTerminalOptions {
   onData?: (data: string) => void;
   onResize?: (cols: number, rows: number) => void;
@@ -99,15 +108,17 @@ export function useTerminal(options: UseTerminalOptions = {}) {
         terminal.onData(onData);
       }
 
-      // Handle resize
-      resizeObserverRef.current = new ResizeObserver(() => {
+      // Handle resize with debounce to prevent text corruption during rapid resizing
+      const debouncedResize = debounce(() => {
         if (fitAddonRef.current && terminalRef.current) {
           fitAddonRef.current.fit();
           if (onResize) {
             onResize(terminalRef.current.cols, terminalRef.current.rows);
           }
         }
-      });
+      }, 100);
+
+      resizeObserverRef.current = new ResizeObserver(debouncedResize);
       resizeObserverRef.current.observe(container);
 
       isInitializedRef.current = true;

@@ -29,28 +29,36 @@ import { toast } from '../store/toastStore';
 
 const API_BASE = '/api';
 
-async function request<T>(url: string, options?: RequestInit): Promise<T> {
+interface RequestOptions extends RequestInit {
+  silent?: boolean; // Don't show toast on error
+}
+
+async function request<T>(url: string, options?: RequestOptions): Promise<T> {
+  const { silent, ...fetchOptions } = options || {};
+
   try {
     const response = await fetch(`${API_BASE}${url}`, {
       headers: {
         'Content-Type': 'application/json',
-        ...options?.headers,
+        ...fetchOptions?.headers,
       },
-      ...options,
+      ...fetchOptions,
     });
 
     const data = await response.json();
 
     if (!response.ok) {
       const errorMessage = data.error || 'Request failed';
-      toast.error(errorMessage);
+      if (!silent) {
+        toast.error(errorMessage);
+      }
       throw new Error(errorMessage);
     }
 
     return data;
   } catch (error) {
     // Network errors (fetch failed, no connection, etc.)
-    if (error instanceof TypeError) {
+    if (error instanceof TypeError && !silent) {
       toast.error('Network error - check your connection');
     }
     throw error;
@@ -243,10 +251,10 @@ export const machinesApi = {
       method: 'DELETE',
     }),
 
-  testConnection: (id: string) =>
+  testConnection: (id: string, options?: { silent?: boolean }) =>
     request<ApiResponse<{ connected: boolean; error?: string; machine: RemoteMachine }>>(
       `/machines/${id}/test`,
-      { method: 'POST' }
+      { method: 'POST', silent: options?.silent }
     ),
 
   listDirectories: (id: string, path = '~') =>

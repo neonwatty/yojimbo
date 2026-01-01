@@ -1,4 +1,4 @@
-.PHONY: dev start stop build lint lint-fix knip test test-unit test-e2e clean db-reset db-migrate install hooks-install hooks-uninstall help
+.PHONY: dev start stop build lint lint-fix knip test test-unit test-e2e test-local clean db-reset db-migrate install hooks-install hooks-uninstall help
 
 # Default target
 .DEFAULT_GOAL := help
@@ -103,6 +103,13 @@ test-e2e-claude:
 test-watch:
 	@echo "$(CYAN)Running tests in watch mode...$(NC)"
 	npm run test:watch --workspace=server
+
+## test-local: Run all tests including macOS-specific tests (keychain, etc.)
+test-local:
+	@echo "$(CYAN)Running all tests (including macOS-specific)...$(NC)"
+	@echo "$(YELLOW)Note: Keychain tests require macOS and will test real keychain access$(NC)"
+	@unset CI && npm run test --workspace=server
+	@echo "$(GREEN)All local tests complete$(NC)"
 
 #===============================================================================
 # Database

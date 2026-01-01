@@ -110,6 +110,18 @@ export const instancesApi = {
     request<ApiResponse<{ message: string }>>(`/instances/${id}/uninstall-hooks`, {
       method: 'POST',
     }),
+
+  resetStatus: (id: string) =>
+    request<ApiResponse<{ status: string }>>(`/instances/${id}/reset-status`, {
+      method: 'POST',
+    }),
+
+  getHooksConfig: (id: string, orchestratorUrl: string) =>
+    request<ApiResponse<{
+      config: object;
+      configJson: string;
+      instructions: string[];
+    }>>(`/instances/${id}/hooks-config?orchestratorUrl=${encodeURIComponent(orchestratorUrl)}`),
 };
 
 // Session API

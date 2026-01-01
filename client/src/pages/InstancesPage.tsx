@@ -17,6 +17,7 @@ import { Icons } from '../components/common/Icons';
 import { instancesApi, keychainApi } from '../api/client';
 import { toast } from '../store/toastStore';
 import { KeychainUnlockModal } from '../components/modals/KeychainUnlockModal';
+import { HooksConfigModal } from '../components/modals/HooksConfigModal';
 import type { Instance } from '@cc-orchestrator/shared';
 
 export default function InstancesPage() {
@@ -95,8 +96,11 @@ export default function InstancesPage() {
   // Keychain modal state
   const [showKeychainModal, setShowKeychainModal] = useState(false);
 
-  // Hook installation state
-  const [installingHooks, setInstallingHooks] = useState(false);
+  // Hooks config modal state
+  const [showHooksConfigModal, setShowHooksConfigModal] = useState(false);
+
+  // Status reset state
+  const [resettingStatus, setResettingStatus] = useState(false);
 
   // Track which machines have saved keychain passwords
   const [savedPasswords, setSavedPasswords] = useState<Record<string, boolean>>({});
@@ -259,23 +263,24 @@ export default function InstancesPage() {
     setEditingName('');
   }, []);
 
-  // Install hooks on remote machine
-  const handleInstallHooks = useCallback(async (instanceId: string) => {
-    setInstallingHooks(true);
-    try {
-      // Build orchestrator URL from current location
-      // Use the server port (3456) since that's where the API is
-      const orchestratorUrl = `http://${window.location.hostname}:3456`;
-
-      await instancesApi.installHooks(instanceId, orchestratorUrl);
-      toast.success('Hooks installed successfully on remote machine');
-    } catch (error) {
-      // Error toast already shown by API layer
-      console.error('Failed to install hooks:', error);
-    } finally {
-      setInstallingHooks(false);
-    }
+  // Show hooks config modal for remote instance
+  const handleShowHooksConfig = useCallback(() => {
+    setShowHooksConfigModal(true);
   }, []);
+
+  // Reset instance status to idle
+  const handleResetStatus = useCallback(async (instanceId: string) => {
+    setResettingStatus(true);
+    try {
+      await instancesApi.resetStatus(instanceId);
+      updateInstance(instanceId, { status: 'idle' });
+      toast.success('Status reset to idle');
+    } catch (error) {
+      console.error('Failed to reset status:', error);
+    } finally {
+      setResettingStatus(false);
+    }
+  }, [updateInstance]);
 
   // Expanded view for a specific instance
   if (id) {
@@ -362,17 +367,28 @@ export default function InstancesPage() {
               <span>Terminal</span>
             </button>
             <span className="text-surface-600 mx-1">│</span>
+            {/* Reset Status button - shown when instance is working */}
+            {instance.status === 'working' && (
+              <button
+                onClick={() => handleResetStatus(instance.id)}
+                disabled={resettingStatus}
+                className="flex items-center gap-1.5 px-2 py-1 rounded text-xs text-aurora-4 hover:text-aurora-3 hover:bg-surface-700 transition-colors disabled:opacity-50"
+                title="Manually reset status to idle"
+              >
+                <Icons.refresh />
+                <span>{resettingStatus ? 'Resetting...' : 'Reset Status'}</span>
+              </button>
+            )}
             {/* Only show Keychain and Hooks buttons for remote instances */}
             {instance.machineType === 'remote' && (
               <>
                 <button
-                  onClick={() => handleInstallHooks(instance.id)}
-                  disabled={installingHooks}
-                  className="flex items-center gap-1.5 px-2 py-1 rounded text-xs text-frost-3 hover:text-frost-2 hover:bg-surface-700 transition-colors disabled:opacity-50"
-                  title="Install Claude Code hooks on remote machine for status tracking"
+                  onClick={handleShowHooksConfig}
+                  className="flex items-center gap-1.5 px-2 py-1 rounded text-xs text-frost-3 hover:text-frost-2 hover:bg-surface-700 transition-colors"
+                  title="View hooks configuration for status tracking"
                 >
                   <Icons.settings />
-                  <span>{installingHooks ? 'Installing...' : 'Install Hooks'}</span>
+                  <span>Hooks Config</span>
                 </button>
                 <button
                   onClick={() => setShowKeychainModal(true)}
@@ -488,6 +504,14 @@ export default function InstancesPage() {
           }}
           instanceId={instance.id}
           machineId={instance.machineId}
+        />
+
+        {/* Hooks Config Modal */}
+        <HooksConfigModal
+          isOpen={showHooksConfigModal}
+          onClose={() => setShowHooksConfigModal(false)}
+          instanceId={instance.id}
+          instanceName={instance.name}
         />
       </div>
     );

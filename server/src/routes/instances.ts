@@ -334,4 +334,80 @@ router.post('/:id/uninstall-hooks', async (req, res) => {
   }
 });
 
+// POST /api/instances/:id/reset-status - Manually reset instance status to idle
+router.post('/:id/reset-status', (req, res) => {
+  try {
+    const db = getDatabase();
+    const { id } = req.params;
+
+    // Check if instance exists
+    const existing = db.prepare('SELECT * FROM instances WHERE id = ? AND closed_at IS NULL').get(id) as InstanceRow | undefined;
+    if (!existing) {
+      return res.status(404).json({ success: false, error: 'Instance not found' });
+    }
+
+    // Reset status to idle
+    db.prepare(`
+      UPDATE instances
+      SET status = 'idle', updated_at = datetime('now')
+      WHERE id = ?
+    `).run(id);
+
+    // Broadcast status change
+    broadcast({
+      type: 'status:changed',
+      instanceId: id,
+      status: 'idle',
+    });
+
+    console.log(`🔄 Instance ${id} status manually reset to idle`);
+
+    res.json({ success: true, data: { status: 'idle' } });
+  } catch (error) {
+    console.error('Error resetting instance status:', error);
+    res.status(500).json({ success: false, error: 'Failed to reset status' });
+  }
+});
+
+// GET /api/instances/:id/hooks-config - Get hooks configuration for preview (remote instances only)
+router.get('/:id/hooks-config', (req, res) => {
+  try {
+    const db = getDatabase();
+    const { id } = req.params;
+    const { orchestratorUrl } = req.query;
+
+    if (!orchestratorUrl || typeof orchestratorUrl !== 'string') {
+      return res.status(400).json({
+        success: false,
+        error: 'orchestratorUrl query parameter is required',
+      });
+    }
+
+    // Check if instance exists
+    const existing = db.prepare('SELECT * FROM instances WHERE id = ? AND closed_at IS NULL').get(id) as InstanceRow | undefined;
+    if (!existing) {
+      return res.status(404).json({ success: false, error: 'Instance not found' });
+    }
+
+    // Generate hooks config for preview
+    const hooksConfig = hookInstallerService.getHooksConfigForPreview(id, orchestratorUrl);
+
+    res.json({
+      success: true,
+      data: {
+        config: hooksConfig,
+        configJson: JSON.stringify(hooksConfig, null, 2),
+        instructions: [
+          'Add the following to your ~/.claude/settings.json on the remote machine:',
+          'If you already have a settings.json, merge the "hooks" section with your existing hooks.',
+          'These hooks allow the orchestrator to track Claude Code status on this instance.',
+        ],
+      },
+    });
+  } catch (error) {
+    console.error('Error getting hooks config:', error);
+    res.status(500).json({ success: false, error: 'Failed to get hooks config' });
+  }
+});
+
 export default router;

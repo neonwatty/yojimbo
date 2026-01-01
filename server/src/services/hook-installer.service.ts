@@ -490,6 +490,13 @@ PYTHON_SCRIPT
       echo "Hook uninstallation complete"
     `;
   }
+
+  /**
+   * Get hooks configuration for preview (public method for API)
+   */
+  getHooksConfigForPreview(instanceId: string, orchestratorUrl: string): object {
+    return this.generateHooksConfig(instanceId, orchestratorUrl);
+  }
 }
 
 export const hookInstallerService = new HookInstallerService();

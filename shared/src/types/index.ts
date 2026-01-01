@@ -1,5 +1,5 @@
 // Instance types
-export type InstanceStatus = 'working' | 'awaiting' | 'idle' | 'error' | 'disconnected';
+export type InstanceStatus = 'working' | 'idle' | 'error' | 'disconnected';
 export type MachineType = 'local' | 'remote';
 
 export interface Instance {
@@ -90,7 +90,7 @@ export interface ReorderInstancesRequest {
 }
 
 // Activity Feed types
-export type ActivityEventType = 'completed' | 'awaiting' | 'error' | 'started';
+export type ActivityEventType = 'completed' | 'error' | 'started';
 
 export interface ActivityEvent {
   id: string;
@@ -168,7 +168,7 @@ export interface HookStatusEvent {
 }
 
 export interface HookNotificationEvent {
-  event: 'awaiting';
+  event: 'notification';
   projectDir: string;
   sessionId?: string;
 }

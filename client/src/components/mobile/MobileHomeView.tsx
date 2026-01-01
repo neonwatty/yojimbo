@@ -60,9 +60,9 @@ export function MobileHomeView({ onTopGesture, onBottomGesture, onViewAllInstanc
       colorClass: 'text-state-working border-state-working/30 bg-state-working/10'
     },
     {
-      label: 'Awaiting',
-      value: instances.filter((i) => i.status === 'awaiting').length,
-      colorClass: 'text-state-awaiting border-state-awaiting/30 bg-state-awaiting/10'
+      label: 'Idle',
+      value: instances.filter((i) => i.status === 'idle').length,
+      colorClass: 'text-state-idle border-state-idle/30 bg-state-idle/10'
     },
     {
       label: 'Errors',
@@ -170,7 +170,6 @@ export function MobileHomeView({ onTopGesture, onBottomGesture, onViewAllInstanc
                   <div
                     className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${
                       instance.status === 'working' ? 'bg-state-working' :
-                      instance.status === 'awaiting' ? 'bg-state-awaiting' :
                       instance.status === 'error' ? 'bg-state-error' :
                       'bg-state-idle'
                     }`}
@@ -210,7 +209,6 @@ export function MobileHomeView({ onTopGesture, onBottomGesture, onViewAllInstanc
                   <div
                     className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${
                       instance.status === 'working' ? 'bg-state-working' :
-                      instance.status === 'awaiting' ? 'bg-state-awaiting' :
                       instance.status === 'error' ? 'bg-state-error' :
                       'bg-state-idle'
                     }`}

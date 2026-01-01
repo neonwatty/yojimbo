@@ -99,6 +99,17 @@ export const instancesApi = {
       method: 'POST',
       body: JSON.stringify({ data }),
     }),
+
+  installHooks: (id: string, orchestratorUrl: string) =>
+    request<ApiResponse<{ message: string }>>(`/instances/${id}/install-hooks`, {
+      method: 'POST',
+      body: JSON.stringify({ orchestratorUrl }),
+    }),
+
+  uninstallHooks: (id: string) =>
+    request<ApiResponse<{ message: string }>>(`/instances/${id}/uninstall-hooks`, {
+      method: 'POST',
+    }),
 };
 
 // Session API
@@ -287,6 +298,7 @@ export const portForwardsApi = {
 
 // Keychain API (macOS only)
 export const keychainApi = {
+  // Local keychain operations
   unlock: (password: string) =>
     request<ApiResponse<{ message: string }>>('/keychain/unlock', {
       method: 'POST',
@@ -295,4 +307,24 @@ export const keychainApi = {
 
   status: () =>
     request<ApiResponse<{ locked: boolean; message: string }>>('/keychain/status'),
+
+  // Remote keychain password storage (stores in LOCAL keychain)
+  saveRemotePassword: (machineId: string, password: string) =>
+    request<ApiResponse<{ message: string }>>(`/keychain/remote/${machineId}/save`, {
+      method: 'POST',
+      body: JSON.stringify({ password }),
+    }),
+
+  hasRemotePassword: (machineId: string) =>
+    request<ApiResponse<{ hasPassword: boolean }>>(`/keychain/remote/${machineId}/has-password`),
+
+  deleteRemotePassword: (machineId: string) =>
+    request<ApiResponse<{ message: string }>>(`/keychain/remote/${machineId}`, {
+      method: 'DELETE',
+    }),
+
+  autoUnlockRemote: (instanceId: string) =>
+    request<ApiResponse<{ message: string }>>(`/keychain/remote/${instanceId}/auto-unlock`, {
+      method: 'POST',
+    }),
 };

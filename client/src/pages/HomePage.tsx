@@ -16,7 +16,7 @@ export default function HomePage() {
   const stats = [
     { label: 'Total', value: instances.length, colorClass: 'text-accent border-accent/30' },
     { label: 'Working', value: instances.filter((i) => i.status === 'working').length, colorClass: 'text-state-working border-state-working/30' },
-    { label: 'Awaiting', value: instances.filter((i) => i.status === 'awaiting').length, colorClass: 'text-state-awaiting border-state-awaiting/30' },
+    { label: 'Idle', value: instances.filter((i) => i.status === 'idle').length, colorClass: 'text-state-idle border-state-idle/30' },
     { label: 'Errors', value: instances.filter((i) => i.status === 'error').length, colorClass: 'text-state-error border-state-error/30' },
   ];
 

@@ -14,7 +14,6 @@ export function StatusDot({ status, size = 'md' }: StatusDotProps) {
 
   const colorClasses = {
     working: 'bg-state-working pulse-working',
-    awaiting: 'bg-state-awaiting',
     idle: 'bg-state-idle',
     error: 'bg-state-error',
     disconnected: 'bg-surface-500',
@@ -30,7 +29,6 @@ interface StatusBadgeProps {
 export function StatusBadge({ status }: StatusBadgeProps) {
   const labels: Record<InstanceStatus, string> = {
     working: 'Working',
-    awaiting: 'Awaiting',
     idle: 'Idle',
     error: 'Error',
     disconnected: 'Disconnected',
@@ -38,7 +36,6 @@ export function StatusBadge({ status }: StatusBadgeProps) {
 
   const bgClasses: Record<InstanceStatus, string> = {
     working: 'bg-state-working/20 text-state-working border-state-working/30',
-    awaiting: 'bg-state-awaiting/20 text-state-awaiting border-state-awaiting/30',
     idle: 'bg-state-idle/20 text-state-idle border-state-idle/30',
     error: 'bg-state-error/20 text-state-error border-state-error/30',
     disconnected: 'bg-surface-500/20 text-surface-500 border-surface-500/30',

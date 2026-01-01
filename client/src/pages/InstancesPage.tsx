@@ -15,6 +15,7 @@ import { EditableName } from '../components/common/EditableName';
 import { ErrorBoundary } from '../components/common/ErrorBoundary';
 import { Icons } from '../components/common/Icons';
 import { instancesApi } from '../api/client';
+import { toast } from '../store/toastStore';
 import { KeychainUnlockModal } from '../components/modals/KeychainUnlockModal';
 import type { Instance } from '@cc-orchestrator/shared';
 
@@ -94,6 +95,9 @@ export default function InstancesPage() {
   // Keychain modal state
   const [showKeychainModal, setShowKeychainModal] = useState(false);
 
+  // Hook installation state
+  const [installingHooks, setInstallingHooks] = useState(false);
+
   // Loading state for new instance creation
 
   // Get current instance for keyboard shortcuts
@@ -102,7 +106,7 @@ export default function InstancesPage() {
   // Instance-specific keyboard shortcut handlers
   const handleKeyboardClose = useCallback(() => {
     if (currentInstance) {
-      if (currentInstance.status === 'working' || currentInstance.status === 'awaiting' || currentInstance.isPinned) {
+      if (currentInstance.status === 'working' || currentInstance.isPinned) {
         setConfirmInstance(currentInstance);
       } else {
         instancesApi.close(currentInstance.id).then(() => {
@@ -157,7 +161,7 @@ export default function InstancesPage() {
   }, [instances, updateInstance]);
 
   const handleClose = useCallback((instance: Instance) => {
-    if (instance.status === 'working' || instance.status === 'awaiting' || instance.isPinned) {
+    if (instance.status === 'working' || instance.isPinned) {
       setConfirmInstance(instance);
     } else {
       performClose(instance.id);
@@ -221,6 +225,24 @@ export default function InstancesPage() {
   const handleCancelEditing = useCallback(() => {
     setEditingId(null);
     setEditingName('');
+  }, []);
+
+  // Install hooks on remote machine
+  const handleInstallHooks = useCallback(async (instanceId: string) => {
+    setInstallingHooks(true);
+    try {
+      // Build orchestrator URL from current location
+      // Use the server port (3456) since that's where the API is
+      const orchestratorUrl = `http://${window.location.hostname}:3456`;
+
+      await instancesApi.installHooks(instanceId, orchestratorUrl);
+      toast.success('Hooks installed successfully on remote machine');
+    } catch (error) {
+      // Error toast already shown by API layer
+      console.error('Failed to install hooks:', error);
+    } finally {
+      setInstallingHooks(false);
+    }
   }, []);
 
   // Expanded view for a specific instance
@@ -308,9 +330,18 @@ export default function InstancesPage() {
               <span>Terminal</span>
             </button>
             <span className="text-surface-600 mx-1">│</span>
-            {/* Only show Keychain button for remote instances */}
+            {/* Only show Keychain and Hooks buttons for remote instances */}
             {instance.machineType === 'remote' && (
               <>
+                <button
+                  onClick={() => handleInstallHooks(instance.id)}
+                  disabled={installingHooks}
+                  className="flex items-center gap-1.5 px-2 py-1 rounded text-xs text-frost-3 hover:text-frost-2 hover:bg-surface-700 transition-colors disabled:opacity-50"
+                  title="Install Claude Code hooks on remote machine for status tracking"
+                >
+                  <Icons.settings />
+                  <span>{installingHooks ? 'Installing...' : 'Install Hooks'}</span>
+                </button>
                 <button
                   onClick={() => setShowKeychainModal(true)}
                   className="flex items-center gap-1.5 px-2 py-1 rounded text-xs text-aurora-4 hover:text-aurora-3 hover:bg-surface-700 transition-colors"
@@ -407,6 +438,7 @@ export default function InstancesPage() {
           isOpen={showKeychainModal}
           onClose={() => setShowKeychainModal(false)}
           instanceId={instance.id}
+          machineId={instance.machineId}
         />
       </div>
     );
@@ -481,8 +513,6 @@ export default function InstancesPage() {
             <p className="text-theme-muted mb-6">
               {confirmInstance.status === 'working'
                 ? `"${confirmInstance.name}" is currently working. Are you sure you want to close it?`
-                : confirmInstance.status === 'awaiting'
-                ? `"${confirmInstance.name}" is awaiting input. Are you sure you want to close it?`
                 : confirmInstance.isPinned
                 ? `"${confirmInstance.name}" is pinned. Are you sure you want to close it?`
                 : `Close "${confirmInstance.name}"?`}

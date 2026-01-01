@@ -40,10 +40,10 @@ describe('Hooks API', () => {
       expect(expectedStatus).toBe('idle');
     });
 
-    it('notification should set status to awaiting', () => {
-      // Notification endpoint always sets awaiting
-      const status = 'awaiting';
-      expect(status).toBe('awaiting');
+    it('notification should set status to idle', () => {
+      // Notification endpoint now sets idle (awaiting status removed)
+      const status = 'idle';
+      expect(status).toBe('idle');
     });
 
     it('stop should set status to idle', () => {
@@ -120,9 +120,9 @@ describe('Hooks API', () => {
       });
     });
 
-    it('should broadcast awaiting status', () => {
+    it('should broadcast idle status on notification', () => {
       const instanceId = 'test-123';
-      const status = 'awaiting';
+      const status = 'idle';
 
       mockBroadcast({
         type: 'status:changed',
@@ -133,7 +133,7 @@ describe('Hooks API', () => {
       expect(mockBroadcast).toHaveBeenCalledWith({
         type: 'status:changed',
         instanceId,
-        status: 'awaiting',
+        status: 'idle',
       });
     });
 
@@ -183,10 +183,10 @@ describe('Hooks API', () => {
       expect(resultStatus).toBe('idle');
     });
 
-    it('Notification should trigger awaiting status', () => {
-      // Notification endpoint always sets awaiting
-      const resultStatus = 'awaiting';
-      expect(resultStatus).toBe('awaiting');
+    it('Notification should trigger idle status', () => {
+      // Notification endpoint now sets idle (awaiting status removed)
+      const resultStatus = 'idle';
+      expect(resultStatus).toBe('idle');
     });
   });
 

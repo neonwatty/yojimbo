@@ -4,7 +4,14 @@ import path from 'path';
 import os from 'os';
 import { getDatabase } from '../db/connection.js';
 import type { SSHConfig } from './terminal-backend.js';
-import type { MachineStatus, SSHKey } from '@cc-orchestrator/shared';
+import type { MachineStatus, SSHKey, InstanceStatus } from '@cc-orchestrator/shared';
+
+interface CommandResult {
+  success: boolean;
+  stdout: string;
+  stderr: string;
+  code: number;
+}
 
 interface RemoteMachineRow {
   id: string;
@@ -325,6 +332,165 @@ class SSHConnectionService {
         readyTimeout: 10000,
       });
     });
+  }
+
+  /**
+   * Execute a command on a remote machine
+   */
+  async executeCommand(machineId: string, command: string, timeoutMs = 10000): Promise<CommandResult> {
+    const config = this.getMachineSSHConfig(machineId);
+    if (!config) {
+      return { success: false, stdout: '', stderr: 'Machine not found', code: -1 };
+    }
+
+    return new Promise((resolve) => {
+      const client = new Client();
+      const timeout = setTimeout(() => {
+        client.end();
+        resolve({ success: false, stdout: '', stderr: 'Connection timeout', code: -1 });
+      }, timeoutMs);
+
+      // Read private key
+      let privateKey: Buffer | undefined;
+      if (config.privateKeyPath) {
+        const keyPath = config.privateKeyPath.replace(/^~/, os.homedir());
+        try {
+          privateKey = fs.readFileSync(keyPath);
+        } catch {
+          clearTimeout(timeout);
+          resolve({ success: false, stdout: '', stderr: `Failed to read SSH key`, code: -1 });
+          return;
+        }
+      } else {
+        const defaultKeys = ['id_ed25519', 'id_rsa', 'id_ecdsa'];
+        for (const keyName of defaultKeys) {
+          const keyPath = `${os.homedir()}/.ssh/${keyName}`;
+          if (fs.existsSync(keyPath)) {
+            try {
+              privateKey = fs.readFileSync(keyPath);
+              break;
+            } catch {
+              // Continue to next key
+            }
+          }
+        }
+      }
+
+      if (!privateKey) {
+        clearTimeout(timeout);
+        resolve({ success: false, stdout: '', stderr: 'No SSH private key found', code: -1 });
+        return;
+      }
+
+      client.on('ready', () => {
+        client.exec(command, (err, stream) => {
+          if (err) {
+            clearTimeout(timeout);
+            client.end();
+            resolve({ success: false, stdout: '', stderr: err.message, code: -1 });
+            return;
+          }
+
+          let stdout = '';
+          let stderr = '';
+
+          stream.on('data', (data: Buffer) => {
+            stdout += data.toString();
+          });
+
+          stream.stderr.on('data', (data: Buffer) => {
+            stderr += data.toString();
+          });
+
+          stream.on('close', (code: number) => {
+            clearTimeout(timeout);
+            client.end();
+            resolve({
+              success: code === 0,
+              stdout: stdout.trim(),
+              stderr: stderr.trim(),
+              code,
+            });
+          });
+        });
+      });
+
+      client.on('error', (err) => {
+        clearTimeout(timeout);
+        client.end();
+        resolve({ success: false, stdout: '', stderr: err.message, code: -1 });
+      });
+
+      client.connect({
+        host: config.host,
+        port: config.port,
+        username: config.username,
+        privateKey,
+        readyTimeout: 10000,
+      });
+    });
+  }
+
+  /**
+   * Check Claude Code status on a remote machine by examining session files
+   * Returns 'working' if recent activity (within 30s), 'idle' otherwise
+   */
+  async checkRemoteClaudeStatus(
+    machineId: string,
+    workingDir: string
+  ): Promise<{ status: InstanceStatus; error?: string }> {
+    // Encode the working directory path like Claude does (replace / with -)
+    const encodedDir = workingDir.replace(/\//g, '-').replace(/^-/, '');
+
+    // Command to:
+    // 1. Find the latest .jsonl session file for this project
+    // 2. Get its modification time in seconds since epoch
+    // 3. Get the last line to check message type
+    const command = `
+      SESSION_DIR="$HOME/.claude/projects/${encodedDir}"
+      if [ -d "$SESSION_DIR" ]; then
+        LATEST=$(ls -t "$SESSION_DIR"/*.jsonl 2>/dev/null | head -1)
+        if [ -n "$LATEST" ]; then
+          # Get file mod time and current time
+          MOD_TIME=$(stat -f %m "$LATEST" 2>/dev/null || stat -c %Y "$LATEST" 2>/dev/null)
+          NOW=$(date +%s)
+          AGE=$((NOW - MOD_TIME))
+          # Get last non-empty line
+          LAST_LINE=$(tail -1 "$LATEST" 2>/dev/null)
+          echo "AGE:$AGE"
+          echo "LAST:$LAST_LINE"
+        else
+          echo "NO_SESSION"
+        fi
+      else
+        echo "NO_PROJECT"
+      fi
+    `;
+
+    const result = await this.executeCommand(machineId, command);
+
+    if (!result.success) {
+      return { status: 'idle', error: result.stderr };
+    }
+
+    const output = result.stdout;
+
+    if (output.includes('NO_SESSION') || output.includes('NO_PROJECT')) {
+      return { status: 'idle' };
+    }
+
+    // Parse age from session file modification time
+    const ageMatch = output.match(/AGE:(\d+)/);
+    const age = ageMatch ? parseInt(ageMatch[1], 10) : Infinity;
+
+    // Determine status:
+    // - If file modified within last 30 seconds = working
+    // - Otherwise = idle
+    if (age <= 30) {
+      return { status: 'working' };
+    } else {
+      return { status: 'idle' };
+    }
   }
 }
 

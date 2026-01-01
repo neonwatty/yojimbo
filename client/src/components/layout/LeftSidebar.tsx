@@ -259,9 +259,6 @@ export function LeftSidebar() {
                     onCancel={handleCancelEditing}
                     className="flex-1 truncate text-xs"
                   />
-                  {inst.status === 'awaiting' && (
-                    <span className="w-1.5 h-1.5 rounded-full bg-state-awaiting animate-pulse group-hover:hidden" />
-                  )}
                   <button
                     onClick={(e) => handleCloseInstance(e, inst)}
                     className="hidden group-hover:block p-0.5 rounded hover:bg-surface-600 text-theme-dim hover:text-state-error transition-colors"
@@ -315,9 +312,6 @@ export function LeftSidebar() {
                   onCancel={handleCancelEditing}
                   className="flex-1 truncate text-xs"
                 />
-                {inst.status === 'awaiting' && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-state-awaiting animate-pulse group-hover:hidden" />
-                )}
                 <button
                   onClick={(e) => handleCloseInstance(e, inst)}
                   className="hidden group-hover:block p-0.5 rounded hover:bg-surface-600 text-theme-dim hover:text-state-error transition-colors"
@@ -348,7 +342,7 @@ export function LeftSidebar() {
       <div className="px-3 py-2 border-t border-surface-600 text-xs text-theme-muted">
         <div className="flex justify-between">
           <span>{instances.filter((i) => i.status === 'working').length} working</span>
-          <span>{instances.filter((i) => i.status === 'awaiting').length} awaiting</span>
+          <span>{instances.filter((i) => i.status === 'idle').length} idle</span>
         </div>
       </div>
 
@@ -360,8 +354,6 @@ export function LeftSidebar() {
             <p className="text-theme-muted mb-6">
               {confirmInstance.status === 'working'
                 ? `"${confirmInstance.name}" is currently working. Are you sure you want to close it?`
-                : confirmInstance.status === 'awaiting'
-                ? `"${confirmInstance.name}" is awaiting input. Are you sure you want to close it?`
                 : confirmInstance.isPinned
                 ? `"${confirmInstance.name}" is pinned. Are you sure you want to close it?`
                 : `Are you sure you want to close "${confirmInstance.name}"?`}

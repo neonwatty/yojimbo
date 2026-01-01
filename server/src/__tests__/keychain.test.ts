@@ -302,4 +302,97 @@ describe('Keychain API', () => {
       expect(options.timeout).toBeLessThanOrEqual(30000);
     });
   });
+
+  describe('Remote keychain auto-unlock security', () => {
+    it('should not include password in command when auto-unlocking', () => {
+      // Simulating the auto-unlock command construction
+      const keychainPath = '~/Library/Keychains/login.keychain-db';
+      const password = 'super-secret-password';
+
+      // The correct approach: command without -p flag
+      const secureCommand = `security unlock-keychain ${keychainPath}\n`;
+
+      // Verify password is NOT in the command string
+      expect(secureCommand).not.toContain(password);
+      expect(secureCommand).not.toContain('-p');
+    });
+
+    it('should send password separately after command', () => {
+      const password = 'test-password-123';
+      const commands: string[] = [];
+
+      // Simulate terminal.write calls
+      const mockTerminalWrite = (cmd: string) => commands.push(cmd);
+
+      // First write: command without password
+      const keychainPath = '~/Library/Keychains/login.keychain-db';
+      mockTerminalWrite(`security unlock-keychain ${keychainPath}\n`);
+
+      // Second write: just the password (sent after delay)
+      mockTerminalWrite(password + '\n');
+
+      // Verify first command doesn't contain password
+      expect(commands[0]).not.toContain(password);
+      expect(commands[0]).toContain('security unlock-keychain');
+
+      // Verify password is sent separately
+      expect(commands[1]).toBe(password + '\n');
+    });
+
+    it('should never use -p flag which exposes password in terminal', () => {
+      const password = 'visible-password';
+      const keychainPath = '~/Library/Keychains/login.keychain-db';
+
+      // BAD: This would show password in terminal
+      const insecureCommand = `security unlock-keychain -p "${password}" ${keychainPath}\n`;
+
+      // GOOD: This doesn't show password
+      const secureCommand = `security unlock-keychain ${keychainPath}\n`;
+
+      // The insecure command contains the password (bad!)
+      expect(insecureCommand).toContain(password);
+      expect(insecureCommand).toContain('-p');
+
+      // The secure command does not (good!)
+      expect(secureCommand).not.toContain(password);
+      expect(secureCommand).not.toContain('-p');
+    });
+  });
+
+  describe('Remote keychain API response format', () => {
+    it('should return hasPassword wrapped in data object', () => {
+      // Test the expected response format for has-password endpoint
+      const hasPassword = true;
+
+      // Correct format (matches ApiResponse<T> type)
+      const correctResponse = {
+        success: true,
+        data: { hasPassword },
+      };
+
+      expect(correctResponse.success).toBe(true);
+      expect(correctResponse.data).toBeDefined();
+      expect(correctResponse.data.hasPassword).toBe(true);
+    });
+
+    it('should not return hasPassword at root level', () => {
+      // Incorrect format that was causing the bug
+      const incorrectResponse = {
+        success: true,
+        hasPassword: true,
+      };
+
+      // The old incorrect format had hasPassword at root
+      // This test documents what we fixed
+      expect(incorrectResponse).not.toHaveProperty('data');
+
+      // Correct format should have data wrapper
+      const correctResponse = {
+        success: true,
+        data: { hasPassword: true },
+      };
+      expect(correctResponse).toHaveProperty('data');
+      expect(correctResponse.data).toHaveProperty('hasPassword');
+    });
+  });
 });

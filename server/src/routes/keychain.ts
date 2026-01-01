@@ -186,7 +186,7 @@ router.get('/remote/:machineId/has-password', async (req: Request, res: Response
 
     return res.json({
       success: true,
-      hasPassword,
+      data: { hasPassword },
     });
   } catch (error) {
     console.error('Error checking remote keychain password:', error);
@@ -274,11 +274,16 @@ router.post('/remote/:instanceId/auto-unlock', async (req: Request, res: Respons
     }
 
     // Send the unlock command to the remote terminal
-    // Using the same approach as the KeychainUnlockModal
+    // First send the command (without -p flag to avoid showing password)
     const keychainPath = '~/Library/Keychains/login.keychain-db';
-    const command = `security unlock-keychain -p "${passwordResult.password.replace(/"/g, '\\"')}" ${keychainPath}\n`;
-
+    const command = `security unlock-keychain ${keychainPath}\n`;
     terminalManager.write(instanceId, command);
+
+    // Wait for the password prompt to appear, then send password
+    // The password won't be echoed because it's a password prompt
+    setTimeout(() => {
+      terminalManager.write(instanceId, passwordResult.password + '\n');
+    }, 500);
 
     console.log(`🔓 Sent auto-unlock command for instance ${instanceId}`);
 

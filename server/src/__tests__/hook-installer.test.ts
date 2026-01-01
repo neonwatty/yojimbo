@@ -206,5 +206,52 @@ describe('HookInstallerService', () => {
       const notifCmd = hooks.Notification[0].hooks[0].command;
       expect(notifCmd).toContain('/api/hooks/notification');
     });
+
+    it('should generate valid JSON when stringified', async () => {
+      const { HookInstallerService } = await import('../services/hook-installer.service.js') as any;
+      const service = new HookInstallerService();
+
+      const config = service['generateHooksConfig']('test-instance', 'http://localhost:3456');
+
+      // The config object should be serializable to valid JSON
+      const jsonString = JSON.stringify(config, null, 2);
+
+      // Should not throw when parsing
+      expect(() => JSON.parse(jsonString)).not.toThrow();
+
+      // Parse and verify structure is preserved
+      const parsed = JSON.parse(jsonString);
+      expect(parsed).toHaveProperty('hooks');
+      expect(parsed.hooks).toHaveProperty('UserPromptSubmit');
+    });
+
+    it('should produce valid JSON that Claude Code can parse as settings.json', async () => {
+      const { HookInstallerService } = await import('../services/hook-installer.service.js') as any;
+      const service = new HookInstallerService();
+
+      const config = service['generateHooksConfig']('test-id', 'http://192.168.1.25:3456');
+
+      // Simulate what happens when writing to settings.json
+      const jsonString = JSON.stringify(config, null, 2);
+
+      // Parse it back - this is what Claude Code does when reading settings.json
+      const parsed = JSON.parse(jsonString);
+
+      // Verify commands don't have broken escaping
+      const command = parsed.hooks.UserPromptSubmit[0].hooks[0].command;
+
+      // Command should be a valid string
+      expect(typeof command).toBe('string');
+
+      // Command should contain the curl call
+      expect(command).toContain('curl');
+
+      // Command should contain proper JSON structure for -d argument
+      // The -d argument should have valid JSON (with shell variable substitution pattern)
+      expect(command).toMatch(/-d\s+'/); // -d followed by single quote
+      expect(command).toContain('"event":"working"');
+      expect(command).toContain('"projectDir":"');
+      expect(command).toContain('$CWD'); // Variable should be present for expansion
+    });
   });
 });

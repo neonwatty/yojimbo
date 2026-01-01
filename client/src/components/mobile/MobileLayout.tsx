@@ -14,6 +14,7 @@ import { MobileTextInput } from './MobileTextInput';
 import { MobileHomeView } from './MobileHomeView';
 import { MobileHistoryView } from './MobileHistoryView';
 import { MobileActivityView } from './MobileActivityView';
+import { KeychainUnlockModal } from '../modals/KeychainUnlockModal';
 import type { Instance } from '@cc-orchestrator/shared';
 
 // Connection Status Indicator
@@ -420,6 +421,8 @@ function SettingsDrawer({
   onNavigateHome,
   onNavigateHistory,
   onNavigateActivity,
+  onUnlockKeychain,
+  hasRemoteInstances,
 }: {
   isOpen: boolean;
   onClose: () => void;
@@ -435,6 +438,8 @@ function SettingsDrawer({
   onNavigateHome: () => void;
   onNavigateHistory: () => void;
   onNavigateActivity: () => void;
+  onUnlockKeychain: () => void;
+  hasRemoteInstances: boolean;
 }) {
   const touchRef = useRef({ startY: 0 });
 
@@ -568,56 +573,75 @@ function SettingsDrawer({
             </div>
           )}
 
-          {/* Action buttons */}
-          <div className="grid grid-cols-4 gap-2 mt-3">
-            {/* Home button */}
-            <button
-              onClick={() => {
-                onNavigateHome();
-                onClose();
-              }}
-              className="flex flex-col items-center justify-center gap-1 py-3 bg-surface-600 rounded-xl active:scale-[0.98] transition-transform"
-            >
-              <Icons.home />
-              <span className="text-[10px] text-theme-primary">Home</span>
-            </button>
+          {/* Action buttons - 4 cols if no keychain, 5 cols with keychain */}
+          {(() => {
+            const showKeychain = currentInstance?.machineType === 'remote' || hasRemoteInstances;
+            return (
+              <div className={`grid gap-2 mt-3 ${showKeychain ? 'grid-cols-5' : 'grid-cols-4'}`}>
+                {/* Home button */}
+                <button
+                  onClick={() => {
+                    onNavigateHome();
+                    onClose();
+                  }}
+                  className="flex flex-col items-center justify-center gap-1 py-3 bg-surface-600 rounded-xl active:scale-[0.98] transition-transform"
+                >
+                  <Icons.home />
+                  <span className="text-[10px] text-theme-primary">Home</span>
+                </button>
 
-            {/* History button */}
-            <button
-              onClick={() => {
-                onNavigateHistory();
-                onClose();
-              }}
-              className="flex flex-col items-center justify-center gap-1 py-3 bg-surface-600 rounded-xl active:scale-[0.98] transition-transform"
-            >
-              <Icons.history />
-              <span className="text-[10px] text-theme-primary">History</span>
-            </button>
+                {/* History button */}
+                <button
+                  onClick={() => {
+                    onNavigateHistory();
+                    onClose();
+                  }}
+                  className="flex flex-col items-center justify-center gap-1 py-3 bg-surface-600 rounded-xl active:scale-[0.98] transition-transform"
+                >
+                  <Icons.history />
+                  <span className="text-[10px] text-theme-primary">History</span>
+                </button>
 
-            {/* Activity button */}
-            <button
-              onClick={() => {
-                onNavigateActivity();
-                onClose();
-              }}
-              className="flex flex-col items-center justify-center gap-1 py-3 bg-surface-600 rounded-xl active:scale-[0.98] transition-transform"
-            >
-              <Icons.activity />
-              <span className="text-[10px] text-theme-primary">Activity</span>
-            </button>
+                {/* Activity button */}
+                <button
+                  onClick={() => {
+                    onNavigateActivity();
+                    onClose();
+                  }}
+                  className="flex flex-col items-center justify-center gap-1 py-3 bg-surface-600 rounded-xl active:scale-[0.98] transition-transform"
+                >
+                  <Icons.activity />
+                  <span className="text-[10px] text-theme-primary">Activity</span>
+                </button>
 
-            {/* Settings button */}
-            <button
-              onClick={() => {
-                onOpenSettings();
-                onClose();
-              }}
-              className="flex flex-col items-center justify-center gap-1 py-3 bg-surface-600 rounded-xl active:scale-[0.98] transition-transform"
-            >
-              <Icons.settings />
-              <span className="text-[10px] text-theme-primary">Settings</span>
-            </button>
-          </div>
+                {/* Unlock Keychain button - only on macOS with remote instances */}
+                {showKeychain && (
+                  <button
+                    onClick={() => {
+                      onUnlockKeychain();
+                      onClose();
+                    }}
+                    className="flex flex-col items-center justify-center gap-1 py-3 bg-surface-600 rounded-xl active:scale-[0.98] transition-transform"
+                  >
+                    <Icons.unlock />
+                    <span className="text-[10px] text-theme-primary">Keychain</span>
+                  </button>
+                )}
+
+                {/* Settings button */}
+                <button
+                  onClick={() => {
+                    onOpenSettings();
+                    onClose();
+                  }}
+                  className="flex flex-col items-center justify-center gap-1 py-3 bg-surface-600 rounded-xl active:scale-[0.98] transition-transform"
+                >
+                  <Icons.settings />
+                  <span className="text-[10px] text-theme-primary">Settings</span>
+                </button>
+              </div>
+            );
+          })()}
         </div>
 
         {/* Handle */}
@@ -819,6 +843,7 @@ export function MobileLayout() {
   const [bottomDrawerOpen, setBottomDrawerOpen] = useState(false);
   const [topDrawerOpen, setTopDrawerOpen] = useState(false);
   const [actionSheetInstance, setActionSheetInstance] = useState<Instance | null>(null);
+  const [showKeychainModal, setShowKeychainModal] = useState(false);
 
   const terminalRefs = useRef<Map<string, TerminalRef>>(new Map());
 
@@ -928,6 +953,8 @@ export function MobileLayout() {
             onNavigateHome={() => navigate('/')}
             onNavigateHistory={() => navigate('/history')}
             onNavigateActivity={() => navigate('/activity')}
+            onUnlockKeychain={() => setShowKeychainModal(true)}
+            hasRemoteInstances={instances.some(i => i.machineType === 'remote')}
           />
           <InstanceActionSheet
             isOpen={!!actionSheetInstance}
@@ -1070,6 +1097,8 @@ export function MobileLayout() {
           onNavigateHome={() => navigate('/')}
           onNavigateHistory={() => navigate('/history')}
           onNavigateActivity={() => navigate('/activity')}
+          onUnlockKeychain={() => setShowKeychainModal(true)}
+          hasRemoteInstances={instances.some(i => i.machineType === 'remote')}
         />
 
         {/* Long-press action sheet */}
@@ -1078,6 +1107,13 @@ export function MobileLayout() {
           onClose={() => setActionSheetInstance(null)}
           instance={actionSheetInstance}
           onDelete={handleDeleteInstance}
+        />
+
+        {/* Keychain Unlock Modal */}
+        <KeychainUnlockModal
+          isOpen={showKeychainModal}
+          onClose={() => setShowKeychainModal(false)}
+          instanceId={currentInstance?.id ?? null}
         />
       </div>
     </>

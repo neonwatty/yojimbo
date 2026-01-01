@@ -276,3 +276,15 @@ export const portForwardsApi = {
       method: 'DELETE',
     }),
 };
+
+// Keychain API (macOS only)
+export const keychainApi = {
+  unlock: (password: string) =>
+    request<ApiResponse<{ message: string }>>('/keychain/unlock', {
+      method: 'POST',
+      body: JSON.stringify({ password }),
+    }),
+
+  status: () =>
+    request<ApiResponse<{ locked: boolean; message: string }>>('/keychain/status'),
+};

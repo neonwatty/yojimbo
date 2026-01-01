@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import path from 'path';
+import os from 'os';
 import { fileURLToPath } from 'url';
 import instancesRouter from './routes/instances.js';
 import sessionsRouter from './routes/sessions.js';
@@ -14,6 +15,7 @@ import summariesRouter from './routes/summaries.js';
 import machinesRouter from './routes/machines.js';
 import sshRouter from './routes/ssh.js';
 import portForwardsRouter from './routes/port-forwards.js';
+import keychainRouter from './routes/keychain.js';
 import CONFIG from './config/index.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -36,6 +38,7 @@ app.use(express.json());
 app.get('/api/config', (_req, res) => {
   res.json({
     serverPort: CONFIG.port,
+    platform: os.platform(), // 'darwin' for macOS, 'linux', 'win32', etc.
   });
 });
 
@@ -52,6 +55,7 @@ app.use('/api/summaries', summariesRouter);
 app.use('/api/machines', machinesRouter);
 app.use('/api/ssh', sshRouter);
 app.use('/api/instances', portForwardsRouter);
+app.use('/api/keychain', keychainRouter);
 
 // Health check
 app.get('/api/health', (_req, res) => {

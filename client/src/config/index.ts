@@ -1,11 +1,13 @@
 // Runtime configuration fetched from server
 interface AppConfig {
   serverPort: number;
+  platform: string; // 'darwin' for macOS, 'linux', 'win32', etc.
 }
 
 // Default config (used before fetch completes or if fetch fails)
 let config: AppConfig = {
   serverPort: 3456,
+  platform: 'unknown',
 };
 
 let initialized = false;
@@ -49,4 +51,12 @@ export function getWsUrl(): string {
  */
 export function getConfig(): AppConfig {
   return config;
+}
+
+/**
+ * Check if the server is running on macOS.
+ * Used to conditionally show macOS-specific features like Keychain unlock.
+ */
+export function isMacOS(): boolean {
+  return config.platform === 'darwin';
 }

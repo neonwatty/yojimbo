@@ -15,6 +15,7 @@ import { EditableName } from '../components/common/EditableName';
 import { ErrorBoundary } from '../components/common/ErrorBoundary';
 import { Icons } from '../components/common/Icons';
 import { instancesApi } from '../api/client';
+import { KeychainUnlockModal } from '../components/modals/KeychainUnlockModal';
 import type { Instance } from '@cc-orchestrator/shared';
 
 export default function InstancesPage() {
@@ -89,6 +90,9 @@ export default function InstancesPage() {
 
   // Confirm dialog state
   const [confirmInstance, setConfirmInstance] = useState<Instance | null>(null);
+
+  // Keychain modal state
+  const [showKeychainModal, setShowKeychainModal] = useState(false);
 
   // Loading state for new instance creation
 
@@ -304,6 +308,20 @@ export default function InstancesPage() {
               <span>Terminal</span>
             </button>
             <span className="text-surface-600 mx-1">│</span>
+            {/* Only show Keychain button for remote instances */}
+            {instance.machineType === 'remote' && (
+              <>
+                <button
+                  onClick={() => setShowKeychainModal(true)}
+                  className="flex items-center gap-1.5 px-2 py-1 rounded text-xs text-aurora-4 hover:text-aurora-3 hover:bg-surface-700 transition-colors"
+                  title="Unlock remote macOS Keychain"
+                >
+                  <Icons.unlock />
+                  <span>Keychain</span>
+                </button>
+                <span className="text-surface-600 mx-1">│</span>
+              </>
+            )}
             <span className="text-[10px] text-theme-dim font-mono">{instance.workingDir}</span>
           </div>
         </div>
@@ -383,6 +401,13 @@ export default function InstancesPage() {
             </div>
           )}
         </div>
+
+        {/* Keychain Unlock Modal */}
+        <KeychainUnlockModal
+          isOpen={showKeychainModal}
+          onClose={() => setShowKeychainModal(false)}
+          instanceId={instance.id}
+        />
       </div>
     );
   }

@@ -254,4 +254,29 @@ describe('HookInstallerService', () => {
       expect(command).toContain('$CWD'); // Variable should be present for expansion
     });
   });
+
+  describe('getHooksConfigForPreview', () => {
+    it('should return the same config as generateHooksConfig', async () => {
+      const { HookInstallerService } = await import('../services/hook-installer.service.js') as any;
+      const service = new HookInstallerService();
+
+      const previewConfig = service.getHooksConfigForPreview('test-instance', 'http://localhost:3456');
+      const internalConfig = service['generateHooksConfig']('test-instance', 'http://localhost:3456');
+
+      // Both should produce identical output
+      expect(JSON.stringify(previewConfig)).toBe(JSON.stringify(internalConfig));
+    });
+
+    it('should be callable as a public method', async () => {
+      const { hookInstallerService } = await import('../services/hook-installer.service.js');
+
+      // Should not throw - this is a public method
+      const config = hookInstallerService.getHooksConfigForPreview('my-id', 'http://example.com:3456');
+
+      expect(config).toHaveProperty('hooks');
+      expect((config as any).hooks).toHaveProperty('UserPromptSubmit');
+      expect((config as any).hooks).toHaveProperty('Stop');
+      expect((config as any).hooks).toHaveProperty('Notification');
+    });
+  });
 });

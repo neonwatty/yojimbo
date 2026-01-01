@@ -143,4 +143,68 @@ describe('HookInstallerService', () => {
       expect(result.message).toBe('Instance is not a remote instance');
     });
   });
+
+  describe('hook format', () => {
+    it('should generate hooks in the new matcher-based format', async () => {
+      // Access the private method via the prototype for testing
+      const { HookInstallerService } = await import('../services/hook-installer.service.js') as any;
+      const service = new HookInstallerService();
+
+      // Call the private method directly
+      const config = service['generateHooksConfig']('test-instance-id', 'http://localhost:3456');
+
+      // Verify the structure matches Claude Code's expected format
+      expect(config).toHaveProperty('hooks');
+
+      const hooks = (config as any).hooks;
+
+      // Check each hook type has the new format
+      const hookTypes = ['UserPromptSubmit', 'PreToolUse', 'PostToolUse', 'Stop', 'Notification'];
+
+      for (const hookType of hookTypes) {
+        expect(hooks).toHaveProperty(hookType);
+        expect(Array.isArray(hooks[hookType])).toBe(true);
+        expect(hooks[hookType].length).toBeGreaterThan(0);
+
+        const hookEntry = hooks[hookType][0];
+
+        // Each entry must have a matcher
+        expect(hookEntry).toHaveProperty('matcher');
+        expect(hookEntry.matcher).toBe('.');
+
+        // Each entry must have hooks array with command objects
+        expect(hookEntry).toHaveProperty('hooks');
+        expect(Array.isArray(hookEntry.hooks)).toBe(true);
+        expect(hookEntry.hooks.length).toBeGreaterThan(0);
+
+        const hookCommand = hookEntry.hooks[0];
+        expect(hookCommand).toHaveProperty('type', 'command');
+        expect(hookCommand).toHaveProperty('command');
+        expect(typeof hookCommand.command).toBe('string');
+        expect(hookCommand.command).toContain('curl');
+        expect(hookCommand.command).toContain('test-instance-id');
+      }
+    });
+
+    it('should include correct API endpoints in hook commands', async () => {
+      const { HookInstallerService } = await import('../services/hook-installer.service.js') as any;
+      const service = new HookInstallerService();
+
+      const config = service['generateHooksConfig']('my-instance', 'http://example.com:3456');
+      const hooks = (config as any).hooks;
+
+      // Status hooks should call /api/hooks/status
+      const statusCmd = hooks.UserPromptSubmit[0].hooks[0].command;
+      expect(statusCmd).toContain('/api/hooks/status');
+      expect(statusCmd).toContain('http://example.com:3456');
+
+      // Stop hook should call /api/hooks/stop
+      const stopCmd = hooks.Stop[0].hooks[0].command;
+      expect(stopCmd).toContain('/api/hooks/stop');
+
+      // Notification hook should call /api/hooks/notification
+      const notifCmd = hooks.Notification[0].hooks[0].command;
+      expect(notifCmd).toContain('/api/hooks/notification');
+    });
+  });
 });

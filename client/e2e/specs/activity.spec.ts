@@ -246,9 +246,8 @@ test.describe('Activity Feed', () => {
       // Scroll to Activity Feed section using the heading
       await basePage.page.getByRole('heading', { name: 'Activity Feed' }).scrollIntoViewIfNeeded();
 
-      // Check for event type filter checkboxes
+      // Check for event type filter checkboxes (only completed, error, started exist)
       await expect(basePage.page.locator('label:has-text("Completed")')).toBeVisible();
-      await expect(basePage.page.locator('label:has-text("Awaiting")')).toBeVisible();
       await expect(basePage.page.locator('label:has-text("Error")')).toBeVisible();
       await expect(basePage.page.locator('label:has-text("Started")')).toBeVisible();
     });

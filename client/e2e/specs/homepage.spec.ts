@@ -64,7 +64,7 @@ test.describe('HomePage', () => {
     const mainContent = basePage.page.locator('.flex-1.overflow-auto');
     await expect(mainContent.getByText('Total', { exact: true })).toBeVisible();
     await expect(mainContent.getByText('Working', { exact: true })).toBeVisible();
-    await expect(mainContent.getByText('Awaiting', { exact: true })).toBeVisible();
+    await expect(mainContent.getByText('Idle', { exact: true })).toBeVisible();
     await expect(mainContent.getByText('Errors', { exact: true })).toBeVisible();
   });
 

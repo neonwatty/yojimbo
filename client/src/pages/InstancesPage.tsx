@@ -14,7 +14,7 @@ import { StatusDot, StatusBadge } from '../components/common/Status';
 import { EditableName } from '../components/common/EditableName';
 import { ErrorBoundary } from '../components/common/ErrorBoundary';
 import { Icons } from '../components/common/Icons';
-import { instancesApi } from '../api/client';
+import { instancesApi, keychainApi } from '../api/client';
 import { toast } from '../store/toastStore';
 import { KeychainUnlockModal } from '../components/modals/KeychainUnlockModal';
 import type { Instance } from '@cc-orchestrator/shared';
@@ -97,6 +97,38 @@ export default function InstancesPage() {
 
   // Hook installation state
   const [installingHooks, setInstallingHooks] = useState(false);
+
+  // Track which machines have saved keychain passwords
+  const [savedPasswords, setSavedPasswords] = useState<Record<string, boolean>>({});
+
+  // Check saved password status for remote instances
+  useEffect(() => {
+    const remoteInstances = instances.filter(i => i.machineId);
+    const uniqueMachineIds = [...new Set(remoteInstances.map(i => i.machineId!))];
+
+    // Check each unique machine ID
+    uniqueMachineIds.forEach(async (machineId) => {
+      // Skip if we already know the status
+      if (savedPasswords[machineId] !== undefined) return;
+
+      try {
+        const res = await keychainApi.hasRemotePassword(machineId);
+        setSavedPasswords(prev => ({ ...prev, [machineId]: res.data?.hasPassword ?? false }));
+      } catch {
+        // Silently fail - just won't show the indicator
+      }
+    });
+  }, [instances, savedPasswords]);
+
+  // Callback to refresh saved password status after modal closes
+  const refreshSavedPasswordStatus = useCallback(async (machineId: string) => {
+    try {
+      const res = await keychainApi.hasRemotePassword(machineId);
+      setSavedPasswords(prev => ({ ...prev, [machineId]: res.data?.hasPassword ?? false }));
+    } catch {
+      // Silently fail
+    }
+  }, []);
 
   // Loading state for new instance creation
 
@@ -344,10 +376,21 @@ export default function InstancesPage() {
                 </button>
                 <button
                   onClick={() => setShowKeychainModal(true)}
-                  className="flex items-center gap-1.5 px-2 py-1 rounded text-xs text-aurora-4 hover:text-aurora-3 hover:bg-surface-700 transition-colors"
-                  title="Unlock remote macOS Keychain"
+                  className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs transition-colors ${
+                    instance.machineId && savedPasswords[instance.machineId]
+                      ? 'text-frost-3 hover:text-frost-2 hover:bg-surface-700'
+                      : 'text-aurora-4 hover:text-aurora-3 hover:bg-surface-700'
+                  }`}
+                  title={instance.machineId && savedPasswords[instance.machineId]
+                    ? "Password saved - click to auto-unlock or manage"
+                    : "Unlock remote macOS Keychain"}
                 >
-                  <Icons.unlock />
+                  <span className="relative">
+                    <Icons.unlock />
+                    {instance.machineId && savedPasswords[instance.machineId] && (
+                      <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-frost-4 rounded-full" />
+                    )}
+                  </span>
                   <span>Keychain</span>
                 </button>
                 <span className="text-surface-600 mx-1">│</span>
@@ -436,7 +479,13 @@ export default function InstancesPage() {
         {/* Keychain Unlock Modal */}
         <KeychainUnlockModal
           isOpen={showKeychainModal}
-          onClose={() => setShowKeychainModal(false)}
+          onClose={() => {
+            setShowKeychainModal(false);
+            // Refresh saved password status after modal closes
+            if (instance.machineId) {
+              refreshSavedPasswordStatus(instance.machineId);
+            }
+          }}
           instanceId={instance.id}
           machineId={instance.machineId}
         />

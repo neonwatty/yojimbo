@@ -1,7 +1,7 @@
 import { createServer } from 'http';
 import app from './app.js';
 import { initWebSocketServer } from './websocket/server.js';
-import { initDatabase, getDatabase } from './db/connection.js';
+import { initDatabase, getDatabase, cleanupStalePortForwards } from './db/connection.js';
 import { startSessionWatcher, stopSessionWatcher } from './services/session-watcher.service.js';
 import { remoteStatusPollerService } from './services/remote-status-poller.service.js';
 import { localStatusPollerService } from './services/local-status-poller.service.js';
@@ -26,6 +26,9 @@ async function main() {
   if (resetResult.changes > 0) {
     console.log(`🔄 Reset ${resetResult.changes} instance(s) to idle status`);
   }
+
+  // Clean up stale port forwards from previous sessions
+  cleanupStalePortForwards();
 
   // Create HTTP server
   const server = createServer(app);

@@ -185,6 +185,20 @@ export function cleanupOldActivityEvents(retentionDays: number = 7): void {
   }
 }
 
+export function cleanupStalePortForwards(): void {
+  if (!db) return;
+
+  // On server restart, all active port forwards are stale since the SSH tunnels don't survive
+  const result = db.prepare(`
+    UPDATE port_forwards SET status = 'closed'
+    WHERE status = 'active'
+  `).run();
+
+  if (result.changes > 0) {
+    console.log(`🔌 Closed ${result.changes} stale port forward(s) from previous session`);
+  }
+}
+
 export function closeDatabase(): void {
   if (db) {
     db.close();

@@ -352,7 +352,7 @@ describe('SSHConnectionService', () => {
       const mockStream = new EventEmitter() as EventEmitter & { stderr: EventEmitter };
       mockStream.stderr = new EventEmitter();
 
-      mockClient.exec = vi.fn((cmd, callback) => {
+      mockClient.exec = vi.fn((_cmd, callback) => {
         callback(null, mockStream as any);
         setTimeout(() => {
           mockStream.emit('data', Buffer.from('file1.txt\nfile2.txt'));
@@ -390,7 +390,7 @@ describe('SSHConnectionService', () => {
       const mockStream = new EventEmitter() as EventEmitter & { stderr: EventEmitter };
       mockStream.stderr = new EventEmitter();
 
-      mockClient.exec = vi.fn((cmd, callback) => {
+      mockClient.exec = vi.fn((_cmd, callback) => {
         callback(null, mockStream as any);
         setTimeout(() => {
           mockStream.emit('data', Buffer.from('NO_PROJECT'));
@@ -424,7 +424,7 @@ describe('SSHConnectionService', () => {
       const mockStream = new EventEmitter() as EventEmitter & { stderr: EventEmitter };
       mockStream.stderr = new EventEmitter();
 
-      mockClient.exec = vi.fn((cmd, callback) => {
+      mockClient.exec = vi.fn((_cmd, callback) => {
         callback(null, mockStream as any);
         setTimeout(() => {
           mockStream.emit('data', Buffer.from('AGE:10\nLAST:{"type":"message"}'));
@@ -458,7 +458,7 @@ describe('SSHConnectionService', () => {
       const mockStream = new EventEmitter() as EventEmitter & { stderr: EventEmitter };
       mockStream.stderr = new EventEmitter();
 
-      mockClient.exec = vi.fn((cmd, callback) => {
+      mockClient.exec = vi.fn((_cmd, callback) => {
         callback(null, mockStream as any);
         setTimeout(() => {
           mockStream.emit('data', Buffer.from('AGE:120\nLAST:{"type":"message"}'));

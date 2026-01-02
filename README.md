@@ -5,8 +5,11 @@ Yojimbo is a minimalist IDE for Claude Code power users — status-aware termina
 As usage scales, managing multiple terminals, tabs, tmux splits, markdown plans, and mockups becomes a serious productivity bottleneck. Yojimbo unblocks this by providing one place to:
 
 - **Manage terminal instances** — with hooks into Claude Code so you always know which are churning, idle, or awaiting input
+- **Remote SSH sessions** — connect to remote machines and track Claude status across your fleet
+- **Activity feed** — real-time notifications when instances start, complete, or error
 - **View markdown plans** — keep your roadmaps and specs visible alongside active work
 - **Preview mockups** — render HTML files without leaving the environment
+- **Mobile-optimized UI** — manage instances from your phone or tablet
 
 ## Getting Started
 
@@ -107,6 +110,56 @@ make hooks-check      # Verify hook installation
 | `Cmd+\`` | Toggle terminal panel |
 | `Cmd+S` | Save current file (in editor panel) |
 
+## Remote SSH Instances
+
+Yojimbo can connect to remote machines via SSH, allowing you to manage Claude Code sessions running on other computers.
+
+### Adding a Remote Machine
+
+1. Navigate to **Settings** (`Cmd+,`)
+2. Under **Remote Machines**, click **Add Machine**
+3. Enter the machine details:
+   - **Name**: A friendly name for the machine
+   - **Hostname**: The SSH hostname or IP address
+   - **Port**: SSH port (default: 22)
+   - **Username**: Your SSH username
+   - **SSH Key**: Select a key from `~/.ssh/` or use the default
+
+### Creating Remote Instances
+
+When creating a new instance, you can select a remote machine instead of "Local". The instance will open an SSH terminal to that machine and track Claude Code status remotely.
+
+### Hooks on Remote Machines
+
+For status tracking to work on remote instances, you need to configure hooks on the remote machine. Click **Hooks Config** on a remote instance to get the configuration JSON, then add it to `~/.claude/settings.json` on the remote machine.
+
+### Status Reset
+
+If an instance gets stuck showing "Working" status, you can manually reset it to "Idle" using the **Reset Status** button in the instance header.
+
+## Activity Feed
+
+The Activity Feed tracks events across all your instances:
+
+- **Started** — When Claude begins working
+- **Completed** — When Claude finishes a task
+- **Error** — When something goes wrong
+
+### Accessing the Activity Feed
+
+- Click **Activity** in the header to view all events
+- Unread events show a badge count
+- Click an event to mark it as read
+- Use **Mark all read** to clear all unread indicators
+
+### Configuring Notifications
+
+In Settings, under **Activity Feed**, you can:
+
+- Toggle which event types to track (Completed, Error, Started)
+- Set the retention period for old events
+- Show/hide the Activity button in navigation
+
 ## Architecture
 
 ```
@@ -138,6 +191,7 @@ yojimbo/
 **Backend:**
 - Express.js
 - node-pty for pseudo-terminals
+- ssh2 for remote SSH connections
 - WebSocket for real-time communication
 - better-sqlite3 for persistence
 - chokidar for file watching
@@ -166,6 +220,27 @@ yojimbo/
 - `GET /api/settings` - Get settings
 - `PATCH /api/settings` - Update settings
 
+### Remote Machines
+- `GET /api/machines` - List all remote machines
+- `POST /api/machines` - Add a remote machine
+- `PATCH /api/machines/:id` - Update machine settings
+- `DELETE /api/machines/:id` - Remove a machine
+- `POST /api/machines/:id/test` - Test SSH connection
+
+### Activity Feed
+- `GET /api/feed` - List activity events
+- `GET /api/feed/stats` - Get unread count and totals
+- `PATCH /api/feed/:id/read` - Mark event as read
+- `POST /api/feed/mark-all-read` - Mark all events as read
+- `DELETE /api/feed` - Clear all events
+
+### Hooks
+- `POST /api/hooks/status` - Status update from Claude Code hook
+- `POST /api/hooks/notification` - Notification from Claude Code hook
+- `POST /api/hooks/stop` - Stop event from Claude Code hook
+- `GET /api/instances/:id/hooks-config` - Get hooks config for preview
+- `POST /api/instances/:id/reset-status` - Manually reset instance status
+
 ## WebSocket Events
 
 The server communicates with clients via WebSocket at `ws://localhost:3456/ws`:
@@ -175,6 +250,8 @@ The server communicates with clients via WebSocket at `ws://localhost:3456/ws`:
 - `terminal:resize` - Resize terminal
 - `instance:updated` - Instance state changed
 - `status:changed` - Claude status changed
+- `feed:new` - New activity event created
+- `feed:updated` - Activity event updated (e.g., marked as read)
 
 ## Configuration
 

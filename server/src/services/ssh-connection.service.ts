@@ -13,6 +13,43 @@ interface CommandResult {
   code: number;
 }
 
+interface SSHKeyResult {
+  privateKey?: Buffer;
+  error?: string;
+}
+
+/**
+ * Load SSH private key from path or default locations
+ */
+function loadSSHPrivateKey(privateKeyPath?: string): SSHKeyResult {
+  // If a specific path is provided, try to read it
+  if (privateKeyPath) {
+    const keyPath = privateKeyPath.replace(/^~/, os.homedir());
+    try {
+      const privateKey = fs.readFileSync(keyPath);
+      return { privateKey };
+    } catch {
+      return { error: `Failed to read SSH key: ${keyPath}` };
+    }
+  }
+
+  // Try default keys in order of preference
+  const defaultKeys = ['id_ed25519', 'id_rsa', 'id_ecdsa'];
+  for (const keyName of defaultKeys) {
+    const keyPath = path.join(os.homedir(), '.ssh', keyName);
+    if (fs.existsSync(keyPath)) {
+      try {
+        const privateKey = fs.readFileSync(keyPath);
+        return { privateKey };
+      } catch {
+        // Continue to next key
+      }
+    }
+  }
+
+  return { error: 'No SSH private key found' };
+}
+
 interface RemoteMachineRow {
   id: string;
   name: string;
@@ -64,38 +101,14 @@ class SSHConnectionService {
         resolve({ success: false, error: 'Connection timeout' });
       }, 10000);
 
-      // Read private key
-      let privateKey: Buffer | undefined;
-      if (config.privateKeyPath) {
-        const keyPath = config.privateKeyPath.replace(/^~/, os.homedir());
-        try {
-          privateKey = fs.readFileSync(keyPath);
-        } catch (err) {
-          clearTimeout(timeout);
-          resolve({ success: false, error: `Failed to read SSH key: ${keyPath}` });
-          return;
-        }
-      } else {
-        // Try default keys
-        const defaultKeys = ['id_ed25519', 'id_rsa', 'id_ecdsa'];
-        for (const keyName of defaultKeys) {
-          const keyPath = `${os.homedir()}/.ssh/${keyName}`;
-          if (fs.existsSync(keyPath)) {
-            try {
-              privateKey = fs.readFileSync(keyPath);
-              break;
-            } catch {
-              // Continue to next key
-            }
-          }
-        }
-      }
-
-      if (!privateKey) {
+      // Load SSH private key
+      const keyResult = loadSSHPrivateKey(config.privateKeyPath);
+      if (keyResult.error) {
         clearTimeout(timeout);
-        resolve({ success: false, error: 'No SSH private key found' });
+        resolve({ success: false, error: keyResult.error });
         return;
       }
+      const privateKey = keyResult.privateKey;
 
       client.on('ready', () => {
         clearTimeout(timeout);
@@ -231,38 +244,14 @@ class SSHConnectionService {
         resolve({ success: false, error: 'Connection timeout' });
       }, 15000);
 
-      // Read private key
-      let privateKey: Buffer | undefined;
-      if (config.privateKeyPath) {
-        const keyPath = config.privateKeyPath.replace(/^~/, os.homedir());
-        try {
-          privateKey = fs.readFileSync(keyPath);
-        } catch (err) {
-          clearTimeout(timeout);
-          resolve({ success: false, error: `Failed to read SSH key: ${keyPath}` });
-          return;
-        }
-      } else {
-        // Try default keys
-        const defaultKeys = ['id_ed25519', 'id_rsa', 'id_ecdsa'];
-        for (const keyName of defaultKeys) {
-          const keyPath = `${os.homedir()}/.ssh/${keyName}`;
-          if (fs.existsSync(keyPath)) {
-            try {
-              privateKey = fs.readFileSync(keyPath);
-              break;
-            } catch {
-              // Continue to next key
-            }
-          }
-        }
-      }
-
-      if (!privateKey) {
+      // Load SSH private key
+      const keyResult = loadSSHPrivateKey(config.privateKeyPath);
+      if (keyResult.error) {
         clearTimeout(timeout);
-        resolve({ success: false, error: 'No SSH private key found' });
+        resolve({ success: false, error: keyResult.error });
         return;
       }
+      const privateKey = keyResult.privateKey;
 
       client.on('ready', () => {
         // Expand ~ and get directories
@@ -350,37 +339,14 @@ class SSHConnectionService {
         resolve({ success: false, stdout: '', stderr: 'Connection timeout', code: -1 });
       }, timeoutMs);
 
-      // Read private key
-      let privateKey: Buffer | undefined;
-      if (config.privateKeyPath) {
-        const keyPath = config.privateKeyPath.replace(/^~/, os.homedir());
-        try {
-          privateKey = fs.readFileSync(keyPath);
-        } catch {
-          clearTimeout(timeout);
-          resolve({ success: false, stdout: '', stderr: `Failed to read SSH key`, code: -1 });
-          return;
-        }
-      } else {
-        const defaultKeys = ['id_ed25519', 'id_rsa', 'id_ecdsa'];
-        for (const keyName of defaultKeys) {
-          const keyPath = `${os.homedir()}/.ssh/${keyName}`;
-          if (fs.existsSync(keyPath)) {
-            try {
-              privateKey = fs.readFileSync(keyPath);
-              break;
-            } catch {
-              // Continue to next key
-            }
-          }
-        }
-      }
-
-      if (!privateKey) {
+      // Load SSH private key
+      const keyResult = loadSSHPrivateKey(config.privateKeyPath);
+      if (keyResult.error) {
         clearTimeout(timeout);
-        resolve({ success: false, stdout: '', stderr: 'No SSH private key found', code: -1 });
+        resolve({ success: false, stdout: '', stderr: keyResult.error, code: -1 });
         return;
       }
+      const privateKey = keyResult.privateKey;
 
       client.on('ready', () => {
         client.exec(command, (err, stream) => {

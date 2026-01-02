@@ -208,13 +208,36 @@ yojimbo/
 ### Sessions
 - `GET /api/sessions` - List sessions (paginated)
 - `GET /api/sessions/search?q=` - Search sessions
-- `GET /api/sessions/:id/messages` - Get session messages
+- `GET /api/sessions/by-directory?path=` - List sessions for a specific directory
+- `GET /api/sessions/:id` - Get session details
+- `GET /api/sessions/:id/messages` - Get session messages (paginated)
 
 ### Plans
 - `GET /api/plans?workingDir=` - List plans
-- `GET /api/plans/:path` - Read plan file
-- `PUT /api/plans/:path` - Update plan file
+- `GET /api/plans/:id` - Read plan file content
+- `PUT /api/plans/:id` - Update plan file
 - `POST /api/plans` - Create plan file
+- `POST /api/plans/init` - Initialize plans directory
+- `DELETE /api/plans/:id` - Delete plan file
+
+### Mockups
+- `GET /api/mockups?workingDir=` - List mockup files
+- `GET /api/mockups/:id` - Get mockup content
+- `POST /api/mockups/init` - Initialize mockups directory
+
+### Summaries
+- `POST /api/summaries/generate` - Generate AI summary for a session
+- `POST /api/summaries/generate-stream` - Generate summary with SSE streaming
+
+### Filesystem
+- `GET /api/filesystem/list?path=` - List directory contents
+- `GET /api/filesystem/home` - Get home directory path
+- `GET /api/filesystem/claude-status?workingDir=` - Check Claude Code status in directory
+
+### Port Forwards
+- `GET /api/instances/:id/ports` - List active port forwards for an instance
+- `POST /api/instances/:id/ports` - Create a port forward (SSH instances only)
+- `DELETE /api/instances/:id/ports/:portId` - Close a port forward
 
 ### Settings
 - `GET /api/settings` - Get settings
@@ -234,6 +257,14 @@ yojimbo/
 - `POST /api/feed/mark-all-read` - Mark all events as read
 - `DELETE /api/feed` - Clear all events
 
+### Keychain (macOS)
+- `POST /api/keychain/unlock` - Unlock local macOS login keychain
+- `GET /api/keychain/status` - Check if keychain is locked
+- `POST /api/keychain/remote/:machineId/save` - Store remote machine keychain password
+- `GET /api/keychain/remote/:machineId/has-password` - Check if password is stored
+- `DELETE /api/keychain/remote/:machineId` - Delete stored password
+- `POST /api/keychain/remote/:instanceId/auto-unlock` - Auto-unlock remote keychain
+
 ### Hooks
 - `POST /api/hooks/status` - Status update from Claude Code hook
 - `POST /api/hooks/notification` - Notification from Claude Code hook
@@ -252,6 +283,8 @@ The server communicates with clients via WebSocket at `ws://localhost:3456/ws`:
 - `status:changed` - Claude status changed
 - `feed:new` - New activity event created
 - `feed:updated` - Activity event updated (e.g., marked as read)
+- `file:changed` - Plan or mockup file modified
+- `file:deleted` - Plan or mockup file deleted
 
 ## Configuration
 

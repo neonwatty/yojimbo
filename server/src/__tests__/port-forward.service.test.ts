@@ -1,13 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Hoist mocks
-const { mockRun, mockGet, mockAll, mockGetBackend, mockOn, mockEmit } = vi.hoisted(() => ({
+const { mockRun, mockGet, mockAll, mockGetBackend } = vi.hoisted(() => ({
   mockRun: vi.fn(),
   mockGet: vi.fn(),
   mockAll: vi.fn(),
   mockGetBackend: vi.fn(),
-  mockOn: vi.fn(),
-  mockEmit: vi.fn(),
 }));
 
 vi.mock('../db/connection.js', () => ({

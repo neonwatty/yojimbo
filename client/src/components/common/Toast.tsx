@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import type { JSX } from 'react';
 import type { Toast as ToastType, ToastType as ToastVariant } from '../../store/toastStore';
 import { useToastStore } from '../../store/toastStore';
 

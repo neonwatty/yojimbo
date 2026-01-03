@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as readline from 'readline';
 import * as os from 'os';
-import chokidar from 'chokidar';
+import chokidar, { type FSWatcher } from 'chokidar';
 import { v4 as uuidv4 } from 'uuid';
 import { getDatabase } from '../db/connection.js';
 
@@ -44,7 +44,7 @@ const PROJECTS_DIR = path.join(CLAUDE_DIR, 'projects');
 // Track processed files to avoid duplicates
 const processedFiles = new Map<string, number>(); // filepath -> last line count
 
-let watcher: chokidar.FSWatcher | null = null;
+let watcher: FSWatcher | null = null;
 
 export function startSessionWatcher(): void {
   console.log('[SessionWatcher] Starting session watcher...');
@@ -62,12 +62,12 @@ export function startSessionWatcher(): void {
     },
   });
 
-  watcher.on('add', (filePath) => {
+  watcher.on('add', (filePath: string) => {
     console.log(`[SessionWatcher] New session file: ${filePath}`);
     processSessionFile(filePath);
   });
 
-  watcher.on('change', (filePath) => {
+  watcher.on('change', (filePath: string) => {
     console.log(`[SessionWatcher] Session file updated: ${filePath}`);
     processSessionFile(filePath);
   });

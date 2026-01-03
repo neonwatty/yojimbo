@@ -25,7 +25,7 @@
     "clean": "rm -rf node_modules client/node_modules server/node_modules shared/node_modules client/dist server/dist"
   },
   "devDependencies": {
-    "concurrently": "^8.2.2",
+    "concurrently": "^9.2.1",
     "knip": "^5.76.3",
     "typescript": "^5.3.3"
   },

@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Icons } from '../common/Icons';
 import { useTasksStore } from '../../store/tasksStore';
 import { useInstancesStore } from '../../store/instancesStore';
@@ -9,7 +10,7 @@ import type { GlobalTask, Instance } from '@cc-orchestrator/shared';
 interface GlobalTasksPanelProps {
   isOpen: boolean;
   onClose: () => void;
-  onOpenNewInstance?: () => void;
+  onOpenNewInstance?: (options?: { taskText?: string }) => void;
 }
 
 export function GlobalTasksPanel({ isOpen, onClose, onOpenNewInstance }: GlobalTasksPanelProps) {
@@ -92,6 +93,14 @@ export function GlobalTasksPanel({ isOpen, onClose, onOpenNewInstance }: GlobalT
     }
   };
 
+  const handleUpdateTask = async (taskId: string, newText: string) => {
+    try {
+      await tasksApi.update(taskId, { text: newText });
+    } catch {
+      // Error toast shown by API layer
+    }
+  };
+
   const handleDispatch = async (task: GlobalTask, instanceId: string | 'copy' | 'new') => {
     setDispatchingTaskId(null);
 
@@ -106,7 +115,14 @@ export function GlobalTasksPanel({ isOpen, onClose, onOpenNewInstance }: GlobalT
     }
 
     if (instanceId === 'new') {
-      onOpenNewInstance?.();
+      // Copy task text to clipboard so it's ready to paste in the new instance
+      try {
+        await navigator.clipboard.writeText(task.text);
+        toast.success('Task copied to clipboard');
+      } catch {
+        // Continue even if clipboard fails
+      }
+      onOpenNewInstance?.({ taskText: task.text });
       return;
     }
 
@@ -189,6 +205,7 @@ export function GlobalTasksPanel({ isOpen, onClose, onOpenNewInstance }: GlobalT
                     isDispatchOpen={dispatchingTaskId === task.id}
                     onToggleDone={() => handleToggleDone(task)}
                     onDelete={() => handleDeleteTask(task.id)}
+                    onEdit={(newText) => handleUpdateTask(task.id, newText)}
                     onOpenDispatch={() => setDispatchingTaskId(task.id)}
                     onCloseDispatch={() => setDispatchingTaskId(null)}
                     onDispatch={(instanceId) => handleDispatch(task, instanceId)}
@@ -219,6 +236,7 @@ interface TaskItemProps {
   isDispatchOpen: boolean;
   onToggleDone: () => void;
   onDelete: () => void;
+  onEdit: (newText: string) => void;
   onOpenDispatch: () => void;
   onCloseDispatch: () => void;
   onDispatch: (instanceId: string | 'copy' | 'new') => void;
@@ -230,18 +248,76 @@ function TaskItem({
   isDispatchOpen,
   onToggleDone,
   onDelete,
+  onEdit,
   onOpenDispatch,
   onCloseDispatch,
   onDispatch,
 }: TaskItemProps) {
-  const dispatchRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const editInputRef = useRef<HTMLInputElement>(null);
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
+  const [isEditing, setIsEditing] = useState(false);
+  const [editText, setEditText] = useState(task.text);
+
+  // Focus input when entering edit mode
+  useEffect(() => {
+    if (isEditing) {
+      editInputRef.current?.focus();
+      editInputRef.current?.select();
+    }
+  }, [isEditing]);
+
+  const handleStartEdit = () => {
+    setEditText(task.text);
+    setIsEditing(true);
+  };
+
+  const handleCancelEdit = () => {
+    setEditText(task.text);
+    setIsEditing(false);
+  };
+
+  const handleSaveEdit = () => {
+    const trimmed = editText.trim();
+    if (trimmed && trimmed !== task.text) {
+      onEdit(trimmed);
+    }
+    setIsEditing(false);
+  };
+
+  const handleEditKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleSaveEdit();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      handleCancelEdit();
+    }
+  };
+
+  // Calculate dropdown position when it opens
+  useEffect(() => {
+    if (isDispatchOpen && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      // Position dropdown below and to the left of the button
+      setDropdownPosition({
+        top: rect.bottom + 4,
+        left: rect.right - 224, // 224 = w-56 (14rem = 224px)
+      });
+    }
+  }, [isDispatchOpen]);
 
   // Close dropdown on click outside
   useEffect(() => {
     if (!isDispatchOpen) return;
 
     const handleClickOutside = (e: MouseEvent) => {
-      if (dispatchRef.current && !dispatchRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      if (
+        buttonRef.current && !buttonRef.current.contains(target) &&
+        dropdownRef.current && !dropdownRef.current.contains(target)
+      ) {
         onCloseDispatch();
       }
     };
@@ -284,26 +360,54 @@ function TaskItem({
 
       {/* Content */}
       <div className="flex-1 min-w-0">
-        <p
-          className={`text-sm font-mono break-words ${
-            task.status === 'done' ? 'text-theme-muted line-through' : 'text-theme-primary'
-          }`}
-        >
-          {task.text}
-        </p>
-        {linkedInstance && (
-          <div className="mt-1.5 inline-flex items-center gap-1.5 px-2 py-0.5 bg-yellow-500/20 rounded text-xs text-yellow-400">
-            <div className="w-1.5 h-1.5 bg-yellow-500 rounded-full" />
-            {linkedInstance.name}
+        {isEditing ? (
+          <div className="flex items-center gap-2">
+            <input
+              ref={editInputRef}
+              type="text"
+              value={editText}
+              onChange={(e) => setEditText(e.target.value)}
+              onKeyDown={handleEditKeyDown}
+              onBlur={handleSaveEdit}
+              className="flex-1 px-2 py-1 bg-surface-900 border border-accent rounded text-sm font-mono text-theme-primary focus:outline-none"
+            />
           </div>
+        ) : (
+          <>
+            <p
+              onDoubleClick={handleStartEdit}
+              className={`text-sm font-mono break-words cursor-text ${
+                task.status === 'done' ? 'text-theme-muted line-through' : 'text-theme-primary'
+              }`}
+              title="Double-click to edit"
+            >
+              {task.text}
+            </p>
+            {linkedInstance && (
+              <div className="mt-1.5 inline-flex items-center gap-1.5 px-2 py-0.5 bg-yellow-500/20 rounded text-xs text-yellow-400">
+                <div className="w-1.5 h-1.5 bg-yellow-500 rounded-full" />
+                {linkedInstance.name}
+              </div>
+            )}
+          </>
         )}
       </div>
 
       {/* Actions */}
       <div className="shrink-0 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        {/* Edit Button */}
+        <button
+          onClick={handleStartEdit}
+          className="p-1.5 rounded text-theme-muted hover:text-theme-primary hover:bg-surface-700 transition-colors"
+          title="Edit task"
+        >
+          <Icons.edit className="w-4 h-4" />
+        </button>
+
         {/* Dispatch Button */}
-        <div className="relative" ref={dispatchRef}>
+        <div className="relative">
           <button
+            ref={buttonRef}
             onClick={onOpenDispatch}
             className="p-1.5 rounded text-theme-muted hover:text-accent hover:bg-surface-700 transition-colors"
             title="Dispatch to instance"
@@ -311,9 +415,13 @@ function TaskItem({
             <Icons.send className="w-4 h-4" />
           </button>
 
-          {/* Dispatch Dropdown */}
-          {isDispatchOpen && (
-            <div className="absolute right-0 top-full mt-1 w-56 bg-surface-700 border border-surface-600 rounded-lg shadow-xl z-10 py-1">
+          {/* Dispatch Dropdown - rendered via portal to avoid overflow clipping */}
+          {isDispatchOpen && createPortal(
+            <div
+              ref={dropdownRef}
+              className="fixed w-56 bg-surface-700 border border-surface-600 rounded-lg shadow-xl z-[100] py-1"
+              style={{ top: dropdownPosition.top, left: dropdownPosition.left }}
+            >
               <button
                 onClick={() => onDispatch('copy')}
                 className="w-full flex items-center gap-3 px-3 py-2 text-sm text-theme-primary hover:bg-surface-600 transition-colors"
@@ -360,7 +468,8 @@ function TaskItem({
                 <Icons.plus className="w-4 h-4" />
                 Create new instance
               </button>
-            </div>
+            </div>,
+            document.body
           )}
         </div>
 

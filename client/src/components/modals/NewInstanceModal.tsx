@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSettingsStore } from '../../store/settingsStore';
+import { useUIStore } from '../../store/uiStore';
 import { instancesApi, filesystemApi, sessionsApi, machinesApi } from '../../api/client';
 import { useMachines } from '../../hooks/useMachines';
 import { toast } from '../../store/toastStore';
@@ -24,6 +25,9 @@ export function NewInstanceModal({ isOpen, onClose }: NewInstanceModalProps) {
     setLastInstanceMode,
     getDefaultAlias,
   } = useSettingsStore();
+
+  const newInstanceDefaultMode = useUIStore((state) => state.newInstanceDefaultMode);
+  const setNewInstanceDefaultMode = useUIStore((state) => state.setNewInstanceDefaultMode);
 
   const { machines } = useMachines();
 
@@ -99,7 +103,13 @@ export function NewInstanceModal({ isOpen, onClose }: NewInstanceModalProps) {
     if (isOpen) {
       setName('');
       setWorkingDir(lastUsedDirectory || '~');
-      setMode(lastInstanceMode || 'terminal');
+      // Use the override mode if set (e.g., from task dispatch), otherwise use saved preference
+      const modeToUse = newInstanceDefaultMode || lastInstanceMode || 'terminal';
+      setMode(modeToUse);
+      // Clear the override after using it
+      if (newInstanceDefaultMode) {
+        setNewInstanceDefaultMode(null);
+      }
       setMachineType('local');
       setSelectedMachineId('');
       const defaultAlias = getDefaultAlias();
@@ -110,7 +120,7 @@ export function NewInstanceModal({ isOpen, onClose }: NewInstanceModalProps) {
       setRemoteDirPath('~');
       setShowRemoteBrowser(false);
     }
-  }, [isOpen, lastUsedDirectory, lastInstanceMode, getDefaultAlias]);
+  }, [isOpen, lastUsedDirectory, lastInstanceMode, newInstanceDefaultMode, setNewInstanceDefaultMode, getDefaultAlias]);
 
   // Fetch sessions when directory changes and in Claude Code mode
   useEffect(() => {

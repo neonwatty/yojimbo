@@ -34,6 +34,7 @@ export default function Header() {
   const setShowShortcutsModal = useUIStore((state) => state.setShowShortcutsModal);
   const setShowSettingsModal = useUIStore((state) => state.setShowSettingsModal);
   const setShowNewInstanceModal = useUIStore((state) => state.setShowNewInstanceModal);
+  const openNewInstanceModal = useUIStore((state) => state.openNewInstanceModal);
   const instances = useInstancesStore((state) => state.instances);
   const theme = useSettingsStore((state) => state.theme);
   const setTheme = useSettingsStore((state) => state.setTheme);
@@ -399,9 +400,10 @@ export default function Header() {
       <GlobalTasksPanel
         isOpen={showTasksPanel}
         onClose={() => setShowTasksPanel(false)}
-        onOpenNewInstance={() => {
+        onOpenNewInstance={(options) => {
           setShowTasksPanel(false);
-          setShowNewInstanceModal(true);
+          // When dispatching a task to a new instance, default to Claude Code mode
+          openNewInstanceModal({ defaultMode: 'claude-code' });
         }}
       />
     </header>

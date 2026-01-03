@@ -40,6 +40,7 @@ interface UIState {
   showShortcutsModal: boolean;
   showSettingsModal: boolean;
   showNewInstanceModal: boolean;
+  newInstanceDefaultMode: 'terminal' | 'claude-code' | null;
   showTasksPanel: boolean;
   // File browser state for Plans panel
   plansBrowserWidth: number;
@@ -74,6 +75,8 @@ interface UIState {
   setShowShortcutsModal: (show: boolean) => void;
   setShowSettingsModal: (show: boolean) => void;
   setShowNewInstanceModal: (show: boolean) => void;
+  setNewInstanceDefaultMode: (mode: 'terminal' | 'claude-code' | null) => void;
+  openNewInstanceModal: (options?: { defaultMode?: 'terminal' | 'claude-code' }) => void;
   setShowTasksPanel: (show: boolean) => void;
   // File browser setters
   setPlansBrowserWidth: (width: number) => void;
@@ -101,6 +104,7 @@ export const useUIStore = create<UIState>()(
       showShortcutsModal: false,
       showSettingsModal: false,
       showNewInstanceModal: false,
+      newInstanceDefaultMode: null,
       showTasksPanel: false,
       // Command palette state (not persisted)
       showCommandPalette: false,
@@ -127,6 +131,11 @@ export const useUIStore = create<UIState>()(
       setShowShortcutsModal: (showShortcutsModal) => set({ showShortcutsModal }),
       setShowSettingsModal: (showSettingsModal) => set({ showSettingsModal }),
       setShowNewInstanceModal: (showNewInstanceModal) => set({ showNewInstanceModal }),
+      setNewInstanceDefaultMode: (newInstanceDefaultMode) => set({ newInstanceDefaultMode }),
+      openNewInstanceModal: (options) => set({
+        showNewInstanceModal: true,
+        newInstanceDefaultMode: options?.defaultMode || null
+      }),
       setShowTasksPanel: (showTasksPanel) => set({ showTasksPanel }),
       setPlansBrowserWidth: (plansBrowserWidth) => set({ plansBrowserWidth }),
       togglePlansBrowserCollapsed: () => set((state) => ({ plansBrowserCollapsed: !state.plansBrowserCollapsed })),

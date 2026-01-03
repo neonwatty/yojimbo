@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { MobileTextInput } from './MobileTextInput';
 import { instancesApi } from '../../api/client';
 
@@ -249,8 +249,119 @@ describe('MobileTextInput', () => {
       fireEvent.click(screen.getByTestId('expand-button'));
 
       expect(
-        screen.getByText(/Tap mic on keyboard for speech/)
+        screen.getByText(/Tap mic for speech/)
       ).toBeInTheDocument();
+    });
+  });
+
+  describe('auto-send', () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('auto-sends with enter after 1.5 seconds of no input', () => {
+      render(<MobileTextInput instanceId={mockInstanceId} />);
+
+      fireEvent.click(screen.getByTestId('expand-button'));
+      fireEvent.change(screen.getByTestId('text-input'), { target: { value: 'test command' } });
+
+      // Should not send immediately
+      expect(instancesApi.sendInput).not.toHaveBeenCalled();
+
+      // Advance timers by 1.5 seconds
+      act(() => {
+        vi.advanceTimersByTime(1500);
+      });
+
+      // Should auto-send with carriage return
+      expect(instancesApi.sendInput).toHaveBeenCalledWith(mockInstanceId, 'test command\r');
+    });
+
+    it('resets timer when text changes', () => {
+      render(<MobileTextInput instanceId={mockInstanceId} />);
+
+      fireEvent.click(screen.getByTestId('expand-button'));
+      fireEvent.change(screen.getByTestId('text-input'), { target: { value: 'first' } });
+
+      // Advance 1 second
+      act(() => {
+        vi.advanceTimersByTime(1000);
+      });
+      expect(instancesApi.sendInput).not.toHaveBeenCalled();
+
+      // Change text - should reset timer
+      fireEvent.change(screen.getByTestId('text-input'), { target: { value: 'second' } });
+
+      // Advance another 1 second (total 2s since first input, but only 1s since second)
+      act(() => {
+        vi.advanceTimersByTime(1000);
+      });
+      expect(instancesApi.sendInput).not.toHaveBeenCalled();
+
+      // Advance another 0.5s to complete the 1.5s after second input
+      act(() => {
+        vi.advanceTimersByTime(500);
+      });
+      expect(instancesApi.sendInput).toHaveBeenCalledWith(mockInstanceId, 'second\r');
+    });
+
+    it('does not auto-send when text is empty', () => {
+      render(<MobileTextInput instanceId={mockInstanceId} />);
+
+      fireEvent.click(screen.getByTestId('expand-button'));
+      fireEvent.change(screen.getByTestId('text-input'), { target: { value: '' } });
+
+      act(() => {
+        vi.advanceTimersByTime(1500);
+      });
+
+      expect(instancesApi.sendInput).not.toHaveBeenCalled();
+    });
+
+    it('does not auto-send when text is only whitespace', () => {
+      render(<MobileTextInput instanceId={mockInstanceId} />);
+
+      fireEvent.click(screen.getByTestId('expand-button'));
+      fireEvent.change(screen.getByTestId('text-input'), { target: { value: '   ' } });
+
+      act(() => {
+        vi.advanceTimersByTime(1500);
+      });
+
+      expect(instancesApi.sendInput).not.toHaveBeenCalled();
+    });
+
+    it('cancels auto-send when collapsed', () => {
+      render(<MobileTextInput instanceId={mockInstanceId} />);
+
+      fireEvent.click(screen.getByTestId('expand-button'));
+      fireEvent.change(screen.getByTestId('text-input'), { target: { value: 'test' } });
+
+      // Collapse before timer fires
+      fireEvent.click(screen.getByTestId('collapse-button'));
+
+      act(() => {
+        vi.advanceTimersByTime(1500);
+      });
+
+      expect(instancesApi.sendInput).not.toHaveBeenCalled();
+    });
+
+    it('clears text after auto-send', () => {
+      render(<MobileTextInput instanceId={mockInstanceId} />);
+
+      fireEvent.click(screen.getByTestId('expand-button'));
+      fireEvent.change(screen.getByTestId('text-input'), { target: { value: 'test command' } });
+
+      act(() => {
+        vi.advanceTimersByTime(1500);
+      });
+
+      expect(screen.getByTestId('text-input')).toHaveValue('');
     });
   });
 });

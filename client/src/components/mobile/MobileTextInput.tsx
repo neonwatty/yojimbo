@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { instancesApi } from '../../api/client';
 
 interface MobileTextInputProps {
@@ -13,6 +13,7 @@ export function MobileTextInput({ instanceId }: MobileTextInputProps) {
   const [text, setText] = useState('');
   const [isExpanded, setIsExpanded] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const autoSendTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleSend = useCallback(() => {
     if (text.trim()) {
@@ -38,6 +39,28 @@ export function MobileTextInput({ instanceId }: MobileTextInputProps) {
       handleSendWithEnter();
     }
   }, [handleSendWithEnter]);
+
+  // Auto-send after 1.5 seconds of no input changes
+  useEffect(() => {
+    // Clear existing timeout
+    if (autoSendTimeoutRef.current) {
+      clearTimeout(autoSendTimeoutRef.current);
+    }
+
+    // Only set timeout if expanded and there's text to send
+    if (isExpanded && text.trim()) {
+      autoSendTimeoutRef.current = setTimeout(() => {
+        handleSendWithEnter();
+      }, 1500);
+    }
+
+    // Cleanup on unmount or text change
+    return () => {
+      if (autoSendTimeoutRef.current) {
+        clearTimeout(autoSendTimeoutRef.current);
+      }
+    };
+  }, [text, isExpanded, handleSendWithEnter]);
 
   const handleExpand = useCallback(() => {
     setIsExpanded(true);
@@ -154,7 +177,7 @@ export function MobileTextInput({ instanceId }: MobileTextInputProps) {
 
       {/* Hint text */}
       <div className="px-4 pb-2 text-xs text-theme-dim text-center">
-        Tap mic on keyboard for speech • ⌘+Enter = send with newline
+        Tap mic for speech • Auto-sends after pause
       </div>
     </div>
   );

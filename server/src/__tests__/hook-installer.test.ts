@@ -182,7 +182,10 @@ describe('HookInstallerService', () => {
         expect(hookCommand).toHaveProperty('command');
         expect(typeof hookCommand.command).toBe('string');
         expect(hookCommand.command).toContain('curl');
-        expect(hookCommand.command).toContain('test-instance-id');
+        // Note: instanceId is intentionally NOT included in hooks
+        // because hooks are shared across instances on the same machine
+        // and we rely on projectDir matching instead
+        expect(hookCommand.command).toContain('projectDir');
       }
     });
 

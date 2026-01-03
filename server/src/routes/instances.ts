@@ -382,19 +382,41 @@ router.post('/:id/uninstall-hooks', async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Close reverse tunnel if it exists
-    const tunnelClosed = await reverseTunnelService.closeTunnel(id);
-    if (tunnelClosed) {
-      console.log(`[Hooks] Closed reverse tunnel for instance ${id}`);
+    // Get the machine ID before closing the tunnel (so we can check if other instances remain)
+    const machineId = reverseTunnelService.getMachineIdForInstance(id);
+
+    // Remove this instance from the tunnel (may or may not close the tunnel)
+    const instanceRemoved = await reverseTunnelService.closeTunnel(id);
+
+    // Check if the tunnel is still active for this machine (other instances using it)
+    const tunnelStillActive = machineId ? reverseTunnelService.hasMachineTunnel(machineId) : false;
+
+    // Only uninstall hooks from the remote if this was the last instance (tunnel closed)
+    let hooksUninstalled = false;
+    if (instanceRemoved && !tunnelStillActive) {
+      console.log(`[Hooks] Last instance removed, uninstalling hooks for instance ${id}`);
+      const result = await hookInstallerService.uninstallHooksForInstance(id);
+      hooksUninstalled = result.success;
+      if (!result.success) {
+        console.warn(`[Hooks] Failed to uninstall hooks: ${result.error}`);
+      }
+    } else if (instanceRemoved) {
+      console.log(`[Hooks] Instance ${id} removed from tunnel, but other instances still using it`);
     }
 
-    const result = await hookInstallerService.uninstallHooksForInstance(id);
-
-    if (result.success) {
-      res.json({ success: true, data: { message: result.message, tunnelClosed } });
-    } else {
-      res.status(400).json({ success: false, error: result.message, details: result.error });
-    }
+    res.json({
+      success: true,
+      data: {
+        message: hooksUninstalled
+          ? 'Hooks uninstalled successfully'
+          : tunnelStillActive
+            ? 'Instance removed from shared tunnel (hooks still active for other instances)'
+            : 'Instance was not using a tunnel',
+        instanceRemoved,
+        tunnelStillActive,
+        hooksUninstalled,
+      },
+    });
   } catch (error) {
     console.error('Error uninstalling hooks:', error);
     res.status(500).json({ success: false, error: 'Failed to uninstall hooks' });

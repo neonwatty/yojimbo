@@ -3,6 +3,7 @@ import type { Instance } from '@cc-orchestrator/shared';
 import { StatusDot, StatusBadge } from '../common/Status';
 import { EditableName } from '../common/EditableName';
 import { Icons } from '../common/Icons';
+import { formatRelativeTime } from '../../utils/strings';
 
 interface ListLayoutProps {
   instances: Instance[];
@@ -135,6 +136,7 @@ export const ListLayout = memo(function ListLayout({
                 onCancel={onCancelEditing}
                 className="text-xs"
               />
+              <span className="text-[10px] text-surface-500">{formatRelativeTime(instance.createdAt)}</span>
             </div>
             <div className="text-[10px] text-theme-dim font-mono truncate">{instance.workingDir}</div>
           </div>
@@ -147,7 +149,7 @@ export const ListLayout = memo(function ListLayout({
               e.stopPropagation();
               onExpand(instance.id);
             }}
-            className="p-0.5 rounded transition-all text-theme-dim hover:text-frost-2 hover:bg-frost-4/20 opacity-0 group-hover:opacity-100"
+            className="p-0.5 rounded transition-all text-theme-dim hover:text-frost-2 hover:bg-frost-4/20 opacity-30 group-hover:opacity-100"
             title="Expand"
             aria-label={`Expand ${instance.name}`}
           >
@@ -158,7 +160,7 @@ export const ListLayout = memo(function ListLayout({
               e.stopPropagation();
               onClose(instance);
             }}
-            className="p-0.5 rounded transition-all text-theme-dim hover:text-state-error hover:bg-state-error/10 opacity-0 group-hover:opacity-100"
+            className="p-0.5 rounded transition-all text-theme-dim hover:text-state-error hover:bg-state-error/10 opacity-30 group-hover:opacity-100"
             title="Close"
             aria-label={`Close ${instance.name}`}
           >

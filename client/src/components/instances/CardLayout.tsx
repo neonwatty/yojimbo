@@ -3,6 +3,7 @@ import type { Instance } from '@cc-orchestrator/shared';
 import { StatusDot, StatusBadge } from '../common/Status';
 import { EditableName } from '../common/EditableName';
 import { Icons } from '../common/Icons';
+import { formatRelativeTime } from '../../utils/strings';
 
 interface CardLayoutProps {
   instances: Instance[];
@@ -102,8 +103,8 @@ export const CardLayout = memo(function CardLayout({
 
           </div>
 
-          {/* Action buttons */}
-          <div className="absolute top-2 right-2 flex items-center gap-0.5 opacity-0 group-hover:opacity-100">
+          {/* Action buttons - slightly visible, full on hover */}
+          <div className="absolute top-2 right-2 flex items-center gap-0.5 opacity-30 group-hover:opacity-100 transition-opacity">
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -160,6 +161,12 @@ export const CardLayout = memo(function CardLayout({
 
           <StatusBadge status={instance.status} />
           <div className="mt-2 text-[10px] text-theme-dim font-mono truncate">{instance.workingDir}</div>
+          <div className="mt-1 text-[10px] text-theme-dim">
+            Created {formatRelativeTime(instance.createdAt)}
+            {instance.updatedAt !== instance.createdAt && (
+              <span className="text-surface-500"> · Active {formatRelativeTime(instance.updatedAt)}</span>
+            )}
+          </div>
 
           {/* Terminal preview */}
           <div className="mt-2 bg-surface-900 rounded p-2 h-16 overflow-hidden">

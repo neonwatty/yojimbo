@@ -6,8 +6,10 @@ interface InstancesState {
   activeInstanceId: string | null;
   expandedInstanceId: string | null;
   currentCwds: Record<string, string>; // instanceId -> current working directory
+  isLoading: boolean;
 
   setInstances: (instances: Instance[]) => void;
+  setLoading: (loading: boolean) => void;
   addInstance: (instance: Instance) => void;
   updateInstance: (id: string, updates: Partial<Instance>) => void;
   removeInstance: (id: string) => void;
@@ -22,8 +24,10 @@ export const useInstancesStore = create<InstancesState>((set) => ({
   activeInstanceId: null,
   expandedInstanceId: null,
   currentCwds: {},
+  isLoading: true,
 
   setInstances: (instances) => set({ instances }),
+  setLoading: (isLoading) => set({ isLoading }),
 
   addInstance: (instance) =>
     set((state) => ({

@@ -204,11 +204,11 @@ class HookInstallerService {
     const baseUrl = orchestratorUrl.replace(/\/$/, '');
 
     // Create curl commands for each hook
-    // Shell quoting: 'literal'"$VAR"'literal' concatenates single-quoted and double-quoted parts
-    // We use projectDir ($CWD) for matching instead of instanceId so multiple instances work
-    const statusWorkingCmd = `curl -s -X POST "${baseUrl}/api/hooks/status" -H "Content-Type: application/json" -d '{"event":"working","projectDir":"'"$CWD"'"}'`;
-    const stopCmd = `curl -s -X POST "${baseUrl}/api/hooks/stop" -H "Content-Type: application/json" -d '{"projectDir":"'"$CWD"'"}'`;
-    const notificationCmd = `curl -s -X POST "${baseUrl}/api/hooks/notification" -H "Content-Type: application/json" -d '{"projectDir":"'"$CWD"'"}'`;
+    // Claude Code hooks receive context via stdin as JSON containing { cwd: "...", ... }
+    // We read stdin, extract cwd with jq, transform to our format, and pipe to curl
+    const statusWorkingCmd = `jq '{event:"working",projectDir:.cwd}' | curl -s -X POST "${baseUrl}/api/hooks/status" -H "Content-Type: application/json" -d @-`;
+    const stopCmd = `jq '{projectDir:.cwd}' | curl -s -X POST "${baseUrl}/api/hooks/stop" -H "Content-Type: application/json" -d @-`;
+    const notificationCmd = `jq '{projectDir:.cwd}' | curl -s -X POST "${baseUrl}/api/hooks/notification" -H "Content-Type: application/json" -d @-`;
 
     // Helper to create a hook entry in the new format
     const createHookEntry = (command: string) => ({

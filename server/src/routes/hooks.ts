@@ -39,7 +39,7 @@ function findInstanceByWorkingDir(projectDir: string): InstanceRow | null {
 
   if (instance) return instance;
 
-  // Try with ~ prefix
+  // Try with ~ prefix (for local machine)
   const withTilde = projectDir.startsWith(os.homedir())
     ? projectDir.replace(os.homedir(), '~')
     : projectDir;
@@ -50,18 +50,67 @@ function findInstanceByWorkingDir(projectDir: string): InstanceRow | null {
 
   if (instance) return instance;
 
+  // For remote machines: check if projectDir looks like a home directory
+  // Pattern: /Users/<username> or /home/<username>
+  const homeMatch = projectDir.match(/^(\/Users\/[^/]+|\/home\/[^/]+)$/);
+  if (homeMatch) {
+    // Try matching instances with ~ as working_dir
+    instance = db
+      .prepare('SELECT * FROM instances WHERE working_dir = ? AND closed_at IS NULL')
+      .get('~') as InstanceRow | undefined;
+
+    if (instance) return instance;
+  }
+
   // Try partial match (project dir might be a subdirectory)
-  instance = db
+  // First, get all potential matches and score them
+  const candidates = db
     .prepare(`
       SELECT * FROM instances
       WHERE closed_at IS NULL
-      AND (? LIKE working_dir || '%' OR working_dir LIKE ? || '%')
-      ORDER BY LENGTH(working_dir) DESC
-      LIMIT 1
+      AND (? LIKE working_dir || '%' OR working_dir LIKE ? || '%' OR working_dir = '~')
     `)
-    .get(normalizedDir, normalizedDir) as InstanceRow | undefined;
+    .all(normalizedDir, normalizedDir) as InstanceRow[];
 
-  return instance || null;
+  if (candidates.length === 0) return null;
+
+  // Score candidates: prefer exact/longer matches over partial matches
+  // Also expand ~ in working_dir for proper comparison
+  let bestMatch: InstanceRow | null = null;
+  let bestScore = -1;
+
+  for (const candidate of candidates) {
+    let candidateDir = candidate.working_dir;
+
+    // For ~ working_dir on remote machines, we can't expand it properly
+    // but we can check if projectDir looks like it's under a home directory
+    if (candidateDir === '~') {
+      const homePattern = /^(\/Users\/[^/]+|\/home\/[^/]+)/;
+      const match = projectDir.match(homePattern);
+      if (match) {
+        candidateDir = match[1]; // Use the detected home path
+      }
+    }
+
+    // Calculate match score
+    let score = 0;
+    if (normalizedDir === candidateDir) {
+      score = 1000; // Exact match
+    } else if (normalizedDir.startsWith(candidateDir + '/')) {
+      // projectDir is under working_dir (e.g., /Users/foo/project under /Users/foo)
+      score = candidateDir.length;
+    } else if (candidateDir.startsWith(normalizedDir + '/')) {
+      // working_dir is under projectDir - less preferred
+      score = normalizedDir.length - 500;
+    }
+
+    if (score > bestScore) {
+      bestScore = score;
+      bestMatch = candidate;
+    }
+  }
+
+  return bestMatch;
 }
 
 // Update instance status

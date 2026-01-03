@@ -33,6 +33,10 @@ make dev
 
 Open http://localhost:5173 and you're in.
 
+### Why No Docker?
+
+Yojimbo spawns and manages Claude Code processes on your machine. Running in Docker would require mounting your home directory, SSH keys, and Claude config—defeating the isolation benefits of containerization. Since Claude Code itself requires Node.js, running Yojimbo natively makes more sense.
+
 ## Usage
 
 ### Development

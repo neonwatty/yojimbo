@@ -16,8 +16,9 @@ import type { SummaryType, GenerateSummaryResponse, CommandExecution, SummarySSE
 /**
  * Generate a short, descriptive name from task text for instance naming.
  * Takes first few meaningful words, removes filler, and limits length.
+ * Deduplicates by adding a number suffix if the name already exists.
  */
-function generateShortName(taskText: string): string {
+function generateShortName(taskText: string, existingNames: string[]): string {
   // Common filler words to remove
   const fillerWords = new Set([
     'a', 'an', 'the', 'to', 'for', 'and', 'or', 'of', 'in', 'on', 'at', 'by',
@@ -45,16 +46,27 @@ function generateShortName(taskText: string): string {
   const selectedWords = words.slice(0, maxWords);
 
   // Title case and join
-  const name = selectedWords
+  let baseName = selectedWords
     .map(word => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ');
 
   // Limit total length to 30 characters
-  if (name.length > 30) {
-    return name.slice(0, 27) + '...';
+  if (baseName.length > 30) {
+    baseName = baseName.slice(0, 27) + '...';
   }
 
-  return name;
+  // Deduplicate: check if name exists and add number suffix if needed
+  const lowerExisting = existingNames.map(n => n.toLowerCase());
+  if (!lowerExisting.includes(baseName.toLowerCase())) {
+    return baseName;
+  }
+
+  // Find next available number
+  let counter = 2;
+  while (lowerExisting.includes(`${baseName.toLowerCase()} ${counter}`)) {
+    counter++;
+  }
+  return `${baseName} ${counter}`;
 }
 
 export default function Header() {
@@ -447,8 +459,9 @@ export default function Header() {
         onOpenNewInstance={(options) => {
           setShowTasksPanel(false);
           // When dispatching a task to a new instance, default to Claude Code mode
-          // Generate a short name from the task text if provided
-          const suggestedName = options?.taskText ? generateShortName(options.taskText) : undefined;
+          // Generate a short name from the task text if provided (deduplicated against existing instances)
+          const existingNames = instances.map(i => i.name);
+          const suggestedName = options?.taskText ? generateShortName(options.taskText, existingNames) : undefined;
           openNewInstanceModal({ defaultMode: 'claude-code', suggestedName });
         }}
       />

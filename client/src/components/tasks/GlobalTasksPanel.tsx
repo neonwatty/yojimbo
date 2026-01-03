@@ -292,6 +292,7 @@ function TaskItem({
       handleSaveEdit();
     } else if (e.key === 'Escape') {
       e.preventDefault();
+      e.nativeEvent.stopImmediatePropagation(); // Prevent modal from closing
       handleCancelEdit();
     }
   };

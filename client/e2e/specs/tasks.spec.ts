@@ -354,6 +354,84 @@ test.describe('Global Tasks', () => {
       expect(updatedTask.status).toBe('in_progress');
       expect(updatedTask.dispatchedInstanceId).toBe(instance.id);
     });
+
+    test('create new instance from dispatch opens modal', async ({ basePage, apiClient }) => {
+      await apiClient.createTask('Task for new instance');
+
+      await basePage.goto('/instances');
+      await basePage.page.locator('button:has-text("Tasks")').click();
+
+      // Wait for task
+      await expect(basePage.page.locator('text=Task for new instance')).toBeVisible();
+
+      // Hover and click dispatch
+      const taskItem = basePage.page.locator('div.group').filter({ hasText: 'Task for new instance' });
+      await taskItem.hover();
+      const dispatchButton = taskItem.locator('button[title="Dispatch to instance"]');
+      await dispatchButton.click();
+
+      // Click "Create new instance"
+      await basePage.page.locator('text=Create new instance').click();
+
+      // Tasks panel should close and New Session modal should open
+      await expect(basePage.page.locator('h2:has-text("Global Tasks")')).not.toBeVisible();
+      await expect(basePage.page.locator('h2:has-text("New Session")')).toBeVisible();
+    });
+
+    test('create new instance defaults to Claude Code mode', async ({ basePage, apiClient }) => {
+      await apiClient.createTask('Task for Claude Code');
+
+      await basePage.goto('/instances');
+      await basePage.page.locator('button:has-text("Tasks")').click();
+
+      // Wait for task
+      await expect(basePage.page.locator('text=Task for Claude Code')).toBeVisible();
+
+      // Hover and click dispatch
+      const taskItem = basePage.page.locator('div.group').filter({ hasText: 'Task for Claude Code' });
+      await taskItem.hover();
+      const dispatchButton = taskItem.locator('button[title="Dispatch to instance"]');
+      await dispatchButton.click();
+
+      // Click "Create new instance"
+      await basePage.page.locator('text=Create new instance').click();
+
+      // New Session modal should open
+      await expect(basePage.page.locator('h2:has-text("New Session")')).toBeVisible();
+
+      // Claude Code button should be selected (has the active styling)
+      const claudeCodeButton = basePage.page.locator('button').filter({ hasText: 'Claude Code' });
+      await expect(claudeCodeButton).toHaveClass(/bg-frost-4/);
+    });
+
+    test('create new instance copies task to clipboard', async ({ basePage, apiClient, context }) => {
+      // Grant clipboard permissions
+      await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+
+      await apiClient.createTask('ClipboardTaskNewInstance');
+
+      await basePage.goto('/instances');
+      await basePage.page.locator('button:has-text("Tasks")').click();
+
+      // Wait for task
+      await expect(basePage.page.locator('text=ClipboardTaskNewInstance')).toBeVisible();
+
+      // Hover and click dispatch
+      const taskItem = basePage.page.locator('div.group').filter({ hasText: 'ClipboardTaskNewInstance' });
+      await taskItem.hover();
+      const dispatchButton = taskItem.locator('button[title="Dispatch to instance"]');
+      await dispatchButton.click({ force: true });
+
+      // Click "Create new instance"
+      await basePage.page.locator('text=Create new instance').click();
+
+      // Wait for modal to open
+      await expect(basePage.page.locator('h2:has-text("New Session")')).toBeVisible();
+
+      // Verify clipboard contains the task text
+      const clipboardText = await basePage.page.evaluate(() => navigator.clipboard.readText());
+      expect(clipboardText).toBe('ClipboardTaskNewInstance');
+    });
   });
 
   test.describe('Task Creation Flow', () => {
@@ -428,6 +506,156 @@ test.describe('Global Tasks', () => {
 
       // Badge should update to show 2
       await expect(badge).toHaveText('2');
+    });
+  });
+
+  test.describe('Task Editing', () => {
+    test('can edit task via edit button', async ({ basePage, apiClient }) => {
+      const task = await apiClient.createTask('EditButtonTask');
+
+      await basePage.goto('/instances');
+      await basePage.page.locator('button:has-text("Tasks")').click();
+
+      // Wait for task text
+      await expect(basePage.page.locator('text=EditButtonTask')).toBeVisible();
+
+      // Find the task row and hover to show action buttons
+      const taskRow = basePage.page.locator('div.group').filter({ hasText: 'EditButtonTask' });
+      await taskRow.hover();
+
+      // Click edit button
+      await taskRow.locator('button[title="Edit task"]').click({ force: true });
+
+      // Wait for edit mode - find the input with the task value
+      const editInput = basePage.page.locator('input[value="EditButtonTask"]');
+      await expect(editInput).toBeVisible({ timeout: 5000 });
+
+      // Clear, type new text, and press Enter (using keyboard since selector changes after fill)
+      await editInput.fill('UpdatedButtonTask');
+      await basePage.page.keyboard.press('Enter');
+
+      // Wait for update
+      await basePage.page.waitForTimeout(300);
+
+      // Verify new text is shown
+      await expect(basePage.page.locator('text=UpdatedButtonTask')).toBeVisible();
+
+      // Verify via API
+      const updatedTask = await apiClient.getTask(task.id);
+      expect(updatedTask.text).toBe('UpdatedButtonTask');
+    });
+
+    test('can edit task via double-click', async ({ basePage, apiClient }) => {
+      const task = await apiClient.createTask('DoubleClickTask');
+
+      await basePage.goto('/instances');
+      await basePage.page.locator('button:has-text("Tasks")').click();
+
+      // Wait for task text
+      await expect(basePage.page.locator('text=DoubleClickTask')).toBeVisible();
+
+      // Double-click the task text to edit
+      const taskText = basePage.page.locator('p.font-mono').filter({ hasText: 'DoubleClickTask' });
+      await taskText.dblclick();
+
+      // Wait for edit mode - find the input with the task value
+      const editInput = basePage.page.locator('input[value="DoubleClickTask"]');
+      await expect(editInput).toBeVisible({ timeout: 5000 });
+
+      // Type new text and press Enter (using keyboard since selector changes after fill)
+      await editInput.fill('DoubleClickedEdit');
+      await basePage.page.keyboard.press('Enter');
+
+      // Wait for update
+      await basePage.page.waitForTimeout(300);
+
+      // Verify new text
+      await expect(basePage.page.locator('text=DoubleClickedEdit')).toBeVisible();
+
+      // Verify via API
+      const updatedTask = await apiClient.getTask(task.id);
+      expect(updatedTask.text).toBe('DoubleClickedEdit');
+    });
+
+    test('Escape cancels edit without saving', async ({ basePage, apiClient }) => {
+      const task = await apiClient.createTask('EscapeCancelTask');
+
+      await basePage.goto('/instances');
+      await basePage.page.locator('button:has-text("Tasks")').click();
+
+      // Wait for task text
+      await expect(basePage.page.locator('text=EscapeCancelTask')).toBeVisible();
+
+      // Find the task row and hover
+      const taskRow = basePage.page.locator('div.group').filter({ hasText: 'EscapeCancelTask' });
+      await taskRow.hover();
+      await taskRow.locator('button[title="Edit task"]').click({ force: true });
+
+      // Wait for edit mode - find the input with the task value
+      const editInput = basePage.page.locator('input[value="EscapeCancelTask"]');
+      await expect(editInput).toBeVisible({ timeout: 5000 });
+
+      // Type new text
+      await editInput.fill('ChangedText');
+
+      // Press Escape to cancel (using keyboard since selector changes after fill)
+      await basePage.page.keyboard.press('Escape');
+
+      // Wait for state update
+      await basePage.page.waitForTimeout(100);
+
+      // Original text should still be shown
+      await expect(basePage.page.locator('text=EscapeCancelTask')).toBeVisible();
+      await expect(basePage.page.locator('text=ChangedText')).not.toBeVisible();
+
+      // Verify via API that text was not changed
+      const unchangedTask = await apiClient.getTask(task.id);
+      expect(unchangedTask.text).toBe('EscapeCancelTask');
+    });
+
+    test('blur saves edit', async ({ basePage, apiClient }) => {
+      const task = await apiClient.createTask('BlurSaveTask');
+
+      await basePage.goto('/instances');
+      await basePage.page.locator('button:has-text("Tasks")').click();
+
+      // Wait for task text
+      await expect(basePage.page.locator('text=BlurSaveTask')).toBeVisible();
+
+      // Find the task row and hover
+      const taskRow = basePage.page.locator('div.group').filter({ hasText: 'BlurSaveTask' });
+      await taskRow.hover();
+      await taskRow.locator('button[title="Edit task"]').click({ force: true });
+
+      // Wait for edit mode - find the input with the task value
+      const editInput = basePage.page.locator('input[value="BlurSaveTask"]');
+      await expect(editInput).toBeVisible({ timeout: 5000 });
+
+      // Type new text
+      await editInput.fill('SavedViaBlur');
+
+      // Click elsewhere to blur (on the modal header)
+      await basePage.page.locator('h2:has-text("Global Tasks")').click();
+
+      // Wait for update
+      await basePage.page.waitForTimeout(300);
+
+      // Verify new text is shown
+      await expect(basePage.page.locator('text=SavedViaBlur')).toBeVisible();
+
+      // Verify via API
+      const updatedTask = await apiClient.getTask(task.id);
+      expect(updatedTask.text).toBe('SavedViaBlur');
+    });
+
+    test('edit updates task via API', async ({ apiClient }) => {
+      const task = await apiClient.createTask('API edit test');
+
+      // Update via API
+      const updated = await apiClient.updateTask(task.id, { text: 'API updated text' });
+
+      expect(updated.text).toBe('API updated text');
+      expect(updated.id).toBe(task.id);
     });
   });
 

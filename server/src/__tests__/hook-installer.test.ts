@@ -182,7 +182,10 @@ describe('HookInstallerService', () => {
         expect(hookCommand).toHaveProperty('command');
         expect(typeof hookCommand.command).toBe('string');
         expect(hookCommand.command).toContain('curl');
-        expect(hookCommand.command).toContain('test-instance-id');
+        // Note: instanceId is intentionally NOT included in hooks
+        // because hooks are shared across instances on the same machine
+        // and we rely on projectDir matching instead
+        expect(hookCommand.command).toContain('projectDir');
       }
     });
 
@@ -243,15 +246,15 @@ describe('HookInstallerService', () => {
       // Command should be a valid string
       expect(typeof command).toBe('string');
 
-      // Command should contain the curl call
+      // Command should use jq to read stdin and pipe to curl
+      expect(command).toContain('jq');
       expect(command).toContain('curl');
 
-      // Command should contain proper JSON structure for -d argument
-      // The -d argument should have valid JSON (with shell variable substitution pattern)
-      expect(command).toMatch(/-d\s+'/); // -d followed by single quote
-      expect(command).toContain('"event":"working"');
-      expect(command).toContain('"projectDir":"');
-      expect(command).toContain('$CWD'); // Variable should be present for expansion
+      // Command should pipe jq output to curl via -d @-
+      expect(command).toContain('-d @-');
+      // jq extracts .cwd from stdin and creates the JSON payload
+      expect(command).toContain('.cwd');
+      expect(command).toContain('projectDir')
     });
   });
 

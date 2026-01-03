@@ -194,15 +194,21 @@ class HookInstallerService {
   /**
    * Generate the hooks configuration object
    * Uses the new Claude Code hook format with matchers
+   *
+   * NOTE: We don't include instanceId in the hooks because:
+   * 1. Hooks are stored in ~/.claude/settings.json on the remote machine
+   * 2. Multiple instances on the same machine share this config
+   * 3. The server matches instances by projectDir (working directory) instead
    */
-  private generateHooksConfig(instanceId: string, orchestratorUrl: string): object {
+  private generateHooksConfig(_instanceId: string, orchestratorUrl: string): object {
     const baseUrl = orchestratorUrl.replace(/\/$/, '');
 
     // Create curl commands for each hook
-    // Shell quoting: 'literal'"$VAR"'literal' concatenates single-quoted and double-quoted parts
-    const statusWorkingCmd = `curl -s -X POST "${baseUrl}/api/hooks/status" -H "Content-Type: application/json" -d '{"event":"working","projectDir":"'"$CWD"'","instanceId":"${instanceId}"}'`;
-    const stopCmd = `curl -s -X POST "${baseUrl}/api/hooks/stop" -H "Content-Type: application/json" -d '{"projectDir":"'"$CWD"'","instanceId":"${instanceId}"}'`;
-    const notificationCmd = `curl -s -X POST "${baseUrl}/api/hooks/notification" -H "Content-Type: application/json" -d '{"projectDir":"'"$CWD"'","instanceId":"${instanceId}"}'`;
+    // Claude Code hooks receive context via stdin as JSON containing { cwd: "...", ... }
+    // We read stdin, extract cwd with jq, transform to our format, and pipe to curl
+    const statusWorkingCmd = `jq '{event:"working",projectDir:.cwd}' | curl -s -X POST "${baseUrl}/api/hooks/status" -H "Content-Type: application/json" -d @-`;
+    const stopCmd = `jq '{projectDir:.cwd}' | curl -s -X POST "${baseUrl}/api/hooks/stop" -H "Content-Type: application/json" -d @-`;
+    const notificationCmd = `jq '{projectDir:.cwd}' | curl -s -X POST "${baseUrl}/api/hooks/notification" -H "Content-Type: application/json" -d @-`;
 
     // Helper to create a hook entry in the new format
     const createHookEntry = (command: string) => ({
@@ -427,9 +433,11 @@ PYTHON_SCRIPT
   }
 
   /**
-   * Generate script to remove hooks containing the instance ID
+   * Generate script to remove Yojimbo hooks (hooks that call localhost:3456)
+   * Since hooks are shared across instances on the same machine, this removes
+   * all hooks that look like they were installed by Yojimbo.
    */
-  private generateUninstallScript(instanceId: string): string {
+  private generateUninstallScript(_instanceId: string): string {
     return `
       set -e
 
@@ -443,13 +451,12 @@ PYTHON_SCRIPT
       # Backup existing settings
       cp "$SETTINGS_FILE" "$SETTINGS_FILE.backup.$(date +%Y%m%d%H%M%S)"
 
-      # Remove hooks containing this instance ID using Python
+      # Remove Yojimbo hooks (those that call localhost:3456) using Python
       python3 << 'PYTHON_SCRIPT'
 import json
 import os
 
 settings_file = os.path.expanduser("~/.claude/settings.json")
-instance_id = "${instanceId}"
 
 try:
     with open(settings_file, 'r') as f:
@@ -462,16 +469,15 @@ if 'hooks' not in settings:
     print("No hooks in settings")
     exit(0)
 
-# Remove hooks that contain this instance ID
+# Remove hooks that call localhost:3456 (Yojimbo hooks)
 hooks = settings['hooks']
 for hook_type in list(hooks.keys()):
     hook_list = hooks[hook_type]
     if isinstance(hook_list, list):
-        # Filter out hooks containing this instance ID
+        # Filter out hooks that call localhost:3456
         hooks[hook_type] = [
             h for h in hook_list
-            if not (isinstance(h, str) and instance_id in h) and
-               not (isinstance(h, dict) and instance_id in str(h))
+            if not (isinstance(h, dict) and 'localhost:3456' in str(h))
         ]
         # Remove empty hook types
         if not hooks[hook_type]:

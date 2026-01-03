@@ -205,4 +205,108 @@ describe('Hooks API', () => {
       expect(normalized).toBe('/Users/testuser/projects/test');
     });
   });
+
+  describe('Remote machine directory matching', () => {
+    it('should detect home directory patterns for /Users/<username>', () => {
+      const projectDir = '/Users/neonwatty';
+      const homeMatch = projectDir.match(/^(\/Users\/[^/]+|\/home\/[^/]+)$/);
+      expect(homeMatch).not.toBeNull();
+      expect(homeMatch![1]).toBe('/Users/neonwatty');
+    });
+
+    it('should detect home directory patterns for /home/<username>', () => {
+      const projectDir = '/home/ubuntu';
+      const homeMatch = projectDir.match(/^(\/Users\/[^/]+|\/home\/[^/]+)$/);
+      expect(homeMatch).not.toBeNull();
+      expect(homeMatch![1]).toBe('/home/ubuntu');
+    });
+
+    it('should NOT match subdirectories as home directories', () => {
+      const projectDir = '/Users/neonwatty/Desktop';
+      const homeMatch = projectDir.match(/^(\/Users\/[^/]+|\/home\/[^/]+)$/);
+      expect(homeMatch).toBeNull();
+    });
+
+    it('should extract home path from subdirectory for ~ matching', () => {
+      const projectDir = '/Users/neonwatty/Desktop/project';
+      const homePattern = /^(\/Users\/[^/]+|\/home\/[^/]+)/;
+      const match = projectDir.match(homePattern);
+      expect(match).not.toBeNull();
+      expect(match![1]).toBe('/Users/neonwatty');
+    });
+  });
+
+  describe('Directory matching scoring', () => {
+    it('should prefer exact match over partial match', () => {
+      const projectDir = '/Users/neonwatty/Desktop';
+      const candidates = [
+        { working_dir: '/Users/neonwatty/Desktop', id: 'exact' },
+        { working_dir: '/Users/neonwatty', id: 'parent' },
+      ];
+
+      // Exact match should score highest
+      const scores = candidates.map(c => {
+        if (projectDir === c.working_dir) return { id: c.id, score: 1000 };
+        if (projectDir.startsWith(c.working_dir + '/')) return { id: c.id, score: c.working_dir.length };
+        return { id: c.id, score: 0 };
+      });
+
+      const best = scores.reduce((a, b) => a.score > b.score ? a : b);
+      expect(best.id).toBe('exact');
+    });
+
+    it('should prefer longer parent path for subdirectory matches', () => {
+      const projectDir = '/Users/neonwatty/Desktop/project/src';
+      const candidates = [
+        { working_dir: '/Users/neonwatty', id: 'home' },
+        { working_dir: '/Users/neonwatty/Desktop', id: 'desktop' },
+      ];
+
+      // Both are parents of projectDir, prefer longer (more specific) match
+      const scores = candidates.map(c => {
+        if (projectDir.startsWith(c.working_dir + '/')) return { id: c.id, score: c.working_dir.length };
+        return { id: c.id, score: 0 };
+      });
+
+      const best = scores.reduce((a, b) => a.score > b.score ? a : b);
+      expect(best.id).toBe('desktop');
+    });
+
+    it('should match ~ working_dir to remote home directory', () => {
+      const projectDir = '/Users/neonwatty';
+      const candidateDir = '~';
+
+      // Simulate the logic: expand ~ to detected home path
+      let expandedDir = candidateDir;
+      if (candidateDir === '~') {
+        const homePattern = /^(\/Users\/[^/]+|\/home\/[^/]+)/;
+        const match = projectDir.match(homePattern);
+        if (match) {
+          expandedDir = match[1];
+        }
+      }
+
+      expect(expandedDir).toBe('/Users/neonwatty');
+      expect(projectDir === expandedDir).toBe(true);
+    });
+
+    it('should match ~ to subdirectory under remote home', () => {
+      const projectDir = '/Users/neonwatty/Desktop/project';
+      const candidateDir = '~';
+
+      // Simulate the logic
+      let expandedDir = candidateDir;
+      if (candidateDir === '~') {
+        const homePattern = /^(\/Users\/[^/]+|\/home\/[^/]+)/;
+        const match = projectDir.match(homePattern);
+        if (match) {
+          expandedDir = match[1];
+        }
+      }
+
+      expect(expandedDir).toBe('/Users/neonwatty');
+      // projectDir starts with expandedDir
+      expect(projectDir.startsWith(expandedDir + '/')).toBe(true);
+    });
+  });
 });

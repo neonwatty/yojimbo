@@ -9,6 +9,7 @@ import type { GlobalTask } from '@cc-orchestrator/shared';
 vi.mock('../../api/client', () => ({
   tasksApi: {
     list: vi.fn().mockResolvedValue({
+      success: true,
       data: [{
         id: 'task-1',
         text: 'Test task',
@@ -16,14 +17,17 @@ vi.mock('../../api/client', () => ({
         dispatchedInstanceId: null,
         dispatchedAt: null,
         completedAt: null,
+        archivedAt: null,
+        displayOrder: 0,
         createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       }]
     }),
-    create: vi.fn().mockResolvedValue({ data: { id: 'new-task', text: 'New task', status: 'captured' } }),
-    update: vi.fn().mockResolvedValue({ data: {} }),
+    create: vi.fn().mockResolvedValue({ success: true, data: { id: 'new-task', text: 'New task', status: 'captured' } }),
+    update: vi.fn().mockResolvedValue({ success: true, data: {} }),
     delete: vi.fn().mockResolvedValue({ success: true }),
-    markDone: vi.fn().mockResolvedValue({ data: {} }),
-    dispatch: vi.fn().mockResolvedValue({ data: {} }),
+    markDone: vi.fn().mockResolvedValue({ success: true, data: {} }),
+    dispatch: vi.fn().mockResolvedValue({ success: true, data: {} }),
   },
 }));
 
@@ -75,7 +79,10 @@ describe('MobileTasksView', () => {
     dispatchedInstanceId: null,
     dispatchedAt: null,
     completedAt: null,
+    archivedAt: null,
+    displayOrder: 0,
     createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
   };
 
   const mockTaskDone: GlobalTask = {
@@ -121,7 +128,7 @@ describe('MobileTasksView', () => {
     it('shows empty state when no tasks', async () => {
       // Mock the API to return empty list for this test
       const { tasksApi } = await import('../../api/client');
-      vi.mocked(tasksApi.list).mockResolvedValueOnce({ data: [] });
+      vi.mocked(tasksApi.list).mockResolvedValueOnce({ success: true, data: [] });
 
       await act(async () => {
         render(<MobileTasksView {...defaultProps} />);
@@ -356,6 +363,7 @@ describe('MobileTasksView', () => {
       // Mock the API to return a done task
       const { tasksApi } = await import('../../api/client');
       vi.mocked(tasksApi.list).mockResolvedValueOnce({
+        success: true,
         data: [mockTaskDone]
       });
 

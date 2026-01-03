@@ -400,7 +400,7 @@ export default function Header() {
       <GlobalTasksPanel
         isOpen={showTasksPanel}
         onClose={() => setShowTasksPanel(false)}
-        onOpenNewInstance={(options) => {
+        onOpenNewInstance={() => {
           setShowTasksPanel(false);
           // When dispatching a task to a new instance, default to Claude Code mode
           openNewInstanceModal({ defaultMode: 'claude-code' });

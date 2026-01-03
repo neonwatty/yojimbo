@@ -513,7 +513,7 @@ function TaskDispatchSheet({ task, instances, onDispatch, onClose }: TaskDispatc
               </div>
               <div className="flex-1 text-left">
                 <p className="text-sm font-medium text-theme-primary">{instance.name}</p>
-                <p className="text-xs text-theme-muted truncate">{instance.workingDirectory}</p>
+                <p className="text-xs text-theme-muted truncate">{instance.workingDir}</p>
               </div>
               <div
                 className={`w-2.5 h-2.5 rounded-full ${

@@ -20,7 +20,37 @@ export function GlobalTasksPanel({ isOpen, onClose, onOpenNewInstance }: GlobalT
   const [dispatchingTaskId, setDispatchingTaskId] = useState<string | null>(null);
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
   const [dragOverTaskId, setDragOverTaskId] = useState<string | null>(null);
+  const [animatingTaskIds, setAnimatingTaskIds] = useState<Set<string>>(new Set());
+  const prevTaskIdsRef = useRef<Set<string>>(new Set());
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Track new tasks for enter animations
+  useEffect(() => {
+    const currentIds = new Set(tasks.map(t => t.id));
+    const prevIds = prevTaskIdsRef.current;
+
+    // Find newly added tasks
+    const newTaskIds = new Set<string>();
+    currentIds.forEach(id => {
+      if (!prevIds.has(id)) {
+        newTaskIds.add(id);
+      }
+    });
+
+    if (newTaskIds.size > 0) {
+      setAnimatingTaskIds(prev => new Set([...prev, ...newTaskIds]));
+      // Remove animation class after animation completes
+      setTimeout(() => {
+        setAnimatingTaskIds(prev => {
+          const next = new Set(prev);
+          newTaskIds.forEach(id => next.delete(id));
+          return next;
+        });
+      }, 300);
+    }
+
+    prevTaskIdsRef.current = currentIds;
+  }, [tasks]);
 
   // Fetch tasks when panel opens
   useEffect(() => {
@@ -224,7 +254,7 @@ export function GlobalTasksPanel({ isOpen, onClose, onOpenNewInstance }: GlobalT
             <div className="space-y-2">
               {tasks
                 .filter((t) => t.status !== 'archived')
-                .map((task) => (
+                .map((task, index) => (
                   <TaskItem
                     key={task.id}
                     task={task}
@@ -232,6 +262,8 @@ export function GlobalTasksPanel({ isOpen, onClose, onOpenNewInstance }: GlobalT
                     isDispatchOpen={dispatchingTaskId === task.id}
                     isDragging={draggedTaskId === task.id}
                     isDragOver={dragOverTaskId === task.id && draggedTaskId !== task.id}
+                    isAnimatingIn={animatingTaskIds.has(task.id)}
+                    animationDelay={index * 30}
                     onToggleDone={() => handleToggleDone(task)}
                     onDelete={() => handleDeleteTask(task.id)}
                     onEdit={(newText) => handleUpdateTask(task.id, newText)}
@@ -274,6 +306,8 @@ interface TaskItemProps {
   isDispatchOpen: boolean;
   isDragging: boolean;
   isDragOver: boolean;
+  isAnimatingIn: boolean;
+  animationDelay: number;
   onToggleDone: () => void;
   onDelete: () => void;
   onEdit: (newText: string) => void;
@@ -291,6 +325,8 @@ function TaskItem({
   isDispatchOpen,
   isDragging,
   isDragOver,
+  isAnimatingIn,
+  animationDelay,
   onToggleDone,
   onDelete,
   onEdit,
@@ -412,7 +448,10 @@ function TaskItem({
       }}
       className={`group flex items-start gap-3 p-4 bg-surface-800 rounded-lg transition-all cursor-grab active:cursor-grabbing ${
         isDragging ? 'opacity-50 scale-[0.98]' : 'hover:bg-surface-600/50'
-      } ${isDragOver ? 'ring-2 ring-accent ring-inset' : ''}`}
+      } ${isDragOver ? 'ring-2 ring-accent ring-inset' : ''} ${
+        isAnimatingIn ? 'animate-in fade-in slide-in-from-top-2 duration-200' : ''
+      }`}
+      style={isAnimatingIn ? { animationDelay: `${animationDelay}ms` } : undefined}
     >
       {/* Drag Handle */}
       <div className="shrink-0 flex items-center text-theme-muted/50 group-hover:text-theme-muted transition-colors">

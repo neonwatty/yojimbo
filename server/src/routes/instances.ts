@@ -4,6 +4,7 @@ import { getDatabase } from '../db/connection.js';
 import { terminalManager } from '../services/terminal-manager.service.js';
 import { sshConnectionService } from '../services/ssh-connection.service.js';
 import { hookInstallerService } from '../services/hook-installer.service.js';
+import { reverseTunnelService } from '../services/reverse-tunnel.service.js';
 import { broadcast } from '../websocket/server.js';
 import type { Instance, CreateInstanceRequest, UpdateInstanceRequest, InstanceStatus, MachineType } from '@cc-orchestrator/shared';
 
@@ -221,6 +222,9 @@ router.delete('/:id', async (req, res) => {
       return res.status(404).json({ success: false, error: 'Instance not found' });
     }
 
+    // Close reverse tunnel if it exists (for remote instances)
+    await reverseTunnelService.closeTunnel(id);
+
     // Kill terminal backend if running
     await terminalManager.kill(id);
 
@@ -303,12 +307,66 @@ router.post('/:id/install-hooks', async (req, res) => {
       });
     }
 
+    // Get instance to find machine_id for reverse tunnel
+    const db = getDatabase();
+    const instance = db.prepare('SELECT * FROM instances WHERE id = ?').get(id) as InstanceRow | undefined;
+
+    if (!instance) {
+      return res.status(404).json({ success: false, error: 'Instance not found' });
+    }
+
+    if (!instance.machine_id) {
+      return res.status(400).json({ success: false, error: 'Hooks are only supported for remote instances' });
+    }
+
+    // Install hooks on the remote machine
     const result = await hookInstallerService.installHooksForInstance(id, orchestratorUrl);
 
-    if (result.success) {
-      res.json({ success: true, data: { message: result.message } });
+    if (!result.success) {
+      return res.status(400).json({ success: false, error: result.message, details: result.error });
+    }
+
+    // Set up reverse tunnel so hooks can reach the local server
+    // Parse port from orchestratorUrl (default to 3456)
+    let localPort = 3456;
+    try {
+      const url = new URL(orchestratorUrl);
+      if (url.port) {
+        localPort = parseInt(url.port, 10);
+      } else if (url.protocol === 'https:') {
+        localPort = 443;
+      } else if (url.protocol === 'http:') {
+        localPort = 80;
+      }
+    } catch {
+      // Keep default port if URL parsing fails
+    }
+
+    // Create reverse tunnel: remote:localPort → local:localPort
+    const tunnelResult = await reverseTunnelService.createTunnel(id, instance.machine_id, localPort);
+
+    if (tunnelResult.success) {
+      console.log(`[Hooks] Installed hooks and set up reverse tunnel for instance ${id}`);
+      res.json({
+        success: true,
+        data: {
+          message: result.message,
+          tunnelActive: true,
+          tunnelPort: localPort,
+        },
+      });
     } else {
-      res.status(400).json({ success: false, error: result.message, details: result.error });
+      // Hooks installed but tunnel failed - warn but don't fail completely
+      console.warn(`[Hooks] Hooks installed but reverse tunnel failed: ${tunnelResult.error}`);
+      res.json({
+        success: true,
+        data: {
+          message: result.message,
+          tunnelActive: false,
+          tunnelError: tunnelResult.error,
+          warning: 'Hooks installed but reverse tunnel could not be established. Remote hooks may not work.',
+        },
+      });
     }
   } catch (error) {
     console.error('Error installing hooks:', error);
@@ -321,10 +379,16 @@ router.post('/:id/uninstall-hooks', async (req, res) => {
   try {
     const { id } = req.params;
 
+    // Close reverse tunnel if it exists
+    const tunnelClosed = await reverseTunnelService.closeTunnel(id);
+    if (tunnelClosed) {
+      console.log(`[Hooks] Closed reverse tunnel for instance ${id}`);
+    }
+
     const result = await hookInstallerService.uninstallHooksForInstance(id);
 
     if (result.success) {
-      res.json({ success: true, data: { message: result.message } });
+      res.json({ success: true, data: { message: result.message, tunnelClosed } });
     } else {
       res.status(400).json({ success: false, error: result.message, details: result.error });
     }

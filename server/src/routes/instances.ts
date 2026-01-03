@@ -343,16 +343,19 @@ router.post('/:id/install-hooks', async (req, res) => {
     }
 
     // Create reverse tunnel: remote:localPort → local:localPort
+    // If a tunnel already exists for this machine, the instance will share it
     const tunnelResult = await reverseTunnelService.createTunnel(id, instance.machine_id, localPort);
 
     if (tunnelResult.success) {
-      console.log(`[Hooks] Installed hooks and set up reverse tunnel for instance ${id}`);
+      const tunnelStatus = tunnelResult.shared ? 'sharing existing' : 'new';
+      console.log(`[Hooks] Installed hooks and ${tunnelStatus} reverse tunnel for instance ${id}`);
       res.json({
         success: true,
         data: {
           message: result.message,
           tunnelActive: true,
           tunnelPort: localPort,
+          tunnelShared: tunnelResult.shared || false,
         },
       });
     } else {

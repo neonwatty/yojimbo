@@ -14,12 +14,13 @@ interface RemoteMachineRow {
   ssh_key_path: string | null;
 }
 
-interface TunnelInfo {
+interface MachineTunnel {
   client: Client;
   remotePort: number;
   localPort: number;
-  instanceId: string;
   machineId: string;
+  // Track which instances are using this tunnel
+  instanceIds: Set<string>;
 }
 
 /**
@@ -29,15 +30,19 @@ interface TunnelInfo {
  * When hooks are installed on a remote machine, they curl `localhost:3456` to send status updates.
  * This service creates a reverse tunnel: remote:3456 → local:3456
  *
+ * Tunnels are shared per machine - multiple instances on the same machine share one tunnel.
+ * The tunnel is only closed when the last instance using it is removed.
+ *
  * Uses SSH's `forwardIn` which tells the SSH server to listen on a port and forward
  * connections back to our callback, which we then proxy to the local server.
  */
 class ReverseTunnelService extends EventEmitter {
-  // Track active tunnels per instance: instanceId -> TunnelInfo
-  private activeTunnels: Map<string, TunnelInfo> = new Map();
+  // Track active tunnels per machine: machineId -> MachineTunnel
+  private machineTunnels: Map<string, MachineTunnel> = new Map();
 
   /**
-   * Set up a reverse tunnel for an instance so hooks can reach the local server
+   * Set up a reverse tunnel for an instance so hooks can reach the local server.
+   * If a tunnel already exists for this machine, the instance is added to it.
    * @param instanceId - The instance ID
    * @param machineId - The remote machine ID
    * @param localPort - The local port where Yojimbo server is running (default 3456)
@@ -48,11 +53,14 @@ class ReverseTunnelService extends EventEmitter {
     machineId: string,
     localPort: number = 3456,
     remotePort: number = localPort
-  ): Promise<{ success: boolean; error?: string }> {
-    // Check if tunnel already exists for this instance
-    if (this.activeTunnels.has(instanceId)) {
-      console.log(`[ReverseTunnel] Tunnel already exists for instance ${instanceId}`);
-      return { success: true };
+  ): Promise<{ success: boolean; error?: string; shared?: boolean }> {
+    // Check if a tunnel already exists for this machine
+    const existingTunnel = this.machineTunnels.get(machineId);
+    if (existingTunnel) {
+      // Add this instance to the existing tunnel
+      existingTunnel.instanceIds.add(instanceId);
+      console.log(`[ReverseTunnel] Instance ${instanceId} sharing existing tunnel for machine ${machineId} (${existingTunnel.instanceIds.size} instances)`);
+      return { success: true, shared: true };
     }
 
     // Get machine SSH config from database
@@ -86,7 +94,7 @@ class ReverseTunnelService extends EventEmitter {
     config: SSHConfig,
     localPort: number,
     remotePort: number
-  ): Promise<{ success: boolean; error?: string }> {
+  ): Promise<{ success: boolean; error?: string; shared?: boolean }> {
     return new Promise((resolve) => {
       const client = new Client();
       const timeout = setTimeout(() => {
@@ -127,7 +135,7 @@ class ReverseTunnelService extends EventEmitter {
       }
 
       client.on('ready', () => {
-        console.log(`[ReverseTunnel] SSH connected for instance ${instanceId}`);
+        console.log(`[ReverseTunnel] SSH connected for machine ${machineId}`);
 
         // Set up reverse port forward: remote listens on remotePort, forwards to us
         // forwardIn tells the SSH server to listen on the given address/port
@@ -141,19 +149,22 @@ class ReverseTunnelService extends EventEmitter {
             return;
           }
 
-          console.log(`[ReverseTunnel] Reverse tunnel established: remote:${remotePort} → local:${localPort}`);
+          console.log(`[ReverseTunnel] Reverse tunnel established for machine ${machineId}: remote:${remotePort} → local:${localPort}`);
 
-          // Track the tunnel
-          this.activeTunnels.set(instanceId, {
+          // Track the tunnel by machine, with this instance as the first user
+          const instanceIds = new Set<string>();
+          instanceIds.add(instanceId);
+
+          this.machineTunnels.set(machineId, {
             client,
             remotePort,
             localPort,
-            instanceId,
             machineId,
+            instanceIds,
           });
 
           this.emit('tunnel:created', { instanceId, machineId, remotePort, localPort });
-          resolve({ success: true });
+          resolve({ success: true, shared: false });
         });
       });
 
@@ -195,21 +206,21 @@ class ReverseTunnelService extends EventEmitter {
 
       client.on('error', (err) => {
         clearTimeout(timeout);
-        console.error(`[ReverseTunnel] SSH error:`, err);
+        console.error(`[ReverseTunnel] SSH error for machine ${machineId}:`, err);
 
         // Clean up if tunnel was being set up
-        if (!this.activeTunnels.has(instanceId)) {
+        if (!this.machineTunnels.has(machineId)) {
           resolve({ success: false, error: `SSH connection error: ${err.message}` });
         } else {
           // Tunnel existed, emit event for reconnection handling
-          this.emit('tunnel:error', { instanceId, error: err.message });
+          this.emit('tunnel:error', { machineId, error: err.message });
         }
       });
 
       client.on('close', () => {
-        console.log(`[ReverseTunnel] SSH connection closed for instance ${instanceId}`);
-        this.activeTunnels.delete(instanceId);
-        this.emit('tunnel:closed', { instanceId });
+        console.log(`[ReverseTunnel] SSH connection closed for machine ${machineId}`);
+        this.machineTunnels.delete(machineId);
+        this.emit('tunnel:closed', { machineId });
       });
 
       // Connect to remote host
@@ -226,15 +237,47 @@ class ReverseTunnelService extends EventEmitter {
   }
 
   /**
-   * Close the reverse tunnel for an instance
+   * Remove an instance from a tunnel. If it's the last instance, close the tunnel.
+   * @param instanceId - The instance ID to remove
+   * @returns true if the instance was removed (or tunnel closed), false if not found
    */
   async closeTunnel(instanceId: string): Promise<boolean> {
-    const tunnel = this.activeTunnels.get(instanceId);
+    // Find which machine tunnel this instance belongs to
+    for (const [machineId, tunnel] of this.machineTunnels.entries()) {
+      if (tunnel.instanceIds.has(instanceId)) {
+        tunnel.instanceIds.delete(instanceId);
+
+        if (tunnel.instanceIds.size === 0) {
+          // Last instance removed, close the tunnel
+          console.log(`[ReverseTunnel] Closing tunnel for machine ${machineId} (last instance ${instanceId} removed)`);
+          try {
+            tunnel.client.end();
+          } catch (err) {
+            console.error(`[ReverseTunnel] Error closing tunnel:`, err);
+          }
+          this.machineTunnels.delete(machineId);
+          this.emit('tunnel:closed', { machineId });
+        } else {
+          console.log(`[ReverseTunnel] Instance ${instanceId} removed from tunnel for machine ${machineId} (${tunnel.instanceIds.size} instances remaining)`);
+        }
+
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Close the tunnel for a specific machine (regardless of instances)
+   */
+  async closeMachineTunnel(machineId: string): Promise<boolean> {
+    const tunnel = this.machineTunnels.get(machineId);
     if (!tunnel) {
       return false;
     }
 
-    console.log(`[ReverseTunnel] Closing tunnel for instance ${instanceId}`);
+    console.log(`[ReverseTunnel] Force closing tunnel for machine ${machineId}`);
 
     try {
       tunnel.client.end();
@@ -242,42 +285,55 @@ class ReverseTunnelService extends EventEmitter {
       console.error(`[ReverseTunnel] Error closing tunnel:`, err);
     }
 
-    this.activeTunnels.delete(instanceId);
-    this.emit('tunnel:closed', { instanceId });
+    this.machineTunnels.delete(machineId);
+    this.emit('tunnel:closed', { machineId });
 
     return true;
-  }
-
-  /**
-   * Close all tunnels for a specific machine
-   */
-  async closeAllTunnelsForMachine(machineId: string): Promise<void> {
-    for (const [instanceId, tunnel] of this.activeTunnels.entries()) {
-      if (tunnel.machineId === machineId) {
-        await this.closeTunnel(instanceId);
-      }
-    }
   }
 
   /**
    * Check if a tunnel exists for an instance
    */
   hasTunnel(instanceId: string): boolean {
-    return this.activeTunnels.has(instanceId);
+    for (const tunnel of this.machineTunnels.values()) {
+      if (tunnel.instanceIds.has(instanceId)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /**
-   * Get tunnel info for an instance
+   * Check if a tunnel exists for a machine
    */
-  getTunnelInfo(instanceId: string): TunnelInfo | undefined {
-    return this.activeTunnels.get(instanceId);
+  hasMachineTunnel(machineId: string): boolean {
+    return this.machineTunnels.has(machineId);
   }
 
   /**
-   * Get all active tunnels
+   * Get tunnel info for a machine
    */
-  getAllTunnels(): TunnelInfo[] {
-    return Array.from(this.activeTunnels.values());
+  getMachineTunnel(machineId: string): MachineTunnel | undefined {
+    return this.machineTunnels.get(machineId);
+  }
+
+  /**
+   * Get all active machine tunnels
+   */
+  getAllTunnels(): MachineTunnel[] {
+    return Array.from(this.machineTunnels.values());
+  }
+
+  /**
+   * Get the machine ID that an instance's tunnel belongs to
+   */
+  getMachineIdForInstance(instanceId: string): string | undefined {
+    for (const [machineId, tunnel] of this.machineTunnels.entries()) {
+      if (tunnel.instanceIds.has(instanceId)) {
+        return machineId;
+      }
+    }
+    return undefined;
   }
 }
 

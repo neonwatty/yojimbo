@@ -50,38 +50,22 @@ vi.mock('../db/connection.js', () => ({
 }));
 
 // Mock SSH2 - must use factory that captures the createMockClient at call time
-vi.mock('ssh2', () => ({
-  Client: class {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    private _emitter = new (require('events').EventEmitter)();
-    connect = vi.fn();
-    end = vi.fn();
-    exec = vi.fn();
+vi.mock('ssh2', async () => {
+  const events = await import('events');
 
-    constructor() {
-      mockClientInstances.push(this as unknown as MockSSHClient);
-    }
+  return {
+    Client: class extends events.EventEmitter {
+      connect = vi.fn();
+      end = vi.fn();
+      exec = vi.fn();
 
-    emit(event: string, ...args: unknown[]) {
-      return this._emitter.emit(event, ...args);
-    }
-
-    on(event: string, listener: (...args: unknown[]) => void) {
-      this._emitter.on(event, listener);
-      return this;
-    }
-
-    once(event: string, listener: (...args: unknown[]) => void) {
-      this._emitter.once(event, listener);
-      return this;
-    }
-
-    removeListener(event: string, listener: (...args: unknown[]) => void) {
-      this._emitter.removeListener(event, listener);
-      return this;
-    }
-  },
-}));
+      constructor() {
+        super();
+        mockClientInstances.push(this as unknown as MockSSHClient);
+      }
+    },
+  };
+});
 
 // Import after mocks
 import { sshConnectionService } from '../services/ssh-connection.service.js';

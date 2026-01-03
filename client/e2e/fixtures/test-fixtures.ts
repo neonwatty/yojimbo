@@ -46,6 +46,7 @@ interface ApiClient {
   updateTask(id: string, data: { text?: string; status?: string }): Promise<GlobalTask>;
   deleteTask(id: string): Promise<void>;
   markTaskDone(id: string): Promise<GlobalTask>;
+  dispatchTask(taskId: string, instanceId: string): Promise<GlobalTask>;
   getTaskStats(): Promise<{ total: number; captured: number; inProgress: number; done: number }>;
   cleanupAllTasks(): Promise<void>;
 }
@@ -194,6 +195,16 @@ function createApiClient(): ApiClient {
     async markTaskDone(id: string) {
       const response = await fetch(`${API_BASE}/tasks/${id}/done`, {
         method: 'POST',
+      });
+      const data = await response.json();
+      return data.data;
+    },
+
+    async dispatchTask(taskId: string, instanceId: string) {
+      const response = await fetch(`${API_BASE}/tasks/${taskId}/dispatch`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ instanceId, copyToClipboard: false }),
       });
       const data = await response.json();
       return data.data;

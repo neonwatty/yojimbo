@@ -192,12 +192,12 @@ export function MobileTasksView({ onTopGesture, onBottomGesture, onOpenNewInstan
               value={newTaskText}
               onChange={(e) => setNewTaskText(e.target.value)}
               placeholder="Add a task..."
-              className="flex-1 px-4 py-3 bg-surface-700 border border-surface-600 rounded-xl text-theme-primary placeholder:text-theme-muted focus:outline-none focus:border-accent text-sm"
+              className="flex-1 px-4 py-3 bg-surface-800 border border-surface-600 rounded-lg text-theme-primary placeholder:text-theme-muted focus:outline-none focus:border-accent text-sm"
             />
             <button
               type="submit"
               disabled={!newTaskText.trim()}
-              className="px-4 py-3 bg-accent text-surface-900 rounded-xl font-medium text-sm active:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="px-4 py-3 bg-accent text-surface-900 rounded-lg font-medium text-sm active:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               Add
             </button>
@@ -208,7 +208,7 @@ export function MobileTasksView({ onTopGesture, onBottomGesture, onOpenNewInstan
         {isLoading && tasks.length === 0 && (
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="bg-surface-700 rounded-xl p-4 animate-pulse">
+              <div key={i} className="bg-surface-800 rounded-lg p-4 animate-pulse">
                 <div className="h-4 bg-surface-600 rounded w-2/3" />
               </div>
             ))}
@@ -369,7 +369,7 @@ function SwipeableTaskItem({
   const isRevealed = swipeOffset < -50;
 
   return (
-    <div className="relative overflow-hidden rounded-xl" data-testid="swipeable-task">
+    <div className="relative overflow-hidden rounded-lg" data-testid="swipeable-task">
       {/* Action buttons revealed on swipe */}
       <div className="absolute right-0 top-0 bottom-0 flex items-stretch">
         <button
@@ -397,7 +397,7 @@ function SwipeableTaskItem({
 
       {/* Main task content */}
       <div
-        className="relative bg-surface-700 p-4 transition-transform"
+        className="relative bg-surface-800 p-4 transition-transform"
         style={{ transform: `translateX(${swipeOffset}px)` }}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
@@ -485,7 +485,7 @@ function TaskDispatchSheet({ task, instances, onDispatch, onClose }: TaskDispatc
             onClick={() => onDispatch('copy')}
             className="w-full flex items-center gap-4 px-4 py-4 active:bg-surface-600 transition-colors"
           >
-            <div className="w-10 h-10 bg-surface-600 rounded-xl flex items-center justify-center">
+            <div className="w-10 h-10 bg-surface-600 rounded-lg flex items-center justify-center">
               <Icons.clipboard className="w-5 h-5 text-theme-muted" />
             </div>
             <div className="text-left">
@@ -508,7 +508,7 @@ function TaskDispatchSheet({ task, instances, onDispatch, onClose }: TaskDispatc
               onClick={() => onDispatch(instance.id)}
               className="w-full flex items-center gap-4 px-4 py-4 active:bg-surface-600 transition-colors"
             >
-              <div className="w-10 h-10 bg-surface-600 rounded-xl flex items-center justify-center">
+              <div className="w-10 h-10 bg-surface-600 rounded-lg flex items-center justify-center">
                 <Icons.terminal className="w-5 h-5 text-theme-muted" />
               </div>
               <div className="flex-1 text-left">
@@ -532,7 +532,7 @@ function TaskDispatchSheet({ task, instances, onDispatch, onClose }: TaskDispatc
             onClick={() => onDispatch('new')}
             className="w-full flex items-center gap-4 px-4 py-4 active:bg-surface-600 transition-colors"
           >
-            <div className="w-10 h-10 bg-accent/20 rounded-xl flex items-center justify-center">
+            <div className="w-10 h-10 bg-accent/20 rounded-lg flex items-center justify-center">
               <Icons.plus className="w-5 h-5 text-accent" />
             </div>
             <div className="text-left">
@@ -546,7 +546,7 @@ function TaskDispatchSheet({ task, instances, onDispatch, onClose }: TaskDispatc
         <div className="px-4 pt-2 pb-4">
           <button
             onClick={onClose}
-            className="w-full py-3 bg-surface-600 text-theme-primary rounded-xl font-medium active:bg-surface-500 transition-colors"
+            className="w-full py-3 bg-surface-600 text-theme-primary rounded-lg font-medium active:bg-surface-500 transition-colors"
           >
             Cancel
           </button>

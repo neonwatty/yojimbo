@@ -133,7 +133,7 @@ export function GlobalTasksPanel({ isOpen, onClose, onOpenNewInstance }: GlobalT
         <div className="flex items-center justify-between px-6 py-4 border-b border-surface-600 shrink-0">
           <div className="flex items-center gap-3">
             <h2 className="text-lg font-semibold text-theme-primary">Global Tasks</h2>
-            <span className="text-xs text-theme-muted bg-surface-600 px-2 py-0.5 rounded">
+            <span className="text-xs bg-accent/20 text-accent px-2 py-0.5 rounded-full">
               {tasks.filter((t) => t.status !== 'archived').length} tasks
             </span>
           </div>
@@ -253,19 +253,19 @@ function TaskItem({
   const getStatusIcon = () => {
     if (task.status === 'done') {
       return (
-        <div className="w-5 h-5 rounded bg-green-500 flex items-center justify-center">
-          <Icons.check className="w-3 h-3 text-white" />
+        <div className="w-6 h-6 rounded-lg bg-green-500 flex items-center justify-center">
+          <Icons.check className="w-4 h-4 text-white" />
         </div>
       );
     }
     if (task.status === 'in_progress') {
       return (
-        <div className="w-5 h-5 rounded border-2 border-yellow-500 flex items-center justify-center">
-          <div className="w-2 h-2 bg-yellow-500 rounded-full" />
+        <div className="w-6 h-6 rounded-lg border-2 border-yellow-500 flex items-center justify-center">
+          <div className="w-2.5 h-2.5 bg-yellow-500 rounded-full" />
         </div>
       );
     }
-    return <div className="w-5 h-5 rounded border-2 border-surface-500" />;
+    return <div className="w-6 h-6 rounded-lg border-2 border-surface-500" />;
   };
 
   const linkedInstance = task.dispatchedInstanceId
@@ -273,7 +273,7 @@ function TaskItem({
     : null;
 
   return (
-    <div className="group flex items-start gap-3 p-3 bg-surface-800 rounded-lg hover:bg-surface-600/50 transition-colors">
+    <div className="group flex items-start gap-3 p-4 bg-surface-800 rounded-lg hover:bg-surface-600/50 transition-colors">
       {/* Checkbox */}
       <button
         onClick={onToggleDone}

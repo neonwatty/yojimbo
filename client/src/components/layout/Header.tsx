@@ -11,63 +11,8 @@ import { ConnectionStatus } from '../common/ConnectionStatus';
 import { SummaryModal } from '../modals/SummaryModal';
 import { GlobalTasksPanel } from '../tasks/GlobalTasksPanel';
 import { toast } from '../../store/toastStore';
+import { generateShortName } from '../../utils/strings';
 import type { SummaryType, GenerateSummaryResponse, CommandExecution, SummarySSEEvent } from '@cc-orchestrator/shared';
-
-/**
- * Generate a short, descriptive name from task text for instance naming.
- * Takes first few meaningful words, removes filler, and limits length.
- * Deduplicates by adding a number suffix if the name already exists.
- */
-function generateShortName(taskText: string, existingNames: string[]): string {
-  // Common filler words to remove
-  const fillerWords = new Set([
-    'a', 'an', 'the', 'to', 'for', 'and', 'or', 'of', 'in', 'on', 'at', 'by',
-    'with', 'from', 'as', 'is', 'are', 'be', 'was', 'were', 'been', 'being',
-    'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should',
-    'may', 'might', 'must', 'shall', 'can', 'need', 'please', 'just', 'also',
-    'that', 'this', 'these', 'those', 'it', 'its', 'i', 'me', 'my', 'we', 'our',
-    'you', 'your', 'they', 'them', 'their', 'what', 'which', 'who', 'whom',
-    'some', 'any', 'all', 'each', 'every', 'both', 'few', 'more', 'most', 'other',
-  ]);
-
-  // Split into words, filter out filler and short words
-  const words = taskText
-    .toLowerCase()
-    .replace(/[^\w\s-]/g, ' ') // Remove punctuation except hyphens
-    .split(/\s+/)
-    .filter(word => word.length > 1 && !fillerWords.has(word));
-
-  if (words.length === 0) {
-    return 'New Task';
-  }
-
-  // Take first 3-4 meaningful words
-  const maxWords = 4;
-  const selectedWords = words.slice(0, maxWords);
-
-  // Title case and join
-  let baseName = selectedWords
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
-
-  // Limit total length to 30 characters
-  if (baseName.length > 30) {
-    baseName = baseName.slice(0, 27) + '...';
-  }
-
-  // Deduplicate: check if name exists and add number suffix if needed
-  const lowerExisting = existingNames.map(n => n.toLowerCase());
-  if (!lowerExisting.includes(baseName.toLowerCase())) {
-    return baseName;
-  }
-
-  // Find next available number
-  let counter = 2;
-  while (lowerExisting.includes(`${baseName.toLowerCase()} ${counter}`)) {
-    counter++;
-  }
-  return `${baseName} ${counter}`;
-}
 
 export default function Header() {
   const navigate = useNavigate();

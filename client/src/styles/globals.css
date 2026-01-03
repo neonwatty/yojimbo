@@ -630,6 +630,60 @@ body {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
+   ANIMATE-IN UTILITIES (similar to tailwindcss-animate)
+   ═══════════════════════════════════════════════════════════════════════ */
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slide-in-from-top {
+  from { transform: translateY(-0.5rem); }
+  to { transform: translateY(0); }
+}
+
+@keyframes slide-in-from-bottom {
+  from { transform: translateY(0.5rem); }
+  to { transform: translateY(0); }
+}
+
+@keyframes scale-in {
+  from { transform: scale(0.95); }
+  to { transform: scale(1); }
+}
+
+.animate-in {
+  animation-duration: 0.2s;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  animation-fill-mode: both;
+}
+
+.animate-in.fade-in {
+  animation-name: fade-in;
+}
+
+.animate-in.slide-in-from-top-2 {
+  animation-name: fade-in, slide-in-from-top;
+}
+
+.animate-in.slide-in-from-bottom {
+  animation-name: fade-in, slide-in-from-bottom;
+}
+
+.animate-in.scale-in {
+  animation-name: fade-in, scale-in;
+}
+
+.animate-in.duration-200 {
+  animation-duration: 200ms;
+}
+
+.animate-in.duration-300 {
+  animation-duration: 300ms;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
    MOBILE LAYOUT STYLES
    ═══════════════════════════════════════════════════════════════════════ */
 

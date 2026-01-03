@@ -11,6 +11,17 @@ const { mockGet, mockRun, mockExistsSync, mockReadFileSync, mockReaddirSync, moc
   mockStatSync: vi.fn(),
 }));
 
+// Mock SSH2 Client - extends EventEmitter for emit/on support
+class MockSSHClient extends EventEmitter {
+  connect = vi.fn();
+  end = vi.fn();
+  exec = vi.fn();
+}
+
+// Track mock instances
+const mockClientInstances: MockSSHClient[] = [];
+
+
 // Mock fs
 vi.mock('fs', () => ({
   default: {
@@ -38,24 +49,31 @@ vi.mock('../db/connection.js', () => ({
   })),
 }));
 
-// Mock SSH2 Client
-class MockSSHClient extends EventEmitter {
-  connect = vi.fn();
-  end = vi.fn();
-  exec = vi.fn();
-}
+// Mock SSH2 - must use factory that captures the createMockClient at call time
+vi.mock('ssh2', async () => {
+  const events = await import('events');
 
-vi.mock('ssh2', () => ({
-  Client: vi.fn().mockImplementation(() => new MockSSHClient()),
-}));
+  return {
+    Client: class extends events.EventEmitter {
+      connect = vi.fn();
+      end = vi.fn();
+      exec = vi.fn();
+
+      constructor() {
+        super();
+        mockClientInstances.push(this as unknown as MockSSHClient);
+      }
+    },
+  };
+});
 
 // Import after mocks
 import { sshConnectionService } from '../services/ssh-connection.service.js';
-import { Client } from 'ssh2';
 
 describe('SSHConnectionService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockClientInstances.length = 0;
     mockExistsSync.mockReturnValue(false);
     mockReadFileSync.mockReturnValue(Buffer.from('fake-private-key'));
   });
@@ -84,7 +102,7 @@ describe('SSHConnectionService', () => {
       const resultPromise = sshConnectionService.testConnection('machine-1');
 
       // Get the mock client instance
-      const mockClient = vi.mocked(Client).mock.results[0]?.value as MockSSHClient;
+      const mockClient = mockClientInstances[0] as MockSSHClient;
 
       // Simulate successful connection
       setTimeout(() => {
@@ -108,7 +126,7 @@ describe('SSHConnectionService', () => {
 
       const resultPromise = sshConnectionService.testConnection('machine-1');
 
-      const mockClient = vi.mocked(Client).mock.results[0]?.value as MockSSHClient;
+      const mockClient = mockClientInstances[0] as MockSSHClient;
 
       setTimeout(() => {
         mockClient.emit('error', new Error('Connection refused'));
@@ -163,7 +181,7 @@ describe('SSHConnectionService', () => {
         username: 'user',
       });
 
-      const mockClient = vi.mocked(Client).mock.results[0]?.value as MockSSHClient;
+      const mockClient = mockClientInstances[0] as MockSSHClient;
 
       setTimeout(() => {
         mockClient.emit('ready');
@@ -190,7 +208,7 @@ describe('SSHConnectionService', () => {
 
       const statusPromise = sshConnectionService.checkMachineStatus('machine-1');
 
-      const mockClient = vi.mocked(Client).mock.results[0]?.value as MockSSHClient;
+      const mockClient = mockClientInstances[0] as MockSSHClient;
 
       setTimeout(() => {
         mockClient.emit('ready');
@@ -214,7 +232,7 @@ describe('SSHConnectionService', () => {
 
       const statusPromise = sshConnectionService.checkMachineStatus('machine-1');
 
-      const mockClient = vi.mocked(Client).mock.results[0]?.value as MockSSHClient;
+      const mockClient = mockClientInstances[0] as MockSSHClient;
 
       setTimeout(() => {
         mockClient.emit('error', new Error('Connection refused'));
@@ -346,7 +364,7 @@ describe('SSHConnectionService', () => {
 
       const resultPromise = sshConnectionService.executeCommand('machine-1', 'ls -la');
 
-      const mockClient = vi.mocked(Client).mock.results[0]?.value as MockSSHClient;
+      const mockClient = mockClientInstances[0] as MockSSHClient;
 
       // Create a mock stream
       const mockStream = new EventEmitter() as EventEmitter & { stderr: EventEmitter };
@@ -385,7 +403,7 @@ describe('SSHConnectionService', () => {
 
       const resultPromise = sshConnectionService.checkRemoteClaudeStatus('machine-1', '~/project');
 
-      const mockClient = vi.mocked(Client).mock.results[0]?.value as MockSSHClient;
+      const mockClient = mockClientInstances[0] as MockSSHClient;
 
       const mockStream = new EventEmitter() as EventEmitter & { stderr: EventEmitter };
       mockStream.stderr = new EventEmitter();
@@ -419,7 +437,7 @@ describe('SSHConnectionService', () => {
 
       const resultPromise = sshConnectionService.checkRemoteClaudeStatus('machine-1', '~/project');
 
-      const mockClient = vi.mocked(Client).mock.results[0]?.value as MockSSHClient;
+      const mockClient = mockClientInstances[0] as MockSSHClient;
 
       const mockStream = new EventEmitter() as EventEmitter & { stderr: EventEmitter };
       mockStream.stderr = new EventEmitter();
@@ -453,7 +471,7 @@ describe('SSHConnectionService', () => {
 
       const resultPromise = sshConnectionService.checkRemoteClaudeStatus('machine-1', '~/project');
 
-      const mockClient = vi.mocked(Client).mock.results[0]?.value as MockSSHClient;
+      const mockClient = mockClientInstances[0] as MockSSHClient;
 
       const mockStream = new EventEmitter() as EventEmitter & { stderr: EventEmitter };
       mockStream.stderr = new EventEmitter();

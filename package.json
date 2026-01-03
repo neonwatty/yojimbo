@@ -25,14 +25,18 @@
     "clean": "rm -rf node_modules client/node_modules server/node_modules shared/node_modules client/dist server/dist"
   },
   "devDependencies": {
-    "concurrently": "^8.2.2",
+    "concurrently": "^9.2.1",
     "knip": "^5.76.3",
     "typescript": "^5.3.3"
   },
   "engines": {
     "node": ">=18.0.0"
   },
+  "overrides": {
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3"
+  },
   "dependencies": {
-    "node-pty": "^1.1.0"
+    "node-pty": "1.0.0"
   }
 }

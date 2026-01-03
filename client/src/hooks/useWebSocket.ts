@@ -17,7 +17,7 @@ export function useWebSocket(url: string, options: UseWebSocketOptions = {}) {
   const wsRef = useRef<WebSocket | null>(null);
   const handlersRef = useRef<Map<string, Set<MessageHandler>>>(new Map());
   const reconnectAttemptsRef = useRef(0);
-  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isConnected, setIsConnected] = useState(false);
 
   // Store callbacks in refs to avoid recreating connect function

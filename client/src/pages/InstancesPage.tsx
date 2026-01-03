@@ -14,6 +14,7 @@ import { PortForwardsPanel } from '../components/PortForwardsPanel';
 import { StatusDot, StatusBadge } from '../components/common/Status';
 import { EditableName } from '../components/common/EditableName';
 import { ErrorBoundary } from '../components/common/ErrorBoundary';
+import { ErrorState } from '../components/common/ErrorState';
 import { Icons } from '../components/common/Icons';
 import { instancesApi, keychainApi } from '../api/client';
 import { toast } from '../store/toastStore';
@@ -459,12 +460,10 @@ export default function InstancesPage() {
                   <ErrorBoundary
                     fallback={
                       <div className="flex items-center justify-center h-full bg-surface-900">
-                        <div className="text-center p-6">
-                          <span className="text-red-400 scale-150 inline-block mb-2">
-                            <Icons.alertCircle />
-                          </span>
-                          <p className="text-theme-muted text-sm">Terminal failed to load</p>
-                        </div>
+                        <ErrorState
+                          title="Terminal Error"
+                          message="Terminal failed to load. Try refreshing the page."
+                        />
                       </div>
                     }
                   >

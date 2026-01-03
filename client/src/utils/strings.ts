@@ -12,6 +12,36 @@ const FILLER_WORDS = new Set([
 ]);
 
 /**
+ * Format a date as a relative time string.
+ * Returns: "just now", "5m ago", "2h ago", "3d ago", "Jan 15"
+ *
+ * @param dateString - ISO date string to format
+ * @returns Human-readable relative time string
+ */
+export function formatRelativeTime(dateString: string): string {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffSec = Math.floor(diffMs / 1000);
+  const diffMin = Math.floor(diffSec / 60);
+  const diffHour = Math.floor(diffMin / 60);
+  const diffDay = Math.floor(diffHour / 24);
+
+  if (diffSec < 60) {
+    return 'just now';
+  } else if (diffMin < 60) {
+    return `${diffMin}m ago`;
+  } else if (diffHour < 24) {
+    return `${diffHour}h ago`;
+  } else if (diffDay < 7) {
+    return `${diffDay}d ago`;
+  } else {
+    // Format as "Jan 15" for older dates
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+}
+
+/**
  * Generate a short, readable name from task text.
  * Filters out filler words, title-cases remaining words, and handles deduplication.
  *

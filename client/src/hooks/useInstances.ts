@@ -8,7 +8,7 @@ import { getWsUrl } from '../config';
 import type { Instance, ActivityEvent, GlobalTask } from '@cc-orchestrator/shared';
 
 export function useInstances() {
-  const { instances, setInstances, addInstance, updateInstance, removeInstance, setCurrentCwd } = useInstancesStore();
+  const { instances, setInstances, setLoading, addInstance, updateInstance, removeInstance, setCurrentCwd } = useInstancesStore();
   const { addEvent, setStats } = useFeedStore();
   const { addTask, updateTask: updateTaskInStore, removeTask, setStats: setTaskStats } = useTasksStore();
 
@@ -27,8 +27,10 @@ export function useInstances() {
       }
     } catch {
       // Error toast shown by API layer
+    } finally {
+      setLoading(false);
     }
-  }, [setInstances]);
+  }, [setInstances, setLoading]);
 
   // Subscribe to WebSocket events
   useEffect(() => {

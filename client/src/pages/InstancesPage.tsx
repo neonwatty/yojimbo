@@ -7,6 +7,7 @@ import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { Terminal, type TerminalRef } from '../components/terminal';
 import { CardLayout } from '../components/instances/CardLayout';
 import { ListLayout } from '../components/instances/ListLayout';
+import { InstanceSkeletons } from '../components/instances/InstanceSkeleton';
 import { PlansPanel } from '../components/plans';
 import { MockupsPanel } from '../components/mockups/MockupsPanel';
 import { PortForwardsPanel } from '../components/PortForwardsPanel';
@@ -23,7 +24,7 @@ import type { Instance } from '@cc-orchestrator/shared';
 export default function InstancesPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { instances, setActiveInstanceId, updateInstance, removeInstance, reorderInstances, currentCwds } = useInstancesStore();
+  const { instances, setActiveInstanceId, updateInstance, removeInstance, reorderInstances, currentCwds, isLoading } = useInstancesStore();
   const {
     layout,
     editorPanelOpen, toggleEditorPanel, setEditorPanelOpen,
@@ -288,13 +289,24 @@ export default function InstancesPage() {
     if (!instance) {
       return (
         <div className="flex-1 flex items-center justify-center bg-surface-800">
-          <div className="text-center">
-            <p className="text-theme-muted mb-4">Instance not found</p>
+          <div className="text-center max-w-sm">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-surface-700 flex items-center justify-center text-theme-dim">
+              <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <path d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+            <h3 className="text-base font-medium text-theme-primary mb-2">Session not found</h3>
+            <p className="text-sm text-theme-muted mb-6">
+              This session may have been closed or the ID is invalid.
+            </p>
             <button
               onClick={() => navigate('/instances')}
-              className="px-4 py-2 bg-surface-700 text-theme-primary rounded-lg hover:bg-surface-600"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-surface-700 text-theme-primary rounded-lg hover:bg-surface-600 transition-colors"
             >
-              Back to Instances
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M15 18l-6-6 6-6" />
+              </svg>
+              Back to Sessions
             </button>
           </div>
         </div>
@@ -412,7 +424,18 @@ export default function InstancesPage() {
                 <span className="text-surface-600 mx-1">│</span>
               </>
             )}
-            <span className="text-[10px] text-theme-dim font-mono">{instance.workingDir}</span>
+            <span className="text-[10px] text-theme-dim font-mono">{currentCwds[instance.id] || instance.workingDir}</span>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                navigator.clipboard.writeText(currentCwds[instance.id] || instance.workingDir);
+                toast.success('Copied to clipboard');
+              }}
+              className="p-0.5 rounded text-theme-dim hover:text-theme-primary hover:bg-surface-700 transition-colors opacity-50 hover:opacity-100"
+              title="Copy working directory"
+            >
+              <Icons.copy />
+            </button>
           </div>
         </div>
 
@@ -522,7 +545,9 @@ export default function InstancesPage() {
     <div className="flex-1 flex flex-col overflow-hidden bg-surface-800">
       {/* Content area */}
       <div className="flex-1 overflow-auto">
-        {layout === 'cards' ? (
+        {isLoading ? (
+          <InstanceSkeletons layout={layout} count={6} />
+        ) : layout === 'cards' ? (
           <CardLayout
             instances={instances}
             activeId={null}
@@ -558,7 +583,7 @@ export default function InstancesPage() {
         )}
 
         {/* Empty state when no instances exist */}
-        {instances.length === 0 && (
+        {!isLoading && instances.length === 0 && (
           <div className="flex items-center justify-center h-full min-h-[300px]">
             <div className="text-center">
               <div className="text-theme-dim mb-3">

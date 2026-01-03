@@ -89,6 +89,48 @@ export interface ReorderInstancesRequest {
   instanceIds: string[];
 }
 
+// Global Task types
+export type TaskStatus = 'captured' | 'in_progress' | 'done' | 'archived';
+
+export interface GlobalTask {
+  id: string;
+  text: string;
+  status: TaskStatus;
+  dispatchedInstanceId: string | null;
+  dispatchedAt: string | null;
+  completedAt: string | null;
+  archivedAt: string | null;
+  displayOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateTaskRequest {
+  text: string;
+}
+
+export interface UpdateTaskRequest {
+  text?: string;
+  status?: TaskStatus;
+  dispatchedInstanceId?: string | null;
+}
+
+export interface DispatchTaskRequest {
+  instanceId: string;
+  copyToClipboard?: boolean;
+}
+
+export interface ReorderTasksRequest {
+  taskIds: string[];
+}
+
+export interface TaskStats {
+  total: number;
+  captured: number;
+  inProgress: number;
+  done: number;
+}
+
 // Activity Feed types
 export type ActivityEventType = 'completed' | 'error' | 'started';
 
@@ -213,6 +255,9 @@ export type WSServerMessageType =
   | 'machine:updated'
   | 'machine:deleted'
   | 'machine:status'
+  | 'task:created'
+  | 'task:updated'
+  | 'task:deleted'
   | 'error';
 
 export interface FileChangeEvent {
@@ -238,6 +283,8 @@ export interface WSServerMessage {
   machine?: RemoteMachine;
   machineId?: string;
   machineStatus?: { machineId: string; status: MachineStatus };
+  task?: GlobalTask;
+  taskId?: string;
   error?: string;
 }
 

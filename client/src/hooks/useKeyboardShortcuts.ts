@@ -4,6 +4,7 @@ import { useUIStore } from '../store/uiStore';
 interface UseKeyboardShortcutsOptions {
   onCommandPalette?: () => void;
   onNewInstance?: () => void;
+  onOpenTasks?: () => void;
   onSwitchInstance?: (index: number) => void;
   onCycleInstance?: (direction: 'prev' | 'next') => void;
   onNavigation?: (page: 'home' | 'instances' | 'history') => void;
@@ -81,6 +82,13 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions) {
       if (isMod && e.key.toLowerCase() === 'n' && !e.shiftKey) {
         e.preventDefault();
         options.onNewInstance?.();
+        return;
+      }
+
+      // Handle Cmd+G (Open Tasks)
+      if (isMod && e.key.toLowerCase() === 'g') {
+        e.preventDefault();
+        options.onOpenTasks?.();
         return;
       }
 

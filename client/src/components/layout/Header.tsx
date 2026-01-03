@@ -4,12 +4,70 @@ import { useUIStore } from '../../store/uiStore';
 import { useInstancesStore } from '../../store/instancesStore';
 import { useSettingsStore } from '../../store/settingsStore';
 import { useFeedStore } from '../../store/feedStore';
+import { useTasksStore } from '../../store/tasksStore';
 import { Icons } from '../common/Icons';
 import Tooltip from '../common/Tooltip';
 import { ConnectionStatus } from '../common/ConnectionStatus';
 import { SummaryModal } from '../modals/SummaryModal';
+import { GlobalTasksPanel } from '../tasks/GlobalTasksPanel';
 import { toast } from '../../store/toastStore';
 import type { SummaryType, GenerateSummaryResponse, CommandExecution, SummarySSEEvent } from '@cc-orchestrator/shared';
+
+/**
+ * Generate a short, descriptive name from task text for instance naming.
+ * Takes first few meaningful words, removes filler, and limits length.
+ * Deduplicates by adding a number suffix if the name already exists.
+ */
+function generateShortName(taskText: string, existingNames: string[]): string {
+  // Common filler words to remove
+  const fillerWords = new Set([
+    'a', 'an', 'the', 'to', 'for', 'and', 'or', 'of', 'in', 'on', 'at', 'by',
+    'with', 'from', 'as', 'is', 'are', 'be', 'was', 'were', 'been', 'being',
+    'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should',
+    'may', 'might', 'must', 'shall', 'can', 'need', 'please', 'just', 'also',
+    'that', 'this', 'these', 'those', 'it', 'its', 'i', 'me', 'my', 'we', 'our',
+    'you', 'your', 'they', 'them', 'their', 'what', 'which', 'who', 'whom',
+    'some', 'any', 'all', 'each', 'every', 'both', 'few', 'more', 'most', 'other',
+  ]);
+
+  // Split into words, filter out filler and short words
+  const words = taskText
+    .toLowerCase()
+    .replace(/[^\w\s-]/g, ' ') // Remove punctuation except hyphens
+    .split(/\s+/)
+    .filter(word => word.length > 1 && !fillerWords.has(word));
+
+  if (words.length === 0) {
+    return 'New Task';
+  }
+
+  // Take first 3-4 meaningful words
+  const maxWords = 4;
+  const selectedWords = words.slice(0, maxWords);
+
+  // Title case and join
+  let baseName = selectedWords
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+
+  // Limit total length to 30 characters
+  if (baseName.length > 30) {
+    baseName = baseName.slice(0, 27) + '...';
+  }
+
+  // Deduplicate: check if name exists and add number suffix if needed
+  const lowerExisting = existingNames.map(n => n.toLowerCase());
+  if (!lowerExisting.includes(baseName.toLowerCase())) {
+    return baseName;
+  }
+
+  // Find next available number
+  let counter = 2;
+  while (lowerExisting.includes(`${baseName.toLowerCase()} ${counter}`)) {
+    counter++;
+  }
+  return `${baseName} ${counter}`;
+}
 
 export default function Header() {
   const navigate = useNavigate();
@@ -32,6 +90,7 @@ export default function Header() {
   const setShowShortcutsModal = useUIStore((state) => state.setShowShortcutsModal);
   const setShowSettingsModal = useUIStore((state) => state.setShowSettingsModal);
   const setShowNewInstanceModal = useUIStore((state) => state.setShowNewInstanceModal);
+  const openNewInstanceModal = useUIStore((state) => state.openNewInstanceModal);
   const instances = useInstancesStore((state) => state.instances);
   const theme = useSettingsStore((state) => state.theme);
   const setTheme = useSettingsStore((state) => state.setTheme);
@@ -41,6 +100,9 @@ export default function Header() {
   const summaryIncludeIssues = useSettingsStore((state) => state.summaryIncludeIssues);
   const summaryCustomPrompt = useSettingsStore((state) => state.summaryCustomPrompt);
   const unreadCount = useFeedStore((state) => state.stats.unread);
+  const showTasksPanel = useUIStore((state) => state.showTasksPanel);
+  const setShowTasksPanel = useUIStore((state) => state.setShowTasksPanel);
+  const pendingTaskCount = useTasksStore((state) => state.stats.captured + state.stats.inProgress);
 
   // Close summary menu when clicking outside
   useEffect(() => {
@@ -261,6 +323,24 @@ export default function Header() {
           </Tooltip>
         )}
 
+        {/* Tasks Button */}
+        <Tooltip text="Global tasks (⌘G)" position="bottom">
+          <button
+            onClick={() => setShowTasksPanel(true)}
+            className={`relative px-2 py-1 rounded text-xs transition-colors
+              ${showTasksPanel
+                ? 'bg-frost-4/30 text-frost-2 border border-frost-4/50'
+                : 'text-theme-dim hover:text-theme-primary hover:bg-surface-700'}`}
+          >
+            Tasks
+            {pendingTaskCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 min-w-[14px] h-[14px] flex items-center justify-center text-[10px] font-bold bg-accent text-surface-900 rounded-full">
+                {pendingTaskCount > 99 ? '99+' : pendingTaskCount}
+              </span>
+            )}
+          </button>
+        </Tooltip>
+
         {/* Summary Button with Dropdown */}
         <div className="relative" ref={summaryMenuRef}>
           <Tooltip text="Generate work summary" position="bottom">
@@ -370,6 +450,20 @@ export default function Header() {
         isLoading={isLoadingSummary}
         streamingCommands={streamingCommands}
         isStreaming={isStreaming}
+      />
+
+      {/* Global Tasks Panel */}
+      <GlobalTasksPanel
+        isOpen={showTasksPanel}
+        onClose={() => setShowTasksPanel(false)}
+        onOpenNewInstance={(options) => {
+          setShowTasksPanel(false);
+          // When dispatching a task to a new instance, default to Claude Code mode
+          // Generate a short name from the task text if provided (deduplicated against existing instances)
+          const existingNames = instances.map(i => i.name);
+          const suggestedName = options?.taskText ? generateShortName(options.taskText, existingNames) : undefined;
+          openNewInstanceModal({ defaultMode: 'claude-code', suggestedName });
+        }}
       />
     </header>
   );

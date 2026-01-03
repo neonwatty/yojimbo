@@ -14,6 +14,7 @@ import { MobileTextInput } from './MobileTextInput';
 import { MobileHomeView } from './MobileHomeView';
 import { MobileHistoryView } from './MobileHistoryView';
 import { MobileActivityView } from './MobileActivityView';
+import { MobileTasksView } from './MobileTasksView';
 import { KeychainUnlockModal } from '../modals/KeychainUnlockModal';
 import type { Instance } from '@cc-orchestrator/shared';
 
@@ -419,6 +420,7 @@ function SettingsDrawer({
   onNavigateHome,
   onNavigateHistory,
   onNavigateActivity,
+  onNavigateTasks,
   onUnlockKeychain,
   hasRemoteInstances,
 }: {
@@ -436,6 +438,7 @@ function SettingsDrawer({
   onNavigateHome: () => void;
   onNavigateHistory: () => void;
   onNavigateActivity: () => void;
+  onNavigateTasks: () => void;
   onUnlockKeychain: () => void;
   hasRemoteInstances: boolean;
 }) {
@@ -570,11 +573,11 @@ function SettingsDrawer({
             </div>
           )}
 
-          {/* Action buttons - 4 cols if no keychain, 5 cols with keychain */}
+          {/* Action buttons - 5 cols if no keychain, 6 cols with keychain */}
           {(() => {
             const showKeychain = currentInstance?.machineType === 'remote' || hasRemoteInstances;
             return (
-              <div className={`grid gap-2 mt-3 ${showKeychain ? 'grid-cols-5' : 'grid-cols-4'}`}>
+              <div className={`grid gap-2 mt-3 ${showKeychain ? 'grid-cols-6' : 'grid-cols-5'}`}>
                 {/* Home button */}
                 <button
                   onClick={() => {
@@ -609,6 +612,18 @@ function SettingsDrawer({
                 >
                   <Icons.activity />
                   <span className="text-[10px] text-theme-primary">Activity</span>
+                </button>
+
+                {/* Tasks button */}
+                <button
+                  onClick={() => {
+                    onNavigateTasks();
+                    onClose();
+                  }}
+                  className="flex flex-col items-center justify-center gap-1 py-3 bg-surface-600 rounded-xl active:scale-[0.98] transition-transform"
+                >
+                  <Icons.tasks />
+                  <span className="text-[10px] text-theme-primary">Tasks</span>
                 </button>
 
                 {/* Unlock Keychain button - only on macOS with remote instances */}
@@ -829,10 +844,11 @@ export function MobileLayout() {
   const { id } = useParams();
   const { instances, setActiveInstanceId, removeInstance } = useInstancesStore();
 
-  // Check if we're on the home page, history page, or activity page
+  // Check if we're on the home page, history page, activity page, or tasks page
   const isHomePage = location.pathname === '/';
   const isHistoryPage = location.pathname === '/history';
   const isActivityPage = location.pathname === '/activity';
+  const isTasksPage = location.pathname === '/tasks';
   const { setShowSettingsModal, setShowNewInstanceModal, isConnected } = useUIStore();
   const { isFullscreen, isStandalone, fullscreenSupported, isIOS, isIOSSafari, toggleFullscreen } = useMobileLayout();
   const isLandscape = useOrientation();
@@ -950,6 +966,7 @@ export function MobileLayout() {
             onNavigateHome={() => navigate('/')}
             onNavigateHistory={() => navigate('/history')}
             onNavigateActivity={() => navigate('/activity')}
+            onNavigateTasks={() => navigate('/tasks')}
             onUnlockKeychain={() => setShowKeychainModal(true)}
             hasRemoteInstances={instances.some(i => i.machineType === 'remote')}
           />
@@ -998,6 +1015,12 @@ export function MobileLayout() {
               <MobileActivityView
                 onTopGesture={() => {}}
                 onBottomGesture={() => {}}
+              />
+            ) : isTasksPage ? (
+              <MobileTasksView
+                onTopGesture={() => {}}
+                onBottomGesture={() => {}}
+                onOpenNewInstance={handleNewInstance}
               />
             ) : currentInstance ? (
               <MobileTerminalView
@@ -1051,6 +1074,12 @@ export function MobileLayout() {
             onTopGesture={() => setTopDrawerOpen(true)}
             onBottomGesture={() => setBottomDrawerOpen(true)}
           />
+        ) : isTasksPage ? (
+          <MobileTasksView
+            onTopGesture={() => setTopDrawerOpen(true)}
+            onBottomGesture={() => setBottomDrawerOpen(true)}
+            onOpenNewInstance={handleNewInstance}
+          />
         ) : currentInstance ? (
           <MobileTerminalView
             key={currentInstance.id}
@@ -1094,6 +1123,7 @@ export function MobileLayout() {
           onNavigateHome={() => navigate('/')}
           onNavigateHistory={() => navigate('/history')}
           onNavigateActivity={() => navigate('/activity')}
+          onNavigateTasks={() => navigate('/tasks')}
           onUnlockKeychain={() => setShowKeychainModal(true)}
           hasRemoteInstances={instances.some(i => i.machineType === 'remote')}
         />

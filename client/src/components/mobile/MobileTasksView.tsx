@@ -217,7 +217,16 @@ export function MobileTasksView({ onTopGesture, onBottomGesture, onOpenNewInstan
 
         {/* Tasks List */}
         {(!isLoading || tasks.length > 0) && (
-          <div className="flex-1 overflow-auto mobile-scroll space-y-2">
+          <div
+            className="flex-1 overflow-auto mobile-scroll space-y-2"
+            onClick={(e) => {
+              // Close any revealed swipe actions when tapping outside task actions
+              if (swipingTaskId && !(e.target as HTMLElement).closest('button')) {
+                setSwipingTaskId(null);
+                setSwipeOffset(0);
+              }
+            }}
+          >
             {activeTasks.map((task) => (
               <SwipeableTaskItem
                 key={task.id}
@@ -231,9 +240,21 @@ export function MobileTasksView({ onTopGesture, onBottomGesture, onOpenNewInstan
                   setSwipingTaskId(null);
                   setSwipeOffset(0);
                 }}
-                onToggleDone={() => handleToggleDone(task)}
-                onDispatch={() => setDispatchTask(task)}
-                onDelete={() => handleDeleteTask(task.id)}
+                onToggleDone={() => {
+                  handleToggleDone(task);
+                  setSwipingTaskId(null);
+                  setSwipeOffset(0);
+                }}
+                onDispatch={() => {
+                  setDispatchTask(task);
+                  setSwipingTaskId(null);
+                  setSwipeOffset(0);
+                }}
+                onDelete={() => {
+                  handleDeleteTask(task.id);
+                  setSwipingTaskId(null);
+                  setSwipeOffset(0);
+                }}
                 getStatusIcon={() => getStatusIcon(task)}
               />
             ))}
@@ -327,20 +348,21 @@ function SwipeableTaskItem({
 
     if (touchRef.current.isHorizontal) {
       e.preventDefault();
-      // Only allow left swipe (negative offset)
-      const clampedOffset = Math.max(-150, Math.min(0, deltaX));
+      // Only allow left swipe (negative offset), max to reveal all 3 buttons
+      const clampedOffset = Math.max(-200, Math.min(0, deltaX));
       onSwipeMove(clampedOffset);
     }
   };
 
   const handleTouchEnd = () => {
     if (swipeOffset < -ACTION_THRESHOLD) {
-      // Keep revealed
-      onSwipeMove(-120);
+      // Keep revealed - show all 3 buttons (3 x 64px = 192px)
+      onSwipeMove(-192);
     } else {
+      // Close and reset
       onSwipeMove(0);
+      setTimeout(onSwipeEnd, 300);
     }
-    setTimeout(onSwipeEnd, 300);
   };
 
   const isRevealed = swipeOffset < -50;

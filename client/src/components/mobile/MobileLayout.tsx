@@ -18,6 +18,44 @@ import { MobileTasksView } from './MobileTasksView';
 import { KeychainUnlockModal } from '../modals/KeychainUnlockModal';
 import type { Instance } from '@cc-orchestrator/shared';
 
+/**
+ * Generate a short, descriptive name from task text for instance naming.
+ * Duplicated from Header.tsx - consider extracting to shared utility.
+ */
+function generateShortName(taskText: string, existingNames: string[]): string {
+  const fillerWords = new Set([
+    'a', 'an', 'the', 'to', 'for', 'and', 'or', 'of', 'in', 'on', 'at', 'by',
+    'with', 'from', 'as', 'is', 'are', 'be', 'was', 'were', 'been', 'being',
+    'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should',
+    'may', 'might', 'must', 'shall', 'can', 'need', 'please', 'just', 'also',
+    'that', 'this', 'these', 'those', 'it', 'its', 'i', 'me', 'my', 'we', 'our',
+    'you', 'your', 'they', 'them', 'their', 'what', 'which', 'who', 'whom',
+    'some', 'any', 'all', 'each', 'every', 'both', 'few', 'more', 'most', 'other',
+  ]);
+
+  const words = taskText
+    .toLowerCase()
+    .replace(/[^\w\s-]/g, ' ')
+    .split(/\s+/)
+    .filter(word => word.length > 1 && !fillerWords.has(word));
+
+  if (words.length === 0) return 'New Task';
+
+  let baseName = words
+    .slice(0, 4)
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+
+  if (baseName.length > 30) baseName = baseName.slice(0, 27) + '...';
+
+  const lowerExisting = existingNames.map(n => n.toLowerCase());
+  if (!lowerExisting.includes(baseName.toLowerCase())) return baseName;
+
+  let counter = 2;
+  while (lowerExisting.includes(`${baseName.toLowerCase()} ${counter}`)) counter++;
+  return `${baseName} ${counter}`;
+}
+
 // Connection Status Indicator
 function ConnectionStatus({ isConnected }: { isConnected: boolean }) {
   return (
@@ -849,7 +887,7 @@ export function MobileLayout() {
   const isHistoryPage = location.pathname === '/history';
   const isActivityPage = location.pathname === '/activity';
   const isTasksPage = location.pathname === '/tasks';
-  const { setShowSettingsModal, setShowNewInstanceModal, isConnected } = useUIStore();
+  const { setShowSettingsModal, openNewInstanceModal, isConnected } = useUIStore();
   const { isFullscreen, isStandalone, fullscreenSupported, isIOS, isIOSSafari, toggleFullscreen } = useMobileLayout();
   const isLandscape = useOrientation();
 
@@ -872,11 +910,13 @@ export function MobileLayout() {
     }
   }, [navigate, setActiveInstanceId, instances]);
 
-  // Handle new instance
-  const handleNewInstance = useCallback(() => {
+  // Handle new instance (with optional task text for auto-generated name)
+  const handleNewInstance = useCallback((options?: { taskText?: string }) => {
     setBottomDrawerOpen(false);
-    setShowNewInstanceModal(true);
-  }, [setShowNewInstanceModal]);
+    const existingNames = instances.map(i => i.name);
+    const suggestedName = options?.taskText ? generateShortName(options.taskText, existingNames) : undefined;
+    openNewInstanceModal({ defaultMode: 'claude-code', suggestedName });
+  }, [instances, openNewInstanceModal]);
 
   // Handle long-press on instance
   const handleInstanceLongPress = useCallback((instance: Instance) => {

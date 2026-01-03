@@ -18,6 +18,8 @@ export function GlobalTasksPanel({ isOpen, onClose, onOpenNewInstance }: GlobalT
   const { instances } = useInstancesStore();
   const [newTaskText, setNewTaskText] = useState('');
   const [dispatchingTaskId, setDispatchingTaskId] = useState<string | null>(null);
+  const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
+  const [dragOverTaskId, setDragOverTaskId] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Fetch tasks when panel opens
@@ -98,6 +100,31 @@ export function GlobalTasksPanel({ isOpen, onClose, onOpenNewInstance }: GlobalT
       await tasksApi.update(taskId, { text: newText });
     } catch {
       // Error toast shown by API layer
+    }
+  };
+
+  const handleReorder = async (fromId: string, toId: string) => {
+    if (fromId === toId) return;
+
+    const filteredTasks = tasks.filter((t) => t.status !== 'archived');
+    const fromIndex = filteredTasks.findIndex((t) => t.id === fromId);
+    const toIndex = filteredTasks.findIndex((t) => t.id === toId);
+
+    if (fromIndex === -1 || toIndex === -1) return;
+
+    // Create new order
+    const newOrder = [...filteredTasks];
+    const [movedTask] = newOrder.splice(fromIndex, 1);
+    newOrder.splice(toIndex, 0, movedTask);
+
+    // Optimistically update UI
+    setTasks(newOrder);
+
+    try {
+      await tasksApi.reorder({ taskIds: newOrder.map((t) => t.id) });
+    } catch {
+      // Revert on error - refetch to get correct order
+      fetchTasks();
     }
   };
 
@@ -203,12 +230,23 @@ export function GlobalTasksPanel({ isOpen, onClose, onOpenNewInstance }: GlobalT
                     task={task}
                     instances={activeInstances}
                     isDispatchOpen={dispatchingTaskId === task.id}
+                    isDragging={draggedTaskId === task.id}
+                    isDragOver={dragOverTaskId === task.id && draggedTaskId !== task.id}
                     onToggleDone={() => handleToggleDone(task)}
                     onDelete={() => handleDeleteTask(task.id)}
                     onEdit={(newText) => handleUpdateTask(task.id, newText)}
                     onOpenDispatch={() => setDispatchingTaskId(task.id)}
                     onCloseDispatch={() => setDispatchingTaskId(null)}
                     onDispatch={(instanceId) => handleDispatch(task, instanceId)}
+                    onDragStart={() => setDraggedTaskId(task.id)}
+                    onDragEnd={() => {
+                      if (draggedTaskId && dragOverTaskId && draggedTaskId !== dragOverTaskId) {
+                        handleReorder(draggedTaskId, dragOverTaskId);
+                      }
+                      setDraggedTaskId(null);
+                      setDragOverTaskId(null);
+                    }}
+                    onDragOver={() => setDragOverTaskId(task.id)}
                   />
                 ))}
             </div>
@@ -234,24 +272,34 @@ interface TaskItemProps {
   task: GlobalTask;
   instances: Instance[];
   isDispatchOpen: boolean;
+  isDragging: boolean;
+  isDragOver: boolean;
   onToggleDone: () => void;
   onDelete: () => void;
   onEdit: (newText: string) => void;
   onOpenDispatch: () => void;
   onCloseDispatch: () => void;
   onDispatch: (instanceId: string | 'copy' | 'new') => void;
+  onDragStart: () => void;
+  onDragEnd: () => void;
+  onDragOver: () => void;
 }
 
 function TaskItem({
   task,
   instances,
   isDispatchOpen,
+  isDragging,
+  isDragOver,
   onToggleDone,
   onDelete,
   onEdit,
   onOpenDispatch,
   onCloseDispatch,
   onDispatch,
+  onDragStart,
+  onDragEnd,
+  onDragOver,
 }: TaskItemProps) {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -350,7 +398,27 @@ function TaskItem({
     : null;
 
   return (
-    <div className="group flex items-start gap-3 p-4 bg-surface-800 rounded-lg hover:bg-surface-600/50 transition-colors">
+    <div
+      draggable
+      onDragStart={(e) => {
+        e.dataTransfer.effectAllowed = 'move';
+        onDragStart();
+      }}
+      onDragEnd={onDragEnd}
+      onDragOver={(e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        onDragOver();
+      }}
+      className={`group flex items-start gap-3 p-4 bg-surface-800 rounded-lg transition-all cursor-grab active:cursor-grabbing ${
+        isDragging ? 'opacity-50 scale-[0.98]' : 'hover:bg-surface-600/50'
+      } ${isDragOver ? 'ring-2 ring-accent ring-inset' : ''}`}
+    >
+      {/* Drag Handle */}
+      <div className="shrink-0 flex items-center text-theme-muted/50 group-hover:text-theme-muted transition-colors">
+        <Icons.grip className="w-4 h-4" />
+      </div>
+
       {/* Checkbox */}
       <button
         onClick={onToggleDone}

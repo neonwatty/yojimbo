@@ -9,7 +9,7 @@ import type { GlobalTask, Instance } from '@cc-orchestrator/shared';
 interface MobileTasksViewProps {
   onTopGesture: () => void;
   onBottomGesture: () => void;
-  onOpenNewInstance?: () => void;
+  onOpenNewInstance?: (options?: { taskText?: string }) => void;
 }
 
 export function MobileTasksView({ onTopGesture, onBottomGesture, onOpenNewInstance }: MobileTasksViewProps) {
@@ -116,7 +116,14 @@ export function MobileTasksView({ onTopGesture, onBottomGesture, onOpenNewInstan
     }
 
     if (instanceId === 'new') {
-      onOpenNewInstance?.();
+      // Copy task text to clipboard so it's ready to paste in the new instance
+      try {
+        await navigator.clipboard.writeText(task.text);
+        toast.success('Task copied to clipboard');
+      } catch {
+        // Continue even if clipboard fails
+      }
+      onOpenNewInstance?.({ taskText: task.text });
       return;
     }
 

@@ -219,6 +219,7 @@ export function MobileTasksView({ onTopGesture, onBottomGesture, onOpenNewInstan
         {(!isLoading || tasks.length > 0) && (
           <div
             className="flex-1 overflow-auto mobile-scroll space-y-2"
+            data-testid="task-list"
             onClick={(e) => {
               // Close any revealed swipe actions when tapping outside task actions
               if (swipingTaskId && !(e.target as HTMLElement).closest('button')) {
@@ -368,24 +369,27 @@ function SwipeableTaskItem({
   const isRevealed = swipeOffset < -50;
 
   return (
-    <div className="relative overflow-hidden rounded-xl">
+    <div className="relative overflow-hidden rounded-xl" data-testid="swipeable-task">
       {/* Action buttons revealed on swipe */}
       <div className="absolute right-0 top-0 bottom-0 flex items-stretch">
         <button
           onClick={onDispatch}
           className="w-16 bg-frost-3 flex items-center justify-center active:bg-frost-2"
+          data-testid="dispatch-button"
         >
           <Icons.send className="w-5 h-5 text-white" />
         </button>
         <button
           onClick={onToggleDone}
           className="w-16 bg-green-500 flex items-center justify-center active:bg-green-600"
+          data-testid="done-button"
         >
           <Icons.check className="w-5 h-5 text-white" />
         </button>
         <button
           onClick={onDelete}
           className="w-16 bg-red-500 flex items-center justify-center active:bg-red-600"
+          data-testid="delete-button"
         >
           <Icons.trash className="w-5 h-5 text-white" />
         </button>
@@ -398,10 +402,11 @@ function SwipeableTaskItem({
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
+        data-testid="task-content"
       >
         <div className="flex items-start gap-3">
           {/* Checkbox */}
-          <button onClick={onToggleDone} className="shrink-0 mt-0.5">
+          <button onClick={onToggleDone} className="shrink-0 mt-0.5" data-testid={`task-checkbox-${task.id}`}>
             {getStatusIcon()}
           </button>
 

@@ -7,14 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-01-03
+
 ### Added
 - Instance management UX polish: status tooltips, skeleton loading, timestamps, copy button for working directory
 - Global Tasks feature for task capture and dispatch to Claude Code instances
 - Drag-to-reorder for tasks
 - Task animations and visual feedback
+- MIT LICENSE file
+- CONTRIBUTING.md with development guidelines
+- CHANGELOG.md for version tracking
 
 ### Changed
 - Extracted `generateShortName` utility for reuse across components
+
+### Fixed
+- High-severity `qs` package vulnerability
+
+### Security
+- Updated `knip` to 5.79.0
 
 ## [0.1.0] - 2024-12-01
 
@@ -59,4 +70,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Version History
 
+- `0.2.0` - UX polish, Global Tasks, repo hardening
 - `0.1.0` - Initial release with core orchestration features

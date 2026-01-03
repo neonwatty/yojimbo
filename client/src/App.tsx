@@ -32,6 +32,7 @@ function App() {
     setShowSettingsModal,
     setShowNewInstanceModal,
     setShowCommandPalette,
+    setShowTasksPanel,
     toggleLeftSidebar,
     toggleEditorPanel,
     toggleMockupsPanel,
@@ -72,6 +73,7 @@ function App() {
   useKeyboardShortcuts({
     onCommandPalette: () => setShowCommandPalette(true),
     onNewInstance: handleNewInstance,
+    onOpenTasks: () => setShowTasksPanel(true),
     onSwitchInstance: switchToInstance,
     onCycleInstance: cycleInstance,
     onNavigation: (page) => {
@@ -207,6 +209,7 @@ function App() {
             <Route path="/instances/:id" element={<MobileLayout />} />
             <Route path="/history" element={<MobileLayout />} />
             <Route path="/activity" element={<MobileLayout />} />
+            <Route path="/tasks" element={<MobileLayout />} />
             {/* Redirect other routes to instances on mobile */}
             <Route path="*" element={<Navigate to="/instances" replace />} />
           </Routes>

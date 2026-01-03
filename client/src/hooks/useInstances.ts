@@ -1,14 +1,16 @@
 import { useEffect, useCallback } from 'react';
 import { useInstancesStore } from '../store/instancesStore';
 import { useFeedStore } from '../store/feedStore';
-import { instancesApi, feedApi } from '../api/client';
+import { useTasksStore } from '../store/tasksStore';
+import { instancesApi, feedApi, tasksApi } from '../api/client';
 import { useWebSocket } from './useWebSocket';
 import { getWsUrl } from '../config';
-import type { Instance, ActivityEvent } from '@cc-orchestrator/shared';
+import type { Instance, ActivityEvent, GlobalTask } from '@cc-orchestrator/shared';
 
 export function useInstances() {
   const { instances, setInstances, addInstance, updateInstance, removeInstance, setCurrentCwd } = useInstancesStore();
   const { addEvent, setStats } = useFeedStore();
+  const { addTask, updateTask: updateTaskInStore, removeTask, setStats: setTaskStats } = useTasksStore();
 
   const { subscribe, isConnected } = useWebSocket(getWsUrl(), {
     onOpen: () => {
@@ -75,6 +77,36 @@ export function useInstances() {
       }
     });
 
+    // Task events
+    const unsubscribeTaskCreated = subscribe('task:created', (data: unknown) => {
+      const { task } = data as { task: GlobalTask };
+      addTask(task);
+    });
+
+    const unsubscribeTaskUpdated = subscribe('task:updated', (data: unknown) => {
+      const { task } = data as { task: GlobalTask | undefined };
+      if (task) {
+        updateTaskInStore(task.id, task);
+      }
+      // Refresh stats when tasks are updated
+      tasksApi.getStats().then((response) => {
+        if (response.data) {
+          setTaskStats(response.data);
+        }
+      }).catch(() => {});
+    });
+
+    const unsubscribeTaskDeleted = subscribe('task:deleted', (data: unknown) => {
+      const { taskId } = data as { taskId: string };
+      removeTask(taskId);
+      // Refresh stats when tasks are deleted
+      tasksApi.getStats().then((response) => {
+        if (response.data) {
+          setTaskStats(response.data);
+        }
+      }).catch(() => {});
+    });
+
     // Re-fetch instances after WebSocket connects to catch any status updates
     // that occurred before we subscribed (fixes race condition)
     fetchInstances();
@@ -86,6 +118,13 @@ export function useInstances() {
       }
     }).catch(() => {});
 
+    // Fetch initial task stats
+    tasksApi.getStats().then((response) => {
+      if (response.data) {
+        setTaskStats(response.data);
+      }
+    }).catch(() => {});
+
     return () => {
       unsubscribeCreated();
       unsubscribeUpdated();
@@ -94,8 +133,11 @@ export function useInstances() {
       unsubscribeCwd();
       unsubscribeFeedNew();
       unsubscribeFeedUpdated();
+      unsubscribeTaskCreated();
+      unsubscribeTaskUpdated();
+      unsubscribeTaskDeleted();
     };
-  }, [isConnected, subscribe, addInstance, updateInstance, removeInstance, setCurrentCwd, fetchInstances, addEvent, setStats]);
+  }, [isConnected, subscribe, addInstance, updateInstance, removeInstance, setCurrentCwd, fetchInstances, addEvent, setStats, addTask, updateTaskInStore, removeTask, setTaskStats]);
 
   // Fetch instances on mount
   useEffect(() => {

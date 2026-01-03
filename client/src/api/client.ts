@@ -24,6 +24,12 @@ import type {
   UpdateMachineRequest,
   SSHKey,
   PortForward,
+  GlobalTask,
+  TaskStats,
+  CreateTaskRequest,
+  UpdateTaskRequest,
+  DispatchTaskRequest,
+  ReorderTasksRequest,
 } from '@cc-orchestrator/shared';
 import { toast } from '../store/toastStore';
 
@@ -338,5 +344,54 @@ export const keychainApi = {
   autoUnlockRemote: (instanceId: string) =>
     request<ApiResponse<{ message: string }>>(`/keychain/remote/${instanceId}/auto-unlock`, {
       method: 'POST',
+    }),
+};
+
+// Tasks API
+export const tasksApi = {
+  list: (includeArchived = false) =>
+    request<ApiResponse<GlobalTask[]>>(`/tasks?includeArchived=${includeArchived}`),
+
+  get: (id: string) => request<ApiResponse<GlobalTask>>(`/tasks/${id}`),
+
+  getStats: () => request<ApiResponse<TaskStats>>('/tasks/stats'),
+
+  create: (data: CreateTaskRequest) =>
+    request<ApiResponse<GlobalTask>>('/tasks', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  update: (id: string, data: UpdateTaskRequest) =>
+    request<ApiResponse<GlobalTask>>(`/tasks/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+
+  delete: (id: string) =>
+    request<ApiResponse<void>>(`/tasks/${id}`, {
+      method: 'DELETE',
+    }),
+
+  dispatch: (id: string, data: DispatchTaskRequest) =>
+    request<ApiResponse<GlobalTask | { text: string }>>(`/tasks/${id}/dispatch`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  markDone: (id: string) =>
+    request<ApiResponse<GlobalTask>>(`/tasks/${id}/done`, {
+      method: 'POST',
+    }),
+
+  archive: (id: string) =>
+    request<ApiResponse<GlobalTask>>(`/tasks/${id}/archive`, {
+      method: 'POST',
+    }),
+
+  reorder: (data: ReorderTasksRequest) =>
+    request<ApiResponse<void>>('/tasks/reorder', {
+      method: 'POST',
+      body: JSON.stringify(data),
     }),
 };

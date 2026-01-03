@@ -1,0 +1,1323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Global Tasks — Mobile Flow Mockups</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #0a0a0b;
+      --bg-secondary: #111113;
+      --bg-tertiary: #18181b;
+      --bg-hover: #1f1f23;
+      --bg-active: #27272a;
+      --border-subtle: #27272a;
+      --border-default: #3f3f46;
+      --text-primary: #fafafa;
+      --text-secondary: #a1a1aa;
+      --text-muted: #71717a;
+      --accent-blue: #3b82f6;
+      --accent-green: #22c55e;
+      --accent-yellow: #eab308;
+      --accent-orange: #f97316;
+      --accent-red: #ef4444;
+      --accent-purple: #8b5cf6;
+      --font-mono: 'JetBrains Mono', monospace;
+      --font-sans: 'Outfit', sans-serif;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background: #050506;
+      color: var(--text-primary);
+      min-height: 100vh;
+      padding: 40px 24px;
+    }
+
+    .page-header {
+      text-align: center;
+      margin-bottom: 48px;
+    }
+
+    .page-title {
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 8px;
+    }
+
+    .page-subtitle {
+      font-size: 15px;
+      color: var(--text-muted);
+    }
+
+    /* Flow Grid */
+    .flow-section {
+      margin-bottom: 64px;
+    }
+
+    .flow-title {
+      font-size: 14px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--accent-blue);
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .flow-title::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(90deg, var(--accent-blue) 0%, transparent 100%);
+      opacity: 0.3;
+    }
+
+    .flow-grid {
+      display: flex;
+      gap: 24px;
+      overflow-x: auto;
+      padding-bottom: 16px;
+    }
+
+    .flow-step {
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .step-number {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--bg-tertiary);
+      border: 2px solid var(--border-default);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+
+    .flow-arrow {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      padding-top: 180px;
+    }
+
+    .flow-arrow svg {
+      width: 24px;
+      height: 24px;
+      color: var(--text-muted);
+    }
+
+    .step-label {
+      font-size: 12px;
+      color: var(--text-muted);
+      text-align: center;
+      max-width: 160px;
+    }
+
+    /* Mobile Frame */
+    .mobile-frame {
+      width: 320px;
+      background: var(--bg-primary);
+      border: 1px solid var(--border-default);
+      border-radius: 36px;
+      overflow: hidden;
+      box-shadow:
+        0 0 0 1px rgba(255,255,255,0.05),
+        0 25px 50px -12px rgba(0, 0, 0, 0.6);
+    }
+
+    .mobile-notch {
+      width: 100px;
+      height: 24px;
+      background: #000;
+      border-radius: 0 0 16px 16px;
+      margin: 0 auto;
+    }
+
+    .mobile-screen {
+      min-height: 580px;
+      position: relative;
+    }
+
+    /* Mobile Header */
+    .mobile-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .mobile-header-title {
+      font-size: 17px;
+      font-weight: 600;
+    }
+
+    .mobile-header-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--bg-tertiary);
+      border: none;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Task Input */
+    .mobile-input-area {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .mobile-input {
+      width: 100%;
+      padding: 12px 16px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      color: var(--text-primary);
+    }
+
+    .mobile-input::placeholder {
+      color: var(--text-muted);
+    }
+
+    /* Task List */
+    .mobile-task-list {
+      padding: 6px 0;
+    }
+
+    .mobile-task {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .mobile-task-bg {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      display: flex;
+    }
+
+    .swipe-action-left {
+      width: 50%;
+      background: var(--accent-green);
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      padding-left: 20px;
+    }
+
+    .swipe-action-right {
+      width: 50%;
+      background: var(--accent-blue);
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      padding-right: 20px;
+    }
+
+    .swipe-action-left svg,
+    .swipe-action-right svg {
+      width: 22px;
+      height: 22px;
+      color: white;
+    }
+
+    .swipe-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: white;
+      margin-left: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .mobile-task-content {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 14px 18px;
+      background: var(--bg-primary);
+      position: relative;
+      transition: transform 0.2s ease;
+    }
+
+    .mobile-task.swiped-left .mobile-task-content {
+      transform: translateX(-80px);
+    }
+
+    .mobile-task.swiped-right .mobile-task-content {
+      transform: translateX(80px);
+    }
+
+    .mobile-task.swiped-full-left .mobile-task-content {
+      transform: translateX(-100%);
+    }
+
+    .mobile-checkbox {
+      width: 20px;
+      height: 20px;
+      border: 2px solid var(--border-default);
+      border-radius: 5px;
+      flex-shrink: 0;
+      margin-top: 1px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .mobile-checkbox.in-progress {
+      border-color: var(--accent-yellow);
+    }
+
+    .mobile-checkbox.in-progress::after {
+      content: '';
+      width: 8px;
+      height: 8px;
+      background: var(--accent-yellow);
+      border-radius: 50%;
+    }
+
+    .mobile-checkbox.checked {
+      background: var(--accent-green);
+      border-color: var(--accent-green);
+    }
+
+    .mobile-checkbox.checked svg {
+      display: block;
+    }
+
+    .mobile-checkbox svg {
+      display: none;
+      width: 12px;
+      height: 12px;
+      color: white;
+    }
+
+    .mobile-task-text {
+      flex: 1;
+    }
+
+    .mobile-task-title {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      line-height: 1.4;
+      color: var(--text-primary);
+    }
+
+    .mobile-task.completed .mobile-task-title {
+      color: var(--text-muted);
+      text-decoration: line-through;
+    }
+
+    .mobile-task-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      margin-top: 6px;
+      padding: 4px 10px;
+      background: rgba(234, 179, 8, 0.12);
+      border-radius: 16px;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--accent-yellow);
+    }
+
+    .mobile-task-badge.idle {
+      background: rgba(34, 197, 94, 0.12);
+      color: var(--accent-green);
+    }
+
+    .status-dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    /* Bottom Sheet */
+    .bottom-sheet {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--bg-tertiary);
+      border-radius: 20px 20px 0 0;
+      box-shadow: 0 -20px 40px rgba(0,0,0,0.5);
+      z-index: 10;
+    }
+
+    .sheet-handle {
+      width: 36px;
+      height: 4px;
+      background: var(--border-default);
+      border-radius: 4px;
+      margin: 10px auto 12px;
+    }
+
+    .sheet-header {
+      padding: 8px 20px 12px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+    }
+
+    .sheet-task-preview {
+      padding: 12px 20px;
+      margin: 0 16px 12px;
+      background: var(--bg-secondary);
+      border-radius: 10px;
+      border: 1px solid var(--border-subtle);
+    }
+
+    .sheet-task-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    .sheet-task-text {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--text-primary);
+      line-height: 1.4;
+    }
+
+    .sheet-item {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 20px;
+    }
+
+    .sheet-item:active {
+      background: var(--bg-hover);
+    }
+
+    .sheet-item-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-secondary);
+    }
+
+    .sheet-item.primary .sheet-item-icon {
+      background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+      border: none;
+      color: white;
+    }
+
+    .sheet-item.copy .sheet-item-icon {
+      background: var(--bg-secondary);
+      color: var(--text-secondary);
+    }
+
+    .sheet-item-content {
+      flex: 1;
+    }
+
+    .sheet-item-title {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    .sheet-item-subtitle {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .sheet-item-status {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+    }
+
+    .sheet-item-status.idle {
+      background: var(--accent-green);
+      box-shadow: 0 0 8px rgba(34, 197, 94, 0.5);
+    }
+
+    .sheet-item-status.working {
+      background: var(--accent-yellow);
+      box-shadow: 0 0 8px rgba(234, 179, 8, 0.5);
+    }
+
+    .sheet-divider {
+      height: 1px;
+      background: var(--border-subtle);
+      margin: 4px 20px;
+    }
+
+    .sheet-section-header {
+      padding: 12px 20px 8px;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+    }
+
+    /* Instance Selection Sheet */
+    .instance-list {
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .sheet-item.selected {
+      background: rgba(59, 130, 246, 0.1);
+    }
+
+    .sheet-item.selected .sheet-item-icon {
+      background: var(--accent-blue);
+      border-color: var(--accent-blue);
+      color: white;
+    }
+
+    .sheet-checkmark {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: var(--accent-blue);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .sheet-checkmark svg {
+      width: 14px;
+      height: 14px;
+      color: white;
+    }
+
+    /* New Instance Flow */
+    .new-instance-form {
+      padding: 0 20px 20px;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .form-select {
+      width: 100%;
+      padding: 12px 14px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+      font-family: var(--font-sans);
+      font-size: 14px;
+      color: var(--text-primary);
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2371717a' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 12px 14px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      color: var(--text-primary);
+    }
+
+    .form-input::placeholder {
+      color: var(--text-muted);
+    }
+
+    .form-row {
+      display: flex;
+      gap: 12px;
+    }
+
+    .form-row .form-group {
+      flex: 1;
+    }
+
+    .btn-primary {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+      border: none;
+      border-radius: 12px;
+      font-family: var(--font-sans);
+      font-size: 15px;
+      font-weight: 600;
+      color: white;
+      cursor: pointer;
+      margin-top: 8px;
+    }
+
+    .btn-secondary {
+      width: 100%;
+      padding: 12px;
+      background: transparent;
+      border: 1px solid var(--border-default);
+      border-radius: 10px;
+      font-family: var(--font-sans);
+      font-size: 14px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      margin-top: 8px;
+    }
+
+    /* Confirmation State */
+    .dispatch-confirm {
+      text-align: center;
+      padding: 32px 24px;
+    }
+
+    .confirm-icon {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background: rgba(34, 197, 94, 0.15);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 16px;
+    }
+
+    .confirm-icon svg {
+      width: 32px;
+      height: 32px;
+      color: var(--accent-green);
+    }
+
+    .confirm-title {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .confirm-subtitle {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .confirm-instance {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      background: var(--bg-secondary);
+      border-radius: 8px;
+      margin-top: 12px;
+    }
+
+    .confirm-instance-name {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    /* Overlay */
+    .sheet-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 5;
+    }
+
+    /* Swipe Hint */
+    .swipe-hint {
+      position: absolute;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 16px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-subtle);
+      border-radius: 20px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .swipe-hint svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    /* Annotation */
+    .step-annotation {
+      margin-top: 12px;
+      padding: 12px 16px;
+      background: rgba(59, 130, 246, 0.08);
+      border-left: 3px solid var(--accent-blue);
+      border-radius: 0 8px 8px 0;
+      font-size: 12px;
+      line-height: 1.5;
+      color: var(--text-secondary);
+      max-width: 320px;
+    }
+
+    .step-annotation strong {
+      color: var(--text-primary);
+    }
+
+    /* Home indicator */
+    .home-indicator {
+      width: 120px;
+      height: 4px;
+      background: var(--text-muted);
+      border-radius: 4px;
+      margin: 12px auto 8px;
+      opacity: 0.4;
+    }
+
+    /* Quick action pills */
+    .quick-actions {
+      display: flex;
+      gap: 8px;
+      padding: 12px 18px;
+      overflow-x: auto;
+    }
+
+    .quick-action-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-subtle);
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      white-space: nowrap;
+    }
+
+    .quick-action-pill svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    .quick-action-pill.active {
+      background: rgba(59, 130, 246, 0.15);
+      border-color: var(--accent-blue);
+      color: var(--accent-blue);
+    }
+  </style>
+</head>
+<body>
+  <header class="page-header">
+    <h1 class="page-title">Mobile Flow — Global Tasks</h1>
+    <p class="page-subtitle">Swipe interactions, dispatch options, and instance selection</p>
+  </header>
+
+  <!-- Flow 1: Swipe to Dispatch -->
+  <section class="flow-section">
+    <h2 class="flow-title">Flow 1: Swipe Left to Dispatch</h2>
+    <div class="flow-grid">
+
+      <!-- Step 1: Initial State -->
+      <div class="flow-step">
+        <div class="step-number">1</div>
+        <div class="mobile-frame">
+          <div class="mobile-notch"></div>
+          <div class="mobile-screen">
+            <div class="mobile-header">
+              <span class="mobile-header-title">Global Tasks</span>
+              <button class="mobile-header-btn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="18" y1="6" x2="6" y2="18"/>
+                  <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            </div>
+            <div class="mobile-input-area">
+              <input type="text" class="mobile-input" placeholder="Add a new task...">
+            </div>
+            <div class="mobile-task-list">
+              <div class="mobile-task">
+                <div class="mobile-task-content">
+                  <div class="mobile-checkbox"></div>
+                  <div class="mobile-task-text">
+                    <div class="mobile-task-title">Add dark mode toggle to settings</div>
+                  </div>
+                </div>
+              </div>
+              <div class="mobile-task">
+                <div class="mobile-task-content">
+                  <div class="mobile-checkbox"></div>
+                  <div class="mobile-task-text">
+                    <div class="mobile-task-title">Refactor auth middleware</div>
+                  </div>
+                </div>
+              </div>
+              <div class="mobile-task">
+                <div class="mobile-task-content">
+                  <div class="mobile-checkbox in-progress"></div>
+                  <div class="mobile-task-text">
+                    <div class="mobile-task-title">Write payment tests</div>
+                    <div class="mobile-task-badge">
+                      <span class="status-dot"></span>
+                      backend-api
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="swipe-hint">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="15 18 9 12 15 6"/>
+              </svg>
+              Swipe left to dispatch
+            </div>
+            <div class="home-indicator"></div>
+          </div>
+        </div>
+        <div class="step-label">Task list with swipe hint</div>
+      </div>
+
+      <div class="flow-arrow">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="5" y1="12" x2="19" y2="12"/>
+          <polyline points="12 5 19 12 12 19"/>
+        </svg>
+      </div>
+
+      <!-- Step 2: Swiping -->
+      <div class="flow-step">
+        <div class="step-number">2</div>
+        <div class="mobile-frame">
+          <div class="mobile-notch"></div>
+          <div class="mobile-screen">
+            <div class="mobile-header">
+              <span class="mobile-header-title">Global Tasks</span>
+              <button class="mobile-header-btn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="18" y1="6" x2="6" y2="18"/>
+                  <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            </div>
+            <div class="mobile-input-area">
+              <input type="text" class="mobile-input" placeholder="Add a new task...">
+            </div>
+            <div class="mobile-task-list">
+              <div class="mobile-task swiped-left">
+                <div class="mobile-task-bg">
+                  <div class="swipe-action-left"></div>
+                  <div class="swipe-action-right">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <line x1="22" y1="2" x2="11" y2="13"/>
+                      <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                    </svg>
+                    <span class="swipe-label">Dispatch</span>
+                  </div>
+                </div>
+                <div class="mobile-task-content">
+                  <div class="mobile-checkbox"></div>
+                  <div class="mobile-task-text">
+                    <div class="mobile-task-title">Add dark mode toggle to settings</div>
+                  </div>
+                </div>
+              </div>
+              <div class="mobile-task">
+                <div class="mobile-task-content">
+                  <div class="mobile-checkbox"></div>
+                  <div class="mobile-task-text">
+                    <div class="mobile-task-title">Refactor auth middleware</div>
+                  </div>
+                </div>
+              </div>
+              <div class="mobile-task">
+                <div class="mobile-task-content">
+                  <div class="mobile-checkbox in-progress"></div>
+                  <div class="mobile-task-text">
+                    <div class="mobile-task-title">Write payment tests</div>
+                    <div class="mobile-task-badge">
+                      <span class="status-dot"></span>
+                      backend-api
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="home-indicator"></div>
+          </div>
+        </div>
+        <div class="step-label">Swipe reveals dispatch action</div>
+      </div>
+
+      <div class="flow-arrow">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="5" y1="12" x2="19" y2="12"/>
+          <polyline points="12 5 19 12 12 19"/>
+        </svg>
+      </div>
+
+      <!-- Step 3: Dispatch Sheet -->
+      <div class="flow-step">
+        <div class="step-number">3</div>
+        <div class="mobile-frame">
+          <div class="mobile-notch"></div>
+          <div class="mobile-screen">
+            <div class="mobile-header">
+              <span class="mobile-header-title">Global Tasks</span>
+              <button class="mobile-header-btn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="18" y1="6" x2="6" y2="18"/>
+                  <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            </div>
+            <div class="sheet-overlay"></div>
+            <div class="bottom-sheet">
+              <div class="sheet-handle"></div>
+              <div class="sheet-task-preview">
+                <div class="sheet-task-label">Dispatching task</div>
+                <div class="sheet-task-text">Add dark mode toggle to settings</div>
+              </div>
+              <div class="sheet-item copy">
+                <div class="sheet-item-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="9" y="9" width="13" height="13" rx="2"/>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                  </svg>
+                </div>
+                <div class="sheet-item-content">
+                  <div class="sheet-item-title">Copy to clipboard</div>
+                </div>
+              </div>
+              <div class="sheet-section-header">Running Instances</div>
+              <div class="sheet-item">
+                <div class="sheet-item-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="4 17 10 11 4 5"/>
+                    <line x1="12" y1="19" x2="20" y2="19"/>
+                  </svg>
+                </div>
+                <div class="sheet-item-content">
+                  <div class="sheet-item-title">frontend-app</div>
+                  <div class="sheet-item-subtitle">~/projects/myapp</div>
+                </div>
+                <div class="sheet-item-status idle"></div>
+              </div>
+              <div class="sheet-item">
+                <div class="sheet-item-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="4 17 10 11 4 5"/>
+                    <line x1="12" y1="19" x2="20" y2="19"/>
+                  </svg>
+                </div>
+                <div class="sheet-item-content">
+                  <div class="sheet-item-title">backend-api</div>
+                  <div class="sheet-item-subtitle">~/projects/api</div>
+                </div>
+                <div class="sheet-item-status working"></div>
+              </div>
+              <div class="sheet-divider"></div>
+              <div class="sheet-item primary">
+                <div class="sheet-item-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19"/>
+                    <line x1="5" y1="12" x2="19" y2="12"/>
+                  </svg>
+                </div>
+                <div class="sheet-item-content">
+                  <div class="sheet-item-title">Create new instance</div>
+                </div>
+              </div>
+              <div class="home-indicator"></div>
+            </div>
+          </div>
+        </div>
+        <div class="step-label">Bottom sheet with options</div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Flow 2: Swipe Right to Complete -->
+  <section class="flow-section">
+    <h2 class="flow-title">Flow 2: Swipe Right to Complete</h2>
+    <div class="flow-grid">
+
+      <!-- Step 1: Swipe Right -->
+      <div class="flow-step">
+        <div class="step-number">1</div>
+        <div class="mobile-frame">
+          <div class="mobile-notch"></div>
+          <div class="mobile-screen">
+            <div class="mobile-header">
+              <span class="mobile-header-title">Global Tasks</span>
+              <button class="mobile-header-btn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="18" y1="6" x2="6" y2="18"/>
+                  <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            </div>
+            <div class="mobile-input-area">
+              <input type="text" class="mobile-input" placeholder="Add a new task...">
+            </div>
+            <div class="mobile-task-list">
+              <div class="mobile-task">
+                <div class="mobile-task-content">
+                  <div class="mobile-checkbox"></div>
+                  <div class="mobile-task-text">
+                    <div class="mobile-task-title">Add dark mode toggle</div>
+                  </div>
+                </div>
+              </div>
+              <div class="mobile-task swiped-right">
+                <div class="mobile-task-bg">
+                  <div class="swipe-action-left">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                      <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                    <span class="swipe-label">Done</span>
+                  </div>
+                  <div class="swipe-action-right"></div>
+                </div>
+                <div class="mobile-task-content">
+                  <div class="mobile-checkbox in-progress"></div>
+                  <div class="mobile-task-text">
+                    <div class="mobile-task-title">Write payment tests</div>
+                    <div class="mobile-task-badge">
+                      <span class="status-dot"></span>
+                      backend-api
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="home-indicator"></div>
+          </div>
+        </div>
+        <div class="step-label">Swipe right reveals complete</div>
+        <div class="step-annotation">
+          <strong>Swipe right</strong> to mark a task as done. Works on both captured and in-progress tasks. The linked instance remains unaffected.
+        </div>
+      </div>
+
+      <div class="flow-arrow">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="5" y1="12" x2="19" y2="12"/>
+          <polyline points="12 5 19 12 12 19"/>
+        </svg>
+      </div>
+
+      <!-- Step 2: Completed -->
+      <div class="flow-step">
+        <div class="step-number">2</div>
+        <div class="mobile-frame">
+          <div class="mobile-notch"></div>
+          <div class="mobile-screen">
+            <div class="mobile-header">
+              <span class="mobile-header-title">Global Tasks</span>
+              <button class="mobile-header-btn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="18" y1="6" x2="6" y2="18"/>
+                  <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            </div>
+            <div class="mobile-input-area">
+              <input type="text" class="mobile-input" placeholder="Add a new task...">
+            </div>
+            <div class="mobile-task-list">
+              <div class="mobile-task">
+                <div class="mobile-task-content">
+                  <div class="mobile-checkbox"></div>
+                  <div class="mobile-task-text">
+                    <div class="mobile-task-title">Add dark mode toggle</div>
+                  </div>
+                </div>
+              </div>
+              <div class="mobile-task completed">
+                <div class="mobile-task-content">
+                  <div class="mobile-checkbox checked">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                      <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                  </div>
+                  <div class="mobile-task-text">
+                    <div class="mobile-task-title">Write payment tests</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="home-indicator"></div>
+          </div>
+        </div>
+        <div class="step-label">Task marked complete</div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Flow 3: Create New Instance -->
+  <section class="flow-section">
+    <h2 class="flow-title">Flow 3: Create New Instance</h2>
+    <div class="flow-grid">
+
+      <!-- Step 1: New Instance Form -->
+      <div class="flow-step">
+        <div class="step-number">1</div>
+        <div class="mobile-frame">
+          <div class="mobile-notch"></div>
+          <div class="mobile-screen">
+            <div class="mobile-header">
+              <span class="mobile-header-title">New Instance</span>
+              <button class="mobile-header-btn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="18" y1="6" x2="6" y2="18"/>
+                  <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            </div>
+            <div class="sheet-task-preview" style="margin: 16px;">
+              <div class="sheet-task-label">Task to dispatch</div>
+              <div class="sheet-task-text">Add dark mode toggle to settings</div>
+            </div>
+            <div class="new-instance-form">
+              <div class="form-group">
+                <label class="form-label">Machine</label>
+                <select class="form-select">
+                  <option>Local</option>
+                  <option>dev-server (SSH)</option>
+                  <option>staging-box (SSH)</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Directory</label>
+                <input type="text" class="form-input" placeholder="~/projects/myapp" value="~/projects/myapp">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Instance Name (optional)</label>
+                <input type="text" class="form-input" placeholder="Auto-generated from directory">
+              </div>
+              <button class="btn-primary">Create & Dispatch</button>
+              <button class="btn-secondary">Cancel</button>
+            </div>
+            <div class="home-indicator"></div>
+          </div>
+        </div>
+        <div class="step-label">New instance configuration</div>
+      </div>
+
+      <div class="flow-arrow">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="5" y1="12" x2="19" y2="12"/>
+          <polyline points="12 5 19 12 12 19"/>
+        </svg>
+      </div>
+
+      <!-- Step 2: Confirmation -->
+      <div class="flow-step">
+        <div class="step-number">2</div>
+        <div class="mobile-frame">
+          <div class="mobile-notch"></div>
+          <div class="mobile-screen">
+            <div class="mobile-header">
+              <span class="mobile-header-title">Global Tasks</span>
+              <button class="mobile-header-btn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="18" y1="6" x2="6" y2="18"/>
+                  <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            </div>
+            <div class="dispatch-confirm">
+              <div class="confirm-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+              </div>
+              <div class="confirm-title">Task Dispatched!</div>
+              <div class="confirm-subtitle">Sent to new instance</div>
+              <div class="confirm-instance">
+                <div class="sheet-item-status idle"></div>
+                <span class="confirm-instance-name">myapp</span>
+              </div>
+            </div>
+            <div class="mobile-task-list" style="margin-top: 24px; border-top: 1px solid var(--border-subtle);">
+              <div class="mobile-task">
+                <div class="mobile-task-content">
+                  <div class="mobile-checkbox in-progress"></div>
+                  <div class="mobile-task-text">
+                    <div class="mobile-task-title">Add dark mode toggle to settings</div>
+                    <div class="mobile-task-badge idle">
+                      <span class="status-dot"></span>
+                      myapp
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="mobile-task">
+                <div class="mobile-task-content">
+                  <div class="mobile-checkbox"></div>
+                  <div class="mobile-task-text">
+                    <div class="mobile-task-title">Refactor auth middleware</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="home-indicator"></div>
+          </div>
+        </div>
+        <div class="step-label">Confirmation & updated list</div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Flow 4: Filter & Quick Actions -->
+  <section class="flow-section">
+    <h2 class="flow-title">Flow 4: Filter & Organization</h2>
+    <div class="flow-grid">
+
+      <div class="flow-step">
+        <div class="step-number">1</div>
+        <div class="mobile-frame">
+          <div class="mobile-notch"></div>
+          <div class="mobile-screen">
+            <div class="mobile-header">
+              <span class="mobile-header-title">Global Tasks</span>
+              <button class="mobile-header-btn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="18" y1="6" x2="6" y2="18"/>
+                  <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            </div>
+            <div class="mobile-input-area">
+              <input type="text" class="mobile-input" placeholder="Add a new task...">
+            </div>
+            <div class="quick-actions">
+              <div class="quick-action-pill active">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"/>
+                </svg>
+                All
+              </div>
+              <div class="quick-action-pill">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="3" width="18" height="18" rx="2"/>
+                </svg>
+                Captured
+              </div>
+              <div class="quick-action-pill">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="3"/>
+                  <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+                </svg>
+                In Progress
+              </div>
+              <div class="quick-action-pill">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+                Done
+              </div>
+            </div>
+            <div class="mobile-task-list">
+              <div class="mobile-task">
+                <div class="mobile-task-content">
+                  <div class="mobile-checkbox"></div>
+                  <div class="mobile-task-text">
+                    <div class="mobile-task-title">Add dark mode toggle</div>
+                  </div>
+                </div>
+              </div>
+              <div class="mobile-task">
+                <div class="mobile-task-content">
+                  <div class="mobile-checkbox in-progress"></div>
+                  <div class="mobile-task-text">
+                    <div class="mobile-task-title">Write payment tests</div>
+                    <div class="mobile-task-badge">
+                      <span class="status-dot"></span>
+                      backend-api
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="mobile-task completed">
+                <div class="mobile-task-content">
+                  <div class="mobile-checkbox checked">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                      <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                  </div>
+                  <div class="mobile-task-text">
+                    <div class="mobile-task-title">Fix login bug</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="home-indicator"></div>
+          </div>
+        </div>
+        <div class="step-label">Quick filter pills</div>
+        <div class="step-annotation">
+          <strong>Filter pills</strong> let you quickly focus on captured, in-progress, or completed tasks. "Done" filter shows archived tasks.
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+</body>
+</html>

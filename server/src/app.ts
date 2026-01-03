@@ -16,6 +16,7 @@ import machinesRouter from './routes/machines.js';
 import sshRouter from './routes/ssh.js';
 import portForwardsRouter from './routes/port-forwards.js';
 import keychainRouter from './routes/keychain.js';
+import tasksRouter from './routes/tasks.js';
 import CONFIG from './config/index.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -56,6 +57,7 @@ app.use('/api/machines', machinesRouter);
 app.use('/api/ssh', sshRouter);
 app.use('/api/instances', portForwardsRouter);
 app.use('/api/keychain', keychainRouter);
+app.use('/api/tasks', tasksRouter);
 
 // Health check
 app.get('/api/health', (_req, res) => {

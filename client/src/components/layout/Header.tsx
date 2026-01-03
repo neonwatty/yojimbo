@@ -4,10 +4,12 @@ import { useUIStore } from '../../store/uiStore';
 import { useInstancesStore } from '../../store/instancesStore';
 import { useSettingsStore } from '../../store/settingsStore';
 import { useFeedStore } from '../../store/feedStore';
+import { useTasksStore } from '../../store/tasksStore';
 import { Icons } from '../common/Icons';
 import Tooltip from '../common/Tooltip';
 import { ConnectionStatus } from '../common/ConnectionStatus';
 import { SummaryModal } from '../modals/SummaryModal';
+import { GlobalTasksPanel } from '../tasks/GlobalTasksPanel';
 import { toast } from '../../store/toastStore';
 import type { SummaryType, GenerateSummaryResponse, CommandExecution, SummarySSEEvent } from '@cc-orchestrator/shared';
 
@@ -41,6 +43,9 @@ export default function Header() {
   const summaryIncludeIssues = useSettingsStore((state) => state.summaryIncludeIssues);
   const summaryCustomPrompt = useSettingsStore((state) => state.summaryCustomPrompt);
   const unreadCount = useFeedStore((state) => state.stats.unread);
+  const showTasksPanel = useUIStore((state) => state.showTasksPanel);
+  const setShowTasksPanel = useUIStore((state) => state.setShowTasksPanel);
+  const pendingTaskCount = useTasksStore((state) => state.stats.captured + state.stats.inProgress);
 
   // Close summary menu when clicking outside
   useEffect(() => {
@@ -261,6 +266,24 @@ export default function Header() {
           </Tooltip>
         )}
 
+        {/* Tasks Button */}
+        <Tooltip text="Global tasks (⌘G)" position="bottom">
+          <button
+            onClick={() => setShowTasksPanel(true)}
+            className={`relative px-2 py-1 rounded text-xs transition-colors
+              ${showTasksPanel
+                ? 'bg-frost-4/30 text-frost-2 border border-frost-4/50'
+                : 'text-theme-dim hover:text-theme-primary hover:bg-surface-700'}`}
+          >
+            Tasks
+            {pendingTaskCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 min-w-[14px] h-[14px] flex items-center justify-center text-[10px] font-bold bg-accent text-surface-900 rounded-full">
+                {pendingTaskCount > 99 ? '99+' : pendingTaskCount}
+              </span>
+            )}
+          </button>
+        </Tooltip>
+
         {/* Summary Button with Dropdown */}
         <div className="relative" ref={summaryMenuRef}>
           <Tooltip text="Generate work summary" position="bottom">
@@ -370,6 +393,16 @@ export default function Header() {
         isLoading={isLoadingSummary}
         streamingCommands={streamingCommands}
         isStreaming={isStreaming}
+      />
+
+      {/* Global Tasks Panel */}
+      <GlobalTasksPanel
+        isOpen={showTasksPanel}
+        onClose={() => setShowTasksPanel(false)}
+        onOpenNewInstance={() => {
+          setShowTasksPanel(false);
+          setShowNewInstanceModal(true);
+        }}
       />
     </header>
   );

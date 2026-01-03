@@ -14,6 +14,16 @@ interface ActivityEvent {
   readAt: string | null;
 }
 
+interface GlobalTask {
+  id: string;
+  text: string;
+  status: 'captured' | 'in_progress' | 'done' | 'archived';
+  dispatchedInstanceId: string | null;
+  dispatchedAt: string | null;
+  completedAt: string | null;
+  createdAt: string;
+}
+
 interface ApiClient {
   listInstances(): Promise<{ id: string; name: string }[]>;
   createInstance(data: { name: string; workingDir: string }): Promise<{ id: string; name: string }>;
@@ -29,6 +39,15 @@ interface ApiClient {
   markAllEventsAsRead(): Promise<{ count: number }>;
   clearFeedEvents(): Promise<{ count: number }>;
   createTestEvent(instanceId: string, instanceName: string, eventType: string, message: string): Promise<void>;
+  // Tasks API
+  listTasks(): Promise<GlobalTask[]>;
+  createTask(text: string): Promise<GlobalTask>;
+  getTask(id: string): Promise<GlobalTask>;
+  updateTask(id: string, data: { text?: string; status?: string }): Promise<GlobalTask>;
+  deleteTask(id: string): Promise<void>;
+  markTaskDone(id: string): Promise<GlobalTask>;
+  getTaskStats(): Promise<{ total: number; captured: number; inProgress: number; done: number }>;
+  cleanupAllTasks(): Promise<void>;
 }
 
 function createApiClient(): ApiClient {
@@ -131,6 +150,66 @@ function createApiClient(): ApiClient {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ instanceId, instanceName, eventType, message }),
       });
+    },
+
+    // Tasks API implementations
+    async listTasks() {
+      const response = await fetch(`${API_BASE}/tasks`);
+      const data = await response.json();
+      return data.data || [];
+    },
+
+    async createTask(text: string) {
+      const response = await fetch(`${API_BASE}/tasks`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      });
+      const data = await response.json();
+      return data.data;
+    },
+
+    async getTask(id: string) {
+      const response = await fetch(`${API_BASE}/tasks/${id}`);
+      const data = await response.json();
+      return data.data;
+    },
+
+    async updateTask(id: string, updates: { text?: string; status?: string }) {
+      const response = await fetch(`${API_BASE}/tasks/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      });
+      const data = await response.json();
+      return data.data;
+    },
+
+    async deleteTask(id: string) {
+      await fetch(`${API_BASE}/tasks/${id}`, {
+        method: 'DELETE',
+      });
+    },
+
+    async markTaskDone(id: string) {
+      const response = await fetch(`${API_BASE}/tasks/${id}/done`, {
+        method: 'POST',
+      });
+      const data = await response.json();
+      return data.data;
+    },
+
+    async getTaskStats() {
+      const response = await fetch(`${API_BASE}/tasks/stats`);
+      const data = await response.json();
+      return data.data;
+    },
+
+    async cleanupAllTasks() {
+      const tasks = await this.listTasks();
+      for (const task of tasks) {
+        await this.deleteTask(task.id);
+      }
     },
   };
 }

@@ -110,6 +110,21 @@ export function initDatabase(): Database.Database {
       FOREIGN KEY (instance_id) REFERENCES instances(id) ON DELETE CASCADE
     );
 
+    -- global_tasks table
+    CREATE TABLE IF NOT EXISTS global_tasks (
+      id TEXT PRIMARY KEY,
+      text TEXT NOT NULL,
+      status TEXT DEFAULT 'captured' CHECK(status IN ('captured', 'in_progress', 'done', 'archived')),
+      dispatched_instance_id TEXT,
+      dispatched_at TEXT,
+      completed_at TEXT,
+      archived_at TEXT,
+      display_order INTEGER,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (dispatched_instance_id) REFERENCES instances(id) ON DELETE SET NULL
+    );
+
     -- indexes
     CREATE INDEX IF NOT EXISTS idx_instances_status ON instances(status);
     CREATE INDEX IF NOT EXISTS idx_instances_pinned ON instances(is_pinned);
@@ -121,6 +136,9 @@ export function initDatabase(): Database.Database {
     CREATE INDEX IF NOT EXISTS idx_remote_machines_status ON remote_machines(status);
     CREATE INDEX IF NOT EXISTS idx_port_forwards_instance ON port_forwards(instance_id);
     CREATE INDEX IF NOT EXISTS idx_port_forwards_status ON port_forwards(status);
+    CREATE INDEX IF NOT EXISTS idx_global_tasks_status ON global_tasks(status);
+    CREATE INDEX IF NOT EXISTS idx_global_tasks_order ON global_tasks(display_order);
+    CREATE INDEX IF NOT EXISTS idx_global_tasks_instance ON global_tasks(dispatched_instance_id);
   `;
 
   db.exec(schema);

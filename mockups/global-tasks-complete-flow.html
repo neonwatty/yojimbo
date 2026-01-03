@@ -1,0 +1,2077 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Global Tasks — Complete Interaction Flow</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #0a0a0b;
+      --bg-secondary: #111113;
+      --bg-tertiary: #18181b;
+      --bg-hover: #1f1f23;
+      --bg-active: #27272a;
+      --border-subtle: #27272a;
+      --border-default: #3f3f46;
+      --text-primary: #fafafa;
+      --text-secondary: #a1a1aa;
+      --text-muted: #71717a;
+      --accent-blue: #3b82f6;
+      --accent-green: #22c55e;
+      --accent-yellow: #eab308;
+      --accent-orange: #f97316;
+      --accent-red: #ef4444;
+      --accent-purple: #8b5cf6;
+      --font-mono: 'JetBrains Mono', monospace;
+      --font-sans: 'Outfit', sans-serif;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: var(--font-sans);
+      background: #050506;
+      color: var(--text-primary);
+      min-height: 100vh;
+      padding: 40px 24px;
+    }
+
+    .page-header {
+      text-align: center;
+      margin-bottom: 48px;
+      max-width: 800px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .page-title {
+      font-size: 32px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 12px;
+      background: linear-gradient(135deg, var(--text-primary) 0%, var(--text-secondary) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .page-subtitle {
+      font-size: 16px;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    /* Section */
+    .section {
+      margin-bottom: 80px;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .section-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .section-icon.desktop {
+      background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+    }
+
+    .section-icon.mobile {
+      background: linear-gradient(135deg, var(--accent-green), var(--accent-blue));
+    }
+
+    .section-icon svg {
+      width: 24px;
+      height: 24px;
+      color: white;
+    }
+
+    .section-title {
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+
+    .section-desc {
+      font-size: 14px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    /* Flow Container */
+    .flow-container {
+      display: flex;
+      gap: 20px;
+      overflow-x: auto;
+      padding-bottom: 20px;
+      align-items: flex-start;
+    }
+
+    .flow-step {
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .step-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .step-number {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--accent-blue);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 600;
+      color: white;
+    }
+
+    .step-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .step-desc {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-align: center;
+      max-width: 280px;
+      margin-top: 12px;
+      line-height: 1.5;
+    }
+
+    .flow-arrow {
+      display: flex;
+      align-items: center;
+      padding-top: 200px;
+      flex-shrink: 0;
+    }
+
+    .flow-arrow svg {
+      width: 32px;
+      height: 32px;
+      color: var(--border-default);
+    }
+
+    /* Desktop Frame */
+    .desktop-frame {
+      width: 900px;
+      height: 560px;
+      background: var(--bg-primary);
+      border: 1px solid var(--border-default);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+      position: relative;
+    }
+
+    .desktop-frame.small {
+      width: 700px;
+    }
+
+    /* App Header */
+    .app-header {
+      height: 48px;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+    }
+
+    .app-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .app-logo-icon {
+      width: 24px;
+      height: 24px;
+      background: linear-gradient(135deg, var(--accent-orange), var(--accent-red));
+      border-radius: 6px;
+    }
+
+    .app-nav {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .nav-item {
+      padding: 8px 14px;
+      border-radius: 6px;
+      font-size: 13px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .nav-item:hover {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+    }
+
+    .nav-item.active {
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+    }
+
+    .app-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .action-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.15s;
+      position: relative;
+    }
+
+    .action-btn:hover {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+    }
+
+    .action-btn.tasks {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-subtle);
+    }
+
+    .action-btn.tasks:hover {
+      border-color: var(--accent-blue);
+      background: rgba(59, 130, 246, 0.1);
+    }
+
+    .action-btn.tasks.active {
+      background: var(--accent-blue);
+      border-color: var(--accent-blue);
+      color: white;
+    }
+
+    .action-btn svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    .badge {
+      position: absolute;
+      top: -4px;
+      right: -4px;
+      min-width: 18px;
+      height: 18px;
+      padding: 0 5px;
+      background: var(--accent-blue);
+      border-radius: 9px;
+      font-size: 10px;
+      font-weight: 600;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Main Content Area */
+    .app-body {
+      display: flex;
+      height: calc(100% - 48px);
+    }
+
+    .app-sidebar {
+      width: 220px;
+      background: var(--bg-secondary);
+      border-right: 1px solid var(--border-subtle);
+      padding: 12px;
+    }
+
+    .sidebar-section {
+      margin-bottom: 20px;
+    }
+
+    .sidebar-label {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      padding: 8px 10px;
+    }
+
+    .sidebar-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px;
+      border-radius: 8px;
+      font-size: 13px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .sidebar-item:hover {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+    }
+
+    .sidebar-item.active {
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+    }
+
+    .sidebar-item svg {
+      width: 16px;
+      height: 16px;
+      opacity: 0.7;
+    }
+
+    .sidebar-status {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-left: auto;
+    }
+
+    .sidebar-status.idle { background: var(--accent-green); }
+    .sidebar-status.working { background: var(--accent-yellow); }
+
+    .app-main {
+      flex: 1;
+      background: var(--bg-primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .main-placeholder {
+      text-align: center;
+      color: var(--text-muted);
+    }
+
+    .main-placeholder svg {
+      width: 48px;
+      height: 48px;
+      margin-bottom: 16px;
+      opacity: 0.3;
+    }
+
+    /* Tasks Panel (Right Sidebar) */
+    .tasks-panel {
+      width: 360px;
+      background: var(--bg-secondary);
+      border-left: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      animation: slideIn 0.2s ease;
+    }
+
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    .tasks-header {
+      padding: 16px;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .tasks-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .tasks-title-icon {
+      width: 24px;
+      height: 24px;
+      background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .tasks-title-icon svg {
+      width: 14px;
+      height: 14px;
+      color: white;
+    }
+
+    .tasks-close {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .tasks-close:hover {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+    }
+
+    /* Task Input */
+    .task-input-wrap {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .task-input {
+      width: 100%;
+      padding: 10px 14px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--text-primary);
+      outline: none;
+    }
+
+    .task-input:focus {
+      border-color: var(--accent-blue);
+    }
+
+    .task-input::placeholder {
+      color: var(--text-muted);
+    }
+
+    /* Filter Pills */
+    .filter-pills {
+      display: flex;
+      gap: 6px;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border-subtle);
+      overflow-x: auto;
+    }
+
+    .filter-pill {
+      padding: 6px 12px;
+      border-radius: 16px;
+      background: var(--bg-tertiary);
+      border: 1px solid transparent;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-muted);
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s;
+    }
+
+    .filter-pill:hover {
+      color: var(--text-secondary);
+    }
+
+    .filter-pill.active {
+      background: rgba(59, 130, 246, 0.15);
+      border-color: var(--accent-blue);
+      color: var(--accent-blue);
+    }
+
+    /* Task List */
+    .task-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px 0;
+    }
+
+    .task-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 12px 16px;
+      position: relative;
+      cursor: grab;
+      transition: background 0.1s;
+    }
+
+    .task-item:hover {
+      background: var(--bg-hover);
+    }
+
+    .task-item:hover .task-dispatch {
+      opacity: 1;
+    }
+
+    .task-item.dragging {
+      background: var(--bg-active);
+      opacity: 0.8;
+    }
+
+    .task-drag-handle {
+      width: 16px;
+      height: 16px;
+      color: var(--text-muted);
+      opacity: 0;
+      cursor: grab;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .task-item:hover .task-drag-handle {
+      opacity: 0.5;
+    }
+
+    .task-checkbox {
+      width: 16px;
+      height: 16px;
+      border: 2px solid var(--border-default);
+      border-radius: 4px;
+      flex-shrink: 0;
+      margin-top: 2px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    .task-checkbox.in-progress {
+      border-color: var(--accent-yellow);
+    }
+
+    .task-checkbox.in-progress::after {
+      content: '';
+      width: 6px;
+      height: 6px;
+      background: var(--accent-yellow);
+      border-radius: 50%;
+    }
+
+    .task-checkbox.checked {
+      background: var(--accent-green);
+      border-color: var(--accent-green);
+    }
+
+    .task-content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .task-text {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      line-height: 1.4;
+      color: var(--text-primary);
+    }
+
+    .task-item.completed .task-text {
+      color: var(--text-muted);
+      text-decoration: line-through;
+    }
+
+    .task-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      margin-top: 6px;
+      padding: 3px 8px;
+      background: rgba(234, 179, 8, 0.12);
+      border-radius: 12px;
+      font-size: 10px;
+      font-weight: 500;
+      color: var(--accent-yellow);
+    }
+
+    .task-badge.idle {
+      background: rgba(34, 197, 94, 0.12);
+      color: var(--accent-green);
+    }
+
+    .status-dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    .task-dispatch {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      background: var(--accent-blue);
+      border: none;
+      color: white;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: all 0.15s;
+      flex-shrink: 0;
+    }
+
+    .task-dispatch:hover {
+      background: #2563eb;
+      transform: scale(1.05);
+    }
+
+    .task-dispatch svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    /* Dispatch Dropdown */
+    .dispatch-dropdown {
+      position: absolute;
+      right: 16px;
+      top: 44px;
+      width: 260px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-default);
+      border-radius: 10px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+      z-index: 100;
+      overflow: hidden;
+    }
+
+    .dd-header {
+      padding: 10px 12px;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .dd-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+
+    .dd-item:hover {
+      background: var(--bg-hover);
+    }
+
+    .dd-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-secondary);
+    }
+
+    .dd-icon svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    .dd-item.primary .dd-icon {
+      background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+      border: none;
+      color: white;
+    }
+
+    .dd-content {
+      flex: 1;
+    }
+
+    .dd-title {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    .dd-subtitle {
+      font-size: 10px;
+      color: var(--text-muted);
+      margin-top: 1px;
+    }
+
+    .dd-status {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+    }
+
+    .dd-status.idle { background: var(--accent-green); }
+    .dd-status.working { background: var(--accent-yellow); }
+
+    .dd-divider {
+      height: 1px;
+      background: var(--border-subtle);
+    }
+
+    /* Keyboard Shortcut Hint */
+    .kbd-hint {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 16px;
+      border-top: 1px solid var(--border-subtle);
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .kbd {
+      padding: 2px 6px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-subtle);
+      border-radius: 4px;
+      font-family: var(--font-mono);
+      font-size: 10px;
+    }
+
+    /* Hover tooltip */
+    .tooltip {
+      position: absolute;
+      bottom: calc(100% + 8px);
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 6px 10px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-default);
+      border-radius: 6px;
+      font-size: 11px;
+      color: var(--text-primary);
+      white-space: nowrap;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      z-index: 50;
+    }
+
+    .tooltip::after {
+      content: '';
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      border: 6px solid transparent;
+      border-top-color: var(--border-default);
+    }
+
+    /* Callout */
+    .callout {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 16px;
+      background: rgba(59, 130, 246, 0.08);
+      border: 1px solid rgba(59, 130, 246, 0.2);
+      border-radius: 10px;
+      margin-top: 16px;
+      max-width: 900px;
+    }
+
+    .callout-icon {
+      width: 20px;
+      height: 20px;
+      color: var(--accent-blue);
+      flex-shrink: 0;
+    }
+
+    .callout-text {
+      font-size: 13px;
+      line-height: 1.5;
+      color: var(--text-secondary);
+    }
+
+    .callout-text strong {
+      color: var(--text-primary);
+    }
+
+    /* Mobile Frame */
+    .mobile-frame {
+      width: 320px;
+      background: var(--bg-primary);
+      border: 1px solid var(--border-default);
+      border-radius: 36px;
+      overflow: hidden;
+      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+    }
+
+    .mobile-notch {
+      width: 100px;
+      height: 24px;
+      background: #000;
+      border-radius: 0 0 16px 16px;
+      margin: 0 auto;
+    }
+
+    .mobile-screen {
+      min-height: 580px;
+      position: relative;
+    }
+
+    /* Mobile Nav Bar */
+    .mobile-nav {
+      display: flex;
+      justify-content: space-around;
+      padding: 12px 16px;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .mobile-nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+
+    .mobile-nav-item.active {
+      color: var(--accent-blue);
+    }
+
+    .mobile-nav-item svg {
+      width: 22px;
+      height: 22px;
+    }
+
+    /* Mobile Header */
+    .mobile-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .mobile-header-title {
+      font-size: 17px;
+      font-weight: 600;
+    }
+
+    .mobile-header-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--bg-tertiary);
+      border: none;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Mobile Input */
+    .mobile-input-area {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .mobile-input {
+      width: 100%;
+      padding: 12px 14px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      color: var(--text-primary);
+    }
+
+    .mobile-input::placeholder {
+      color: var(--text-muted);
+    }
+
+    /* Mobile Task List */
+    .mobile-task-list {
+      padding: 8px 0;
+    }
+
+    .mobile-task {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .mobile-task-bg {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      display: flex;
+    }
+
+    .swipe-left {
+      width: 50%;
+      background: var(--accent-green);
+      display: flex;
+      align-items: center;
+      padding-left: 20px;
+    }
+
+    .swipe-right {
+      width: 50%;
+      background: var(--accent-blue);
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      padding-right: 20px;
+    }
+
+    .swipe-left svg, .swipe-right svg {
+      width: 20px;
+      height: 20px;
+      color: white;
+    }
+
+    .swipe-label {
+      font-size: 10px;
+      font-weight: 600;
+      color: white;
+      margin-left: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .mobile-task-content {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 14px 18px;
+      background: var(--bg-primary);
+      position: relative;
+      transition: transform 0.2s ease;
+    }
+
+    .mobile-task.swiped-left .mobile-task-content {
+      transform: translateX(-80px);
+    }
+
+    .mobile-task.swiped-right .mobile-task-content {
+      transform: translateX(80px);
+    }
+
+    .mobile-checkbox {
+      width: 20px;
+      height: 20px;
+      border: 2px solid var(--border-default);
+      border-radius: 5px;
+      flex-shrink: 0;
+      margin-top: 1px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .mobile-checkbox.in-progress {
+      border-color: var(--accent-yellow);
+    }
+
+    .mobile-checkbox.in-progress::after {
+      content: '';
+      width: 8px;
+      height: 8px;
+      background: var(--accent-yellow);
+      border-radius: 50%;
+    }
+
+    .mobile-checkbox.checked {
+      background: var(--accent-green);
+      border-color: var(--accent-green);
+    }
+
+    .mobile-task-text {
+      flex: 1;
+    }
+
+    .mobile-task-title {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      line-height: 1.4;
+      color: var(--text-primary);
+    }
+
+    .mobile-task.completed .mobile-task-title {
+      color: var(--text-muted);
+      text-decoration: line-through;
+    }
+
+    .mobile-task-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      margin-top: 6px;
+      padding: 4px 10px;
+      background: rgba(234, 179, 8, 0.12);
+      border-radius: 16px;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--accent-yellow);
+    }
+
+    .mobile-task-badge.idle {
+      background: rgba(34, 197, 94, 0.12);
+      color: var(--accent-green);
+    }
+
+    /* Mobile FAB */
+    .mobile-fab {
+      position: absolute;
+      bottom: 80px;
+      right: 20px;
+      width: 56px;
+      height: 56px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+      border: none;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 8px 24px rgba(59, 130, 246, 0.4);
+    }
+
+    .mobile-fab svg {
+      width: 24px;
+      height: 24px;
+    }
+
+    .mobile-fab .badge {
+      top: -6px;
+      right: -6px;
+      width: 22px;
+      height: 22px;
+      font-size: 11px;
+    }
+
+    /* Mobile Bottom Sheet */
+    .mobile-sheet {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--bg-tertiary);
+      border-radius: 20px 20px 0 0;
+      box-shadow: 0 -20px 40px rgba(0,0,0,0.5);
+      z-index: 10;
+    }
+
+    .sheet-handle {
+      width: 36px;
+      height: 4px;
+      background: var(--border-default);
+      border-radius: 4px;
+      margin: 10px auto 8px;
+    }
+
+    .sheet-header {
+      padding: 8px 20px 12px;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+    }
+
+    .sheet-item {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 20px;
+    }
+
+    .sheet-item-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-secondary);
+    }
+
+    .sheet-item.primary .sheet-item-icon {
+      background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+      border: none;
+      color: white;
+    }
+
+    .sheet-item-content { flex: 1; }
+
+    .sheet-item-title {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    .sheet-item-subtitle {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .sheet-item-status {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+    }
+
+    .sheet-item-status.idle {
+      background: var(--accent-green);
+      box-shadow: 0 0 8px rgba(34, 197, 94, 0.5);
+    }
+
+    .sheet-item-status.working {
+      background: var(--accent-yellow);
+      box-shadow: 0 0 8px rgba(234, 179, 8, 0.5);
+    }
+
+    .sheet-divider {
+      height: 1px;
+      background: var(--border-subtle);
+      margin: 4px 20px;
+    }
+
+    .sheet-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 5;
+    }
+
+    .home-indicator {
+      width: 120px;
+      height: 4px;
+      background: var(--text-muted);
+      border-radius: 4px;
+      margin: 12px auto 8px;
+      opacity: 0.4;
+    }
+
+    /* Annotation Arrow */
+    .annotation-arrow {
+      position: absolute;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .annotation-arrow svg {
+      width: 32px;
+      height: 32px;
+      color: var(--accent-blue);
+    }
+
+    .annotation-arrow span {
+      font-size: 12px;
+      color: var(--accent-blue);
+      font-weight: 500;
+    }
+  </style>
+</head>
+<body>
+  <header class="page-header">
+    <h1 class="page-title">Global Tasks — Complete Flow</h1>
+    <p class="page-subtitle">Every step of the interaction on desktop and mobile, from entry point to dispatch</p>
+  </header>
+
+  <!-- DESKTOP FLOW -->
+  <section class="section">
+    <div class="section-header">
+      <div class="section-icon desktop">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="2" y="3" width="20" height="14" rx="2"/>
+          <line x1="8" y1="21" x2="16" y2="21"/>
+          <line x1="12" y1="17" x2="12" y2="21"/>
+        </svg>
+      </div>
+      <div>
+        <h2 class="section-title">Desktop Flow</h2>
+        <p class="section-desc">Right sidebar panel with keyboard shortcut access</p>
+      </div>
+    </div>
+
+    <div class="flow-container">
+      <!-- Step 1: Entry Point -->
+      <div class="flow-step">
+        <div class="step-header">
+          <div class="step-number">1</div>
+          <div class="step-title">Entry Point</div>
+        </div>
+        <div class="desktop-frame small">
+          <div class="app-header">
+            <div class="app-logo">
+              <div class="app-logo-icon"></div>
+              Yojimbo
+            </div>
+            <div class="app-nav">
+              <div class="nav-item active">Instances</div>
+              <div class="nav-item">History</div>
+              <div class="nav-item">Activity</div>
+            </div>
+            <div class="app-actions">
+              <button class="action-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="11" cy="11" r="8"/>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
+              </button>
+              <button class="action-btn tasks" style="position: relative;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M9 11l3 3L22 4"/>
+                  <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+                </svg>
+                <span class="badge">3</span>
+                <div class="tooltip">Global Tasks <kbd style="margin-left:6px;padding:2px 4px;background:var(--bg-secondary);border:1px solid var(--border-subtle);border-radius:3px;font-size:9px;">⌘G</kbd></div>
+              </button>
+              <button class="action-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="3"/>
+                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+          <div class="app-body">
+            <div class="app-sidebar">
+              <div class="sidebar-section">
+                <div class="sidebar-label">Instances</div>
+                <div class="sidebar-item active">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="4 17 10 11 4 5"/>
+                    <line x1="12" y1="19" x2="20" y2="19"/>
+                  </svg>
+                  frontend-app
+                  <div class="sidebar-status idle"></div>
+                </div>
+                <div class="sidebar-item">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="4 17 10 11 4 5"/>
+                    <line x1="12" y1="19" x2="20" y2="19"/>
+                  </svg>
+                  backend-api
+                  <div class="sidebar-status working"></div>
+                </div>
+              </div>
+            </div>
+            <div class="app-main">
+              <div class="main-placeholder">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <polyline points="4 17 10 11 4 5"/>
+                  <line x1="12" y1="19" x2="20" y2="19"/>
+                </svg>
+                <div>Select an instance</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="step-desc"><strong>Tasks button</strong> in header with badge showing pending count. Hover shows tooltip with keyboard shortcut ⌘G</p>
+      </div>
+
+      <div class="flow-arrow">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="5" y1="12" x2="19" y2="12"/>
+          <polyline points="12 5 19 12 12 19"/>
+        </svg>
+      </div>
+
+      <!-- Step 2: Panel Open -->
+      <div class="flow-step">
+        <div class="step-header">
+          <div class="step-number">2</div>
+          <div class="step-title">Panel Opens</div>
+        </div>
+        <div class="desktop-frame">
+          <div class="app-header">
+            <div class="app-logo">
+              <div class="app-logo-icon"></div>
+              Yojimbo
+            </div>
+            <div class="app-nav">
+              <div class="nav-item active">Instances</div>
+              <div class="nav-item">History</div>
+              <div class="nav-item">Activity</div>
+            </div>
+            <div class="app-actions">
+              <button class="action-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="11" cy="11" r="8"/>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
+              </button>
+              <button class="action-btn tasks active">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M9 11l3 3L22 4"/>
+                  <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+                </svg>
+              </button>
+              <button class="action-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="3"/>
+                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+          <div class="app-body">
+            <div class="app-sidebar">
+              <div class="sidebar-section">
+                <div class="sidebar-label">Instances</div>
+                <div class="sidebar-item active">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="4 17 10 11 4 5"/>
+                    <line x1="12" y1="19" x2="20" y2="19"/>
+                  </svg>
+                  frontend-app
+                  <div class="sidebar-status idle"></div>
+                </div>
+                <div class="sidebar-item">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="4 17 10 11 4 5"/>
+                    <line x1="12" y1="19" x2="20" y2="19"/>
+                  </svg>
+                  backend-api
+                  <div class="sidebar-status working"></div>
+                </div>
+              </div>
+            </div>
+            <div class="app-main">
+              <div class="main-placeholder">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <polyline points="4 17 10 11 4 5"/>
+                  <line x1="12" y1="19" x2="20" y2="19"/>
+                </svg>
+                <div>Select an instance</div>
+              </div>
+            </div>
+            <div class="tasks-panel">
+              <div class="tasks-header">
+                <div class="tasks-title">
+                  <div class="tasks-title-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                      <path d="M9 11l3 3L22 4"/>
+                    </svg>
+                  </div>
+                  Global Tasks
+                </div>
+                <button class="tasks-close">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"/>
+                    <line x1="6" y1="6" x2="18" y2="18"/>
+                  </svg>
+                </button>
+              </div>
+              <div class="task-input-wrap">
+                <input type="text" class="task-input" placeholder="Add a new task... (Enter to save)">
+              </div>
+              <div class="filter-pills">
+                <div class="filter-pill active">All</div>
+                <div class="filter-pill">Captured</div>
+                <div class="filter-pill">In Progress</div>
+                <div class="filter-pill">Done</div>
+              </div>
+              <div class="task-list">
+                <div class="task-item">
+                  <svg class="task-drag-handle" viewBox="0 0 24 24" fill="currentColor">
+                    <circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/>
+                    <circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/>
+                    <circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/>
+                  </svg>
+                  <div class="task-checkbox"></div>
+                  <div class="task-content">
+                    <div class="task-text">Add dark mode toggle to settings</div>
+                  </div>
+                  <button class="task-dispatch">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <line x1="22" y1="2" x2="11" y2="13"/>
+                      <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                    </svg>
+                  </button>
+                </div>
+                <div class="task-item">
+                  <svg class="task-drag-handle" viewBox="0 0 24 24" fill="currentColor">
+                    <circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/>
+                    <circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/>
+                    <circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/>
+                  </svg>
+                  <div class="task-checkbox in-progress"></div>
+                  <div class="task-content">
+                    <div class="task-text">Refactor auth middleware</div>
+                    <div class="task-badge">
+                      <span class="status-dot"></span>
+                      backend-api
+                    </div>
+                  </div>
+                  <button class="task-dispatch">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <line x1="22" y1="2" x2="11" y2="13"/>
+                      <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                    </svg>
+                  </button>
+                </div>
+                <div class="task-item">
+                  <svg class="task-drag-handle" viewBox="0 0 24 24" fill="currentColor">
+                    <circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/>
+                    <circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/>
+                    <circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/>
+                  </svg>
+                  <div class="task-checkbox"></div>
+                  <div class="task-content">
+                    <div class="task-text">Write unit tests for payment service</div>
+                  </div>
+                  <button class="task-dispatch">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <line x1="22" y1="2" x2="11" y2="13"/>
+                      <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+              <div class="kbd-hint">
+                <kbd class="kbd">⌘G</kbd> toggle panel
+                <span style="margin-left:auto;">drag to reorder</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="step-desc">Right sidebar slides in. Shows input, filters, task list with drag handles. Dispatch icon appears on hover.</p>
+      </div>
+
+      <div class="flow-arrow">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="5" y1="12" x2="19" y2="12"/>
+          <polyline points="12 5 19 12 12 19"/>
+        </svg>
+      </div>
+
+      <!-- Step 3: Dispatch Dropdown -->
+      <div class="flow-step">
+        <div class="step-header">
+          <div class="step-number">3</div>
+          <div class="step-title">Dispatch Options</div>
+        </div>
+        <div class="desktop-frame">
+          <div class="app-header">
+            <div class="app-logo">
+              <div class="app-logo-icon"></div>
+              Yojimbo
+            </div>
+            <div class="app-nav">
+              <div class="nav-item active">Instances</div>
+              <div class="nav-item">History</div>
+              <div class="nav-item">Activity</div>
+            </div>
+            <div class="app-actions">
+              <button class="action-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="11" cy="11" r="8"/>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
+              </button>
+              <button class="action-btn tasks active">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M9 11l3 3L22 4"/>
+                  <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+                </svg>
+              </button>
+              <button class="action-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="3"/>
+                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+          <div class="app-body">
+            <div class="app-sidebar">
+              <div class="sidebar-section">
+                <div class="sidebar-label">Instances</div>
+                <div class="sidebar-item active">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="4 17 10 11 4 5"/>
+                    <line x1="12" y1="19" x2="20" y2="19"/>
+                  </svg>
+                  frontend-app
+                  <div class="sidebar-status idle"></div>
+                </div>
+                <div class="sidebar-item">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="4 17 10 11 4 5"/>
+                    <line x1="12" y1="19" x2="20" y2="19"/>
+                  </svg>
+                  backend-api
+                  <div class="sidebar-status working"></div>
+                </div>
+              </div>
+            </div>
+            <div class="app-main">
+              <div class="main-placeholder">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <polyline points="4 17 10 11 4 5"/>
+                  <line x1="12" y1="19" x2="20" y2="19"/>
+                </svg>
+                <div>Select an instance</div>
+              </div>
+            </div>
+            <div class="tasks-panel">
+              <div class="tasks-header">
+                <div class="tasks-title">
+                  <div class="tasks-title-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                      <path d="M9 11l3 3L22 4"/>
+                    </svg>
+                  </div>
+                  Global Tasks
+                </div>
+                <button class="tasks-close">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"/>
+                    <line x1="6" y1="6" x2="18" y2="18"/>
+                  </svg>
+                </button>
+              </div>
+              <div class="task-input-wrap">
+                <input type="text" class="task-input" placeholder="Add a new task... (Enter to save)">
+              </div>
+              <div class="filter-pills">
+                <div class="filter-pill active">All</div>
+                <div class="filter-pill">Captured</div>
+                <div class="filter-pill">In Progress</div>
+                <div class="filter-pill">Done</div>
+              </div>
+              <div class="task-list">
+                <div class="task-item" style="background: var(--bg-hover);">
+                  <svg class="task-drag-handle" viewBox="0 0 24 24" fill="currentColor" style="opacity:0.5;">
+                    <circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/>
+                    <circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/>
+                    <circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/>
+                  </svg>
+                  <div class="task-checkbox"></div>
+                  <div class="task-content">
+                    <div class="task-text">Add dark mode toggle to settings</div>
+                  </div>
+                  <button class="task-dispatch" style="opacity:1;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <line x1="22" y1="2" x2="11" y2="13"/>
+                      <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                    </svg>
+                  </button>
+                  <div class="dispatch-dropdown">
+                    <div class="dd-header">Dispatch to</div>
+                    <div class="dd-item">
+                      <div class="dd-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <rect x="9" y="9" width="13" height="13" rx="2"/>
+                          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                        </svg>
+                      </div>
+                      <div class="dd-content">
+                        <div class="dd-title">Copy to clipboard</div>
+                        <div class="dd-subtitle">Paste manually</div>
+                      </div>
+                    </div>
+                    <div class="dd-divider"></div>
+                    <div class="dd-header">Running Instances</div>
+                    <div class="dd-item">
+                      <div class="dd-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <polyline points="4 17 10 11 4 5"/>
+                          <line x1="12" y1="19" x2="20" y2="19"/>
+                        </svg>
+                      </div>
+                      <div class="dd-content">
+                        <div class="dd-title">frontend-app</div>
+                        <div class="dd-subtitle">~/projects/myapp</div>
+                      </div>
+                      <div class="dd-status idle"></div>
+                    </div>
+                    <div class="dd-item">
+                      <div class="dd-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <polyline points="4 17 10 11 4 5"/>
+                          <line x1="12" y1="19" x2="20" y2="19"/>
+                        </svg>
+                      </div>
+                      <div class="dd-content">
+                        <div class="dd-title">backend-api</div>
+                        <div class="dd-subtitle">~/projects/api</div>
+                      </div>
+                      <div class="dd-status working"></div>
+                    </div>
+                    <div class="dd-divider"></div>
+                    <div class="dd-item primary">
+                      <div class="dd-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <line x1="12" y1="5" x2="12" y2="19"/>
+                          <line x1="5" y1="12" x2="19" y2="12"/>
+                        </svg>
+                      </div>
+                      <div class="dd-content">
+                        <div class="dd-title">Create new instance</div>
+                        <div class="dd-subtitle">Opens instance modal</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="task-item">
+                  <svg class="task-drag-handle" viewBox="0 0 24 24" fill="currentColor">
+                    <circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/>
+                    <circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/>
+                    <circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/>
+                  </svg>
+                  <div class="task-checkbox in-progress"></div>
+                  <div class="task-content">
+                    <div class="task-text">Refactor auth middleware</div>
+                    <div class="task-badge">
+                      <span class="status-dot"></span>
+                      backend-api
+                    </div>
+                  </div>
+                  <button class="task-dispatch">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <line x1="22" y1="2" x2="11" y2="13"/>
+                      <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+              <div class="kbd-hint">
+                <kbd class="kbd">⌘G</kbd> toggle panel
+                <span style="margin-left:auto;">drag to reorder</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="step-desc">Click dispatch icon shows dropdown: Copy, existing instances with status, or create new instance.</p>
+      </div>
+    </div>
+
+    <div class="callout">
+      <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="12" y1="16" x2="12" y2="12"/>
+        <line x1="12" y1="8" x2="12.01" y2="8"/>
+      </svg>
+      <div class="callout-text">
+        <strong>Drag to reorder:</strong> Grab the dots handle on the left of each task to reorder. Priority tasks at the top. <strong>Keyboard shortcut ⌘G</strong> toggles the panel from anywhere in the app.
+      </div>
+    </div>
+  </section>
+
+  <!-- MOBILE FLOW -->
+  <section class="section">
+    <div class="section-header">
+      <div class="section-icon mobile">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="5" y="2" width="14" height="20" rx="2"/>
+          <line x1="12" y1="18" x2="12.01" y2="18"/>
+        </svg>
+      </div>
+      <div>
+        <h2 class="section-title">Mobile Flow</h2>
+        <p class="section-desc">FAB entry point with full-screen experience</p>
+      </div>
+    </div>
+
+    <div class="flow-container">
+      <!-- Step 1: FAB on Home -->
+      <div class="flow-step">
+        <div class="step-header">
+          <div class="step-number">1</div>
+          <div class="step-title">Entry Point (FAB)</div>
+        </div>
+        <div class="mobile-frame">
+          <div class="mobile-notch"></div>
+          <div class="mobile-screen">
+            <div class="mobile-nav">
+              <div class="mobile-nav-item active">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                </svg>
+                Home
+              </div>
+              <div class="mobile-nav-item">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="4 17 10 11 4 5"/>
+                  <line x1="12" y1="19" x2="20" y2="19"/>
+                </svg>
+                Instances
+              </div>
+              <div class="mobile-nav-item">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"/>
+                  <polyline points="12 6 12 12 16 14"/>
+                </svg>
+                History
+              </div>
+            </div>
+            <div style="padding: 24px 18px; text-align: center; color: var(--text-muted); margin-top: 100px;">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin: 0 auto 16px; opacity: 0.3;">
+                <polyline points="4 17 10 11 4 5"/>
+                <line x1="12" y1="19" x2="20" y2="19"/>
+              </svg>
+              <div>Your instances will appear here</div>
+            </div>
+            <button class="mobile-fab">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9 11l3 3L22 4"/>
+                <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+              </svg>
+              <span class="badge">3</span>
+            </button>
+            <div class="home-indicator"></div>
+          </div>
+        </div>
+        <p class="step-desc"><strong>Floating Action Button</strong> with badge in bottom-right. Tapping opens full-screen task view.</p>
+      </div>
+
+      <div class="flow-arrow">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="5" y1="12" x2="19" y2="12"/>
+          <polyline points="12 5 19 12 12 19"/>
+        </svg>
+      </div>
+
+      <!-- Step 2: Full Screen Tasks -->
+      <div class="flow-step">
+        <div class="step-header">
+          <div class="step-number">2</div>
+          <div class="step-title">Task List</div>
+        </div>
+        <div class="mobile-frame">
+          <div class="mobile-notch"></div>
+          <div class="mobile-screen">
+            <div class="mobile-header">
+              <span class="mobile-header-title">Global Tasks</span>
+              <button class="mobile-header-btn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="18" y1="6" x2="6" y2="18"/>
+                  <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            </div>
+            <div class="mobile-input-area">
+              <input type="text" class="mobile-input" placeholder="Add a new task...">
+            </div>
+            <div class="mobile-task-list">
+              <div class="mobile-task">
+                <div class="mobile-task-content">
+                  <div class="mobile-checkbox"></div>
+                  <div class="mobile-task-text">
+                    <div class="mobile-task-title">Add dark mode toggle to settings</div>
+                  </div>
+                </div>
+              </div>
+              <div class="mobile-task">
+                <div class="mobile-task-content">
+                  <div class="mobile-checkbox in-progress"></div>
+                  <div class="mobile-task-text">
+                    <div class="mobile-task-title">Refactor auth middleware</div>
+                    <div class="mobile-task-badge">
+                      <span class="status-dot"></span>
+                      backend-api
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="mobile-task">
+                <div class="mobile-task-content">
+                  <div class="mobile-checkbox"></div>
+                  <div class="mobile-task-text">
+                    <div class="mobile-task-title">Write payment tests</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div style="padding: 16px 18px; font-size: 11px; color: var(--text-muted); display: flex; gap: 24px;">
+              <span>← Swipe right: Done</span>
+              <span>Swipe left: Dispatch →</span>
+            </div>
+            <div class="home-indicator"></div>
+          </div>
+        </div>
+        <p class="step-desc">Full-screen task list. Swipe hints at bottom. Input at top for quick capture.</p>
+      </div>
+
+      <div class="flow-arrow">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="5" y1="12" x2="19" y2="12"/>
+          <polyline points="12 5 19 12 12 19"/>
+        </svg>
+      </div>
+
+      <!-- Step 3: Swipe Left -->
+      <div class="flow-step">
+        <div class="step-header">
+          <div class="step-number">3</div>
+          <div class="step-title">Swipe Left</div>
+        </div>
+        <div class="mobile-frame">
+          <div class="mobile-notch"></div>
+          <div class="mobile-screen">
+            <div class="mobile-header">
+              <span class="mobile-header-title">Global Tasks</span>
+              <button class="mobile-header-btn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="18" y1="6" x2="6" y2="18"/>
+                  <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            </div>
+            <div class="mobile-input-area">
+              <input type="text" class="mobile-input" placeholder="Add a new task...">
+            </div>
+            <div class="mobile-task-list">
+              <div class="mobile-task swiped-left">
+                <div class="mobile-task-bg">
+                  <div class="swipe-left"></div>
+                  <div class="swipe-right">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <line x1="22" y1="2" x2="11" y2="13"/>
+                      <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                    </svg>
+                    <span class="swipe-label">Dispatch</span>
+                  </div>
+                </div>
+                <div class="mobile-task-content">
+                  <div class="mobile-checkbox"></div>
+                  <div class="mobile-task-text">
+                    <div class="mobile-task-title">Add dark mode toggle to settings</div>
+                  </div>
+                </div>
+              </div>
+              <div class="mobile-task">
+                <div class="mobile-task-content">
+                  <div class="mobile-checkbox in-progress"></div>
+                  <div class="mobile-task-text">
+                    <div class="mobile-task-title">Refactor auth middleware</div>
+                    <div class="mobile-task-badge">
+                      <span class="status-dot"></span>
+                      backend-api
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="mobile-task">
+                <div class="mobile-task-content">
+                  <div class="mobile-checkbox"></div>
+                  <div class="mobile-task-text">
+                    <div class="mobile-task-title">Write payment tests</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="home-indicator"></div>
+          </div>
+        </div>
+        <p class="step-desc">Swipe left reveals blue <strong>Dispatch</strong> action. Releasing or tapping opens bottom sheet.</p>
+      </div>
+
+      <div class="flow-arrow">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="5" y1="12" x2="19" y2="12"/>
+          <polyline points="12 5 19 12 12 19"/>
+        </svg>
+      </div>
+
+      <!-- Step 4: Bottom Sheet -->
+      <div class="flow-step">
+        <div class="step-header">
+          <div class="step-number">4</div>
+          <div class="step-title">Dispatch Sheet</div>
+        </div>
+        <div class="mobile-frame">
+          <div class="mobile-notch"></div>
+          <div class="mobile-screen">
+            <div class="mobile-header">
+              <span class="mobile-header-title">Global Tasks</span>
+              <button class="mobile-header-btn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="18" y1="6" x2="6" y2="18"/>
+                  <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            </div>
+            <div class="sheet-overlay"></div>
+            <div class="mobile-sheet">
+              <div class="sheet-handle"></div>
+              <div class="sheet-header">Dispatch to</div>
+              <div class="sheet-item">
+                <div class="sheet-item-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="9" y="9" width="13" height="13" rx="2"/>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                  </svg>
+                </div>
+                <div class="sheet-item-content">
+                  <div class="sheet-item-title">Copy to clipboard</div>
+                </div>
+              </div>
+              <div class="sheet-divider"></div>
+              <div class="sheet-header">Running Instances</div>
+              <div class="sheet-item">
+                <div class="sheet-item-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="4 17 10 11 4 5"/>
+                    <line x1="12" y1="19" x2="20" y2="19"/>
+                  </svg>
+                </div>
+                <div class="sheet-item-content">
+                  <div class="sheet-item-title">frontend-app</div>
+                  <div class="sheet-item-subtitle">~/projects/myapp</div>
+                </div>
+                <div class="sheet-item-status idle"></div>
+              </div>
+              <div class="sheet-item">
+                <div class="sheet-item-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="4 17 10 11 4 5"/>
+                    <line x1="12" y1="19" x2="20" y2="19"/>
+                  </svg>
+                </div>
+                <div class="sheet-item-content">
+                  <div class="sheet-item-title">backend-api</div>
+                  <div class="sheet-item-subtitle">~/projects/api</div>
+                </div>
+                <div class="sheet-item-status working"></div>
+              </div>
+              <div class="sheet-divider"></div>
+              <div class="sheet-item primary">
+                <div class="sheet-item-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19"/>
+                    <line x1="5" y1="12" x2="19" y2="12"/>
+                  </svg>
+                </div>
+                <div class="sheet-item-content">
+                  <div class="sheet-item-title">Create new instance</div>
+                </div>
+              </div>
+              <div class="home-indicator"></div>
+            </div>
+          </div>
+        </div>
+        <p class="step-desc">Bottom sheet with: Copy, existing instances (green = idle, yellow = working), and create new.</p>
+      </div>
+
+      <div class="flow-arrow">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="5" y1="12" x2="19" y2="12"/>
+          <polyline points="12 5 19 12 12 19"/>
+        </svg>
+      </div>
+
+      <!-- Step 5: Swipe Right -->
+      <div class="flow-step">
+        <div class="step-header">
+          <div class="step-number">5</div>
+          <div class="step-title">Swipe Right = Done</div>
+        </div>
+        <div class="mobile-frame">
+          <div class="mobile-notch"></div>
+          <div class="mobile-screen">
+            <div class="mobile-header">
+              <span class="mobile-header-title">Global Tasks</span>
+              <button class="mobile-header-btn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="18" y1="6" x2="6" y2="18"/>
+                  <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            </div>
+            <div class="mobile-input-area">
+              <input type="text" class="mobile-input" placeholder="Add a new task...">
+            </div>
+            <div class="mobile-task-list">
+              <div class="mobile-task">
+                <div class="mobile-task-content">
+                  <div class="mobile-checkbox"></div>
+                  <div class="mobile-task-text">
+                    <div class="mobile-task-title">Add dark mode toggle</div>
+                  </div>
+                </div>
+              </div>
+              <div class="mobile-task swiped-right">
+                <div class="mobile-task-bg">
+                  <div class="swipe-left">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                      <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                    <span class="swipe-label">Done</span>
+                  </div>
+                  <div class="swipe-right"></div>
+                </div>
+                <div class="mobile-task-content">
+                  <div class="mobile-checkbox in-progress"></div>
+                  <div class="mobile-task-text">
+                    <div class="mobile-task-title">Refactor auth middleware</div>
+                    <div class="mobile-task-badge">
+                      <span class="status-dot"></span>
+                      backend-api
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="home-indicator"></div>
+          </div>
+        </div>
+        <p class="step-desc">Swipe right reveals green <strong>Done</strong> action. Task is checked off and archived.</p>
+      </div>
+    </div>
+
+    <div class="callout">
+      <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="12" y1="16" x2="12" y2="12"/>
+        <line x1="12" y1="8" x2="12.01" y2="8"/>
+      </svg>
+      <div class="callout-text">
+        <strong>Gesture summary:</strong> Swipe left to dispatch (send to Claude). Swipe right to mark done (archive). Long-press to reorder tasks. Tap checkbox to toggle completion without full swipe.
+      </div>
+    </div>
+  </section>
+
+</body>
+</html>

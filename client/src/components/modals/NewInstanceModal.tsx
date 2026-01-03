@@ -28,6 +28,8 @@ export function NewInstanceModal({ isOpen, onClose }: NewInstanceModalProps) {
 
   const newInstanceDefaultMode = useUIStore((state) => state.newInstanceDefaultMode);
   const setNewInstanceDefaultMode = useUIStore((state) => state.setNewInstanceDefaultMode);
+  const newInstanceSuggestedName = useUIStore((state) => state.newInstanceSuggestedName);
+  const setNewInstanceSuggestedName = useUIStore((state) => state.setNewInstanceSuggestedName);
 
   const { machines } = useMachines();
 
@@ -101,14 +103,18 @@ export function NewInstanceModal({ isOpen, onClose }: NewInstanceModalProps) {
   // Reset form when opening
   useEffect(() => {
     if (isOpen) {
-      setName('');
+      // Use suggested name from task dispatch if available, otherwise empty
+      setName(newInstanceSuggestedName || '');
       setWorkingDir(lastUsedDirectory || '~');
       // Use the override mode if set (e.g., from task dispatch), otherwise use saved preference
       const modeToUse = newInstanceDefaultMode || lastInstanceMode || 'terminal';
       setMode(modeToUse);
-      // Clear the override after using it
+      // Clear the overrides after using them
       if (newInstanceDefaultMode) {
         setNewInstanceDefaultMode(null);
+      }
+      if (newInstanceSuggestedName) {
+        setNewInstanceSuggestedName(null);
       }
       setMachineType('local');
       setSelectedMachineId('');
@@ -120,7 +126,7 @@ export function NewInstanceModal({ isOpen, onClose }: NewInstanceModalProps) {
       setRemoteDirPath('~');
       setShowRemoteBrowser(false);
     }
-  }, [isOpen, lastUsedDirectory, lastInstanceMode, newInstanceDefaultMode, setNewInstanceDefaultMode, getDefaultAlias]);
+  }, [isOpen, lastUsedDirectory, lastInstanceMode, newInstanceDefaultMode, setNewInstanceDefaultMode, newInstanceSuggestedName, setNewInstanceSuggestedName, getDefaultAlias]);
 
   // Fetch sessions when directory changes and in Claude Code mode
   useEffect(() => {
@@ -260,9 +266,9 @@ export function NewInstanceModal({ isOpen, onClose }: NewInstanceModalProps) {
               className="w-full bg-surface-800 border border-surface-600 rounded px-3 py-3 sm:py-1.5 text-base sm:text-xs text-theme-primary placeholder:text-theme-dim focus:outline-none focus:ring-1 focus:ring-frost-4/50"
               autoFocus
             />
-            {!name.trim() && (
+            {!name.trim() ? (
               <p className="text-[10px] text-theme-dim mt-1">Select a directory below to auto-fill</p>
-            )}
+            ) : null}
           </div>
 
           {/* Run On (Local/Remote) */}

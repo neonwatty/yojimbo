@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { filesystemApi } from '../../api/client';
 import { Icons } from './Icons';
 import { Spinner } from './Spinner';
@@ -10,6 +10,7 @@ interface DirectoryPickerProps {
 }
 
 export function DirectoryPicker({ value, onChange }: DirectoryPickerProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
   const [currentPath, setCurrentPath] = useState(value || '~');
   const [displayPath, setDisplayPath] = useState('~');
   const [entries, setEntries] = useState<DirectoryEntry[]>([]);
@@ -42,6 +43,19 @@ export function DirectoryPicker({ value, onChange }: DirectoryPickerProps) {
     fetchDirectory(value || '~');
   }, []);
 
+  // Refresh directory listing when container gains focus
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const handleFocus = () => {
+      fetchDirectory(currentPath);
+    };
+
+    container.addEventListener('focusin', handleFocus);
+    return () => container.removeEventListener('focusin', handleFocus);
+  }, [currentPath]);
+
   const handleNavigate = (path: string) => {
     fetchDirectory(path);
   };
@@ -64,7 +78,7 @@ export function DirectoryPicker({ value, onChange }: DirectoryPickerProps) {
   };
 
   return (
-    <div className="space-y-2">
+    <div ref={containerRef} data-testid="directory-picker" className="space-y-2">
       {/* Current path display */}
       <div className="flex items-center gap-2">
         <div className="flex-1 bg-surface-800 border border-surface-600 rounded-lg px-3 py-2 text-sm text-theme-primary font-mono truncate">

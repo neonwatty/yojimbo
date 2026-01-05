@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSettingsStore } from '../../store/settingsStore';
 import { useUIStore } from '../../store/uiStore';
@@ -52,6 +52,7 @@ export function NewInstanceModal({ isOpen, onClose }: NewInstanceModalProps) {
   const [remoteDirPath, setRemoteDirPath] = useState<string>('~');
   const [loadingRemoteDirs, setLoadingRemoteDirs] = useState(false);
   const [showRemoteBrowser, setShowRemoteBrowser] = useState(false);
+  const remoteBrowserRef = useRef<HTMLDivElement>(null);
 
   // Check Claude CLI status on mount
   useEffect(() => {
@@ -99,6 +100,19 @@ export function NewInstanceModal({ isOpen, onClose }: NewInstanceModalProps) {
       setLoadingRemoteDirs(false);
     }
   }, []);
+
+  // Refresh remote directory listing when browser gains focus
+  useEffect(() => {
+    const container = remoteBrowserRef.current;
+    if (!container || !showRemoteBrowser) return;
+
+    const handleFocus = () => {
+      fetchRemoteDirectories(selectedMachineId, remoteDirPath);
+    };
+
+    container.addEventListener('focusin', handleFocus);
+    return () => container.removeEventListener('focusin', handleFocus);
+  }, [selectedMachineId, remoteDirPath, showRemoteBrowser, fetchRemoteDirectories]);
 
   // Reset form when opening
   useEffect(() => {
@@ -463,7 +477,7 @@ export function NewInstanceModal({ isOpen, onClose }: NewInstanceModalProps) {
 
                 {/* Remote Directory Browser */}
                 {showRemoteBrowser && remoteDirs.length >= 0 && (
-                  <div className="bg-surface-800 border border-surface-600 rounded p-2 max-h-48 overflow-y-auto">
+                  <div ref={remoteBrowserRef} className="bg-surface-800 border border-surface-600 rounded p-2 max-h-48 overflow-y-auto">
                     {/* Current path and parent navigation */}
                     <div className="flex items-center gap-2 mb-2 pb-2 border-b border-surface-600">
                       <button

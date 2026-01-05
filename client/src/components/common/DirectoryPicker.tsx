@@ -11,6 +11,7 @@ interface DirectoryPickerProps {
 
 export function DirectoryPicker({ value, onChange }: DirectoryPickerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const isNavigatingRef = useRef(false);
   const [currentPath, setCurrentPath] = useState(value || '~');
   const [displayPath, setDisplayPath] = useState('~');
   const [entries, setEntries] = useState<DirectoryEntry[]>([]);
@@ -19,7 +20,10 @@ export function DirectoryPicker({ value, onChange }: DirectoryPickerProps) {
   const [hasParent, setHasParent] = useState(false);
   const [parentPath, setParentPath] = useState<string | null>(null);
 
-  const fetchDirectory = async (path: string) => {
+  const fetchDirectory = async (path: string, isUserNavigation = false) => {
+    if (isUserNavigation) {
+      isNavigatingRef.current = true;
+    }
     setLoading(true);
     setError(null);
     try {
@@ -36,6 +40,7 @@ export function DirectoryPicker({ value, onChange }: DirectoryPickerProps) {
       setError('Failed to load directory');
     } finally {
       setLoading(false);
+      isNavigatingRef.current = false;
     }
   };
 
@@ -43,12 +48,17 @@ export function DirectoryPicker({ value, onChange }: DirectoryPickerProps) {
     fetchDirectory(value || '~');
   }, []);
 
-  // Refresh directory listing when container gains focus
+  // Refresh directory listing when container gains focus from outside
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
     const handleFocus = () => {
+      // Skip refresh if we're in the middle of user-initiated navigation
+      // (clicking a directory button triggers both navigation and focusin)
+      if (isNavigatingRef.current) {
+        return;
+      }
       fetchDirectory(currentPath);
     };
 
@@ -57,23 +67,25 @@ export function DirectoryPicker({ value, onChange }: DirectoryPickerProps) {
   }, [currentPath]);
 
   const handleNavigate = (path: string) => {
-    fetchDirectory(path);
+    fetchDirectory(path, true);
   };
 
   const handleGoUp = () => {
     if (parentPath) {
-      fetchDirectory(parentPath);
+      fetchDirectory(parentPath, true);
     }
   };
 
   const handleGoHome = async () => {
+    isNavigatingRef.current = true;
     try {
       const response = await filesystemApi.home();
       if (response.data) {
-        fetchDirectory(response.data.path);
+        fetchDirectory(response.data.path, true);
       }
     } catch {
       setError('Failed to get home directory');
+      isNavigatingRef.current = false;
     }
   };
 
@@ -86,6 +98,7 @@ export function DirectoryPicker({ value, onChange }: DirectoryPickerProps) {
         </div>
         <button
           type="button"
+          onMouseDown={() => { isNavigatingRef.current = true; }}
           onClick={handleGoHome}
           className="p-2 rounded-lg bg-surface-600 text-theme-muted hover:text-theme-primary hover:bg-surface-500 transition-colors"
           title="Go to home directory"
@@ -94,6 +107,7 @@ export function DirectoryPicker({ value, onChange }: DirectoryPickerProps) {
         </button>
         <button
           type="button"
+          onMouseDown={() => { if (hasParent) isNavigatingRef.current = true; }}
           onClick={handleGoUp}
           disabled={!hasParent}
           className="p-2 rounded-lg bg-surface-600 text-theme-muted hover:text-theme-primary hover:bg-surface-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -123,6 +137,7 @@ export function DirectoryPicker({ value, onChange }: DirectoryPickerProps) {
               <button
                 key={entry.path}
                 type="button"
+                onMouseDown={() => { isNavigatingRef.current = true; }}
                 onClick={() => handleNavigate(entry.path)}
                 className="w-full flex items-center gap-2 px-3 py-2 text-sm text-theme-primary hover:bg-surface-600 transition-colors text-left"
               >

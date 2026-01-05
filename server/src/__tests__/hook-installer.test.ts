@@ -193,13 +193,15 @@ describe('HookInstallerService', () => {
       const { HookInstallerService } = await import('../services/hook-installer.service.js') as any;
       const service = new HookInstallerService();
 
+      // Note: generateHooksConfig always uses localhost for reverse tunnel compatibility
+      // The orchestratorUrl is only used to extract the port
       const config = service['generateHooksConfig']('my-instance', 'http://example.com:3456');
       const hooks = (config as any).hooks;
 
-      // Status hooks should call /api/hooks/status
+      // Status hooks should call /api/hooks/status via localhost (reverse tunnel)
       const statusCmd = hooks.UserPromptSubmit[0].hooks[0].command;
       expect(statusCmd).toContain('/api/hooks/status');
-      expect(statusCmd).toContain('http://example.com:3456');
+      expect(statusCmd).toContain('http://localhost:3456');
 
       // Stop hook should call /api/hooks/stop
       const stopCmd = hooks.Stop[0].hooks[0].command;

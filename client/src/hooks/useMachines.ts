@@ -156,6 +156,15 @@ export function useMachines() {
     throw new Error('Failed to test connection');
   }, [fetchMachines]);
 
+  // Test reverse tunnel
+  const testTunnel = useCallback(async (id: string) => {
+    const response = await machinesApi.testTunnel(id);
+    if (response.data) {
+      return response.data;
+    }
+    throw new Error('Failed to test tunnel');
+  }, []);
+
   return {
     machines,
     sshKeys,
@@ -165,6 +174,7 @@ export function useMachines() {
     updateMachine,
     deleteMachine,
     testConnection,
+    testTunnel,
     refetch: fetchMachines,
   };
 }

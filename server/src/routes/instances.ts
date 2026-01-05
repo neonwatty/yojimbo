@@ -294,6 +294,27 @@ router.post('/reorder', (req, res) => {
   }
 });
 
+// GET /api/instances/:id/check-hooks - Check which hooks already exist on remote machine
+router.get('/:id/check-hooks', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const result = await hookInstallerService.checkExistingHooksForInstance(id);
+
+    if (!result.success) {
+      return res.status(400).json({ success: false, error: result.error });
+    }
+
+    res.json({
+      success: true,
+      data: { existingHooks: result.existingHooks },
+    });
+  } catch (error) {
+    console.error('Error checking existing hooks:', error);
+    res.status(500).json({ success: false, error: 'Failed to check existing hooks' });
+  }
+});
+
 // POST /api/instances/:id/install-hooks - Install Claude Code hooks on remote machine
 router.post('/:id/install-hooks', async (req, res) => {
   try {

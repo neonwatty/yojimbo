@@ -73,7 +73,8 @@ export function useTerminal(options: UseTerminalOptions = {}) {
   const fitAddonRef = useRef<FitAddon | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
-  const isInitializedRef = useRef(false);
+  const isInitializedRef = useRef<boolean>(false);
+
 
   const initTerminal = useCallback(
     (container: HTMLDivElement) => {
@@ -89,6 +90,9 @@ export function useTerminal(options: UseTerminalOptions = {}) {
         theme: theme === 'dark' ? darkTheme : lightTheme,
         allowProposedApi: true,
         scrollback: 10000,
+        // Convert bare \n to \r\n - helps with SSH connections where
+        // the remote shell may output \n without \r
+        convertEol: true,
       });
 
       const fitAddon = new FitAddon();
@@ -127,6 +131,43 @@ export function useTerminal(options: UseTerminalOptions = {}) {
   );
 
   const write = useCallback((data: string) => {
+    // Debug: Detect potential blank line issues
+    // Enable with localStorage.setItem('DEBUG_ANIMATION', '1')
+    const DEBUG = localStorage.getItem('DEBUG_ANIMATION') === '1';
+    if (DEBUG) {
+      // eslint-disable-next-line no-control-regex
+      const startCount = (data.match(/\x1b\[\?2026h/g) || []).length;
+      // eslint-disable-next-line no-control-regex
+      const endCount = (data.match(/\x1b\[\?2026l/g) || []).length;
+      const hasEmptyLine = /\n\s*\n/.test(data);
+      // eslint-disable-next-line no-control-regex
+      const hasCursorUp = /\x1b\[\d*A/.test(data);
+
+      if (startCount > 0 || endCount > 0 || hasEmptyLine) {
+        console.log('[TERM] write:', {
+          len: data.length,
+          syncStart: startCount,
+          syncEnd: endCount,
+          balanced: startCount === endCount,
+          hasEmptyLine,
+          hasCursorUp,
+          preview: JSON.stringify(data.slice(0, 150)),
+        });
+
+        // Alert on unbalanced sync frames (the bug we're looking for)
+        if (startCount !== endCount) {
+          console.warn('[TERM] UNBALANCED SYNC FRAME DETECTED!', {
+            startCount,
+            endCount,
+            fullData: JSON.stringify(data),
+          });
+        }
+      }
+    }
+
+    // Write directly to terminal - sync frame buffering is handled
+    // at the server level in the SSH backend to ensure complete
+    // frames are sent as atomic units over WebSocket
     terminalRef.current?.write(data);
   }, []);
 

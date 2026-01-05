@@ -24,6 +24,12 @@ interface HookInstallResult {
   error?: string;
 }
 
+interface CheckHooksResult {
+  success: boolean;
+  existingHooks: string[];
+  error?: string;
+}
+
 /**
  * Hook Installer Service
  * Installs Claude Code hooks on remote machines via SSH
@@ -72,6 +78,153 @@ class HookInstallerService {
     };
 
     return this.installHooks(sshConfig, instanceId, orchestratorUrl);
+  }
+
+  /**
+   * Check which hook types already exist on a remote machine
+   */
+  async checkExistingHooksForInstance(instanceId: string): Promise<CheckHooksResult> {
+    const db = getDatabase();
+
+    // Get instance details
+    const instance = db.prepare(`
+      SELECT id, working_dir, machine_id
+      FROM instances
+      WHERE id = ?
+    `).get(instanceId) as InstanceRow | undefined;
+
+    if (!instance) {
+      return { success: false, existingHooks: [], error: 'Instance not found' };
+    }
+
+    if (!instance.machine_id) {
+      return { success: false, existingHooks: [], error: 'Instance is not a remote instance' };
+    }
+
+    // Get machine details
+    const machine = db.prepare(`
+      SELECT id, hostname, port, username, ssh_key_path
+      FROM remote_machines
+      WHERE id = ?
+    `).get(instance.machine_id) as RemoteMachineRow | undefined;
+
+    if (!machine) {
+      return { success: false, existingHooks: [], error: 'Remote machine not found' };
+    }
+
+    const sshConfig: SSHConfig = {
+      host: machine.hostname,
+      port: machine.port,
+      username: machine.username,
+      privateKeyPath: machine.ssh_key_path || undefined,
+    };
+
+    return this.checkExistingHooks(sshConfig);
+  }
+
+  /**
+   * Check which hook types exist on a remote machine
+   */
+  async checkExistingHooks(config: SSHConfig): Promise<CheckHooksResult> {
+    // The hook types we install that could conflict with user hooks
+    const ourHookTypes = ['UserPromptSubmit', 'PreToolUse', 'PostToolUse', 'Stop', 'Notification'];
+
+    return new Promise((resolve) => {
+      const client = new Client();
+      const timeout = setTimeout(() => {
+        client.end();
+        resolve({ success: false, existingHooks: [], error: 'SSH connection timeout' });
+      }, 15000);
+
+      // Read private key
+      let privateKey: Buffer | undefined;
+      if (config.privateKeyPath) {
+        const keyPath = config.privateKeyPath.replace(/^~/, os.homedir());
+        try {
+          privateKey = fs.readFileSync(keyPath);
+        } catch (err) {
+          clearTimeout(timeout);
+          resolve({ success: false, existingHooks: [], error: `Failed to read SSH key: ${String(err)}` });
+          return;
+        }
+      } else {
+        const defaultKeys = ['id_ed25519', 'id_rsa', 'id_ecdsa'];
+        for (const keyName of defaultKeys) {
+          const keyPath = `${os.homedir()}/.ssh/${keyName}`;
+          if (fs.existsSync(keyPath)) {
+            try {
+              privateKey = fs.readFileSync(keyPath);
+              break;
+            } catch {
+              // Continue to next key
+            }
+          }
+        }
+      }
+
+      if (!privateKey) {
+        clearTimeout(timeout);
+        resolve({ success: false, existingHooks: [], error: 'No SSH private key found' });
+        return;
+      }
+
+      client.on('ready', () => {
+        // Read settings.json and check for existing hooks
+        const checkScript = `cat ~/.claude/settings.json 2>/dev/null || echo '{}'`;
+
+        client.exec(checkScript, (err, stream) => {
+          if (err) {
+            clearTimeout(timeout);
+            client.end();
+            resolve({ success: false, existingHooks: [], error: err.message });
+            return;
+          }
+
+          let stdout = '';
+
+          stream.on('data', (data: Buffer) => {
+            stdout += data.toString();
+          });
+
+          stream.on('close', () => {
+            clearTimeout(timeout);
+            client.end();
+
+            try {
+              const settings = JSON.parse(stdout);
+              const existingHooks: string[] = [];
+
+              if (settings.hooks && typeof settings.hooks === 'object') {
+                for (const hookType of ourHookTypes) {
+                  if (settings.hooks[hookType] && Array.isArray(settings.hooks[hookType]) && settings.hooks[hookType].length > 0) {
+                    existingHooks.push(hookType);
+                  }
+                }
+              }
+
+              resolve({ success: true, existingHooks });
+            } catch {
+              // Invalid JSON or no file - no existing hooks
+              resolve({ success: true, existingHooks: [] });
+            }
+          });
+        });
+      });
+
+      client.on('error', (err) => {
+        clearTimeout(timeout);
+        client.end();
+        resolve({ success: false, existingHooks: [], error: err.message });
+      });
+
+      client.connect({
+        host: config.host,
+        port: config.port,
+        username: config.username,
+        privateKey,
+        readyTimeout: 10000,
+      });
+    });
   }
 
   /**
@@ -201,7 +354,21 @@ class HookInstallerService {
    * 3. The server matches instances by projectDir (working directory) instead
    */
   private generateHooksConfig(_instanceId: string, orchestratorUrl: string): object {
-    const baseUrl = orchestratorUrl.replace(/\/$/, '');
+    // Extract port from orchestratorUrl, but always use localhost
+    // because the reverse tunnel forwards localhost:port → orchestrator server
+    // The remote machine can't reach orchestratorUrl directly, but the reverse
+    // tunnel makes localhost:port available on the remote machine
+    let port = 3456;
+    try {
+      const url = new URL(orchestratorUrl);
+      if (url.port) {
+        port = parseInt(url.port, 10);
+      }
+    } catch {
+      // Keep default port if URL parsing fails
+    }
+
+    const baseUrl = `http://localhost:${port}`;
 
     // Create curl commands for each hook
     // Claude Code hooks receive context via stdin as JSON containing { cwd: "...", ... }

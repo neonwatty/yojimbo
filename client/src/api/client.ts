@@ -107,10 +107,20 @@ export const instancesApi = {
     }),
 
   installHooks: (id: string, orchestratorUrl: string) =>
-    request<ApiResponse<{ message: string }>>(`/instances/${id}/install-hooks`, {
+    request<ApiResponse<{
+      message: string;
+      tunnelActive?: boolean;
+      tunnelPort?: number;
+      tunnelShared?: boolean;
+      tunnelError?: string;
+      warning?: string;
+    }>>(`/instances/${id}/install-hooks`, {
       method: 'POST',
       body: JSON.stringify({ orchestratorUrl }),
     }),
+
+  checkHooks: (id: string) =>
+    request<ApiResponse<{ existingHooks: string[] }>>(`/instances/${id}/check-hooks`),
 
   uninstallHooks: (id: string) =>
     request<ApiResponse<{ message: string }>>(`/instances/${id}/uninstall-hooks`, {
@@ -289,6 +299,12 @@ export const machinesApi = {
   listDirectories: (id: string, path = '~') =>
     request<ApiResponse<{ path: string; directories: string[] }>>(
       `/machines/${id}/directories?path=${encodeURIComponent(path)}`
+    ),
+
+  testTunnel: (id: string) =>
+    request<ApiResponse<{ active: boolean; message: string }>>(
+      `/machines/${id}/test-tunnel`,
+      { method: 'POST' }
     ),
 };
 

@@ -53,6 +53,11 @@ export class LocalPTYBackend extends TerminalBackend {
     this.alive = true;
 
     this.ptyProcess.onData((data) => {
+      // Debug: log if standalone \n detected (without \r)
+      if (data.includes('\n') && !data.includes('\r\n') && data.includes('\x1b[')) {
+        const hexBytes = [...Buffer.from(data)].slice(0, 100).map(b => b.toString(16).padStart(2, '0')).join(' ');
+        console.log(`[LOCAL ${this.id}] DEBUG escape+standalone \\n:`, JSON.stringify(data.slice(0, 80)), 'hex:', hexBytes);
+      }
       this.emitData(data);
     });
 

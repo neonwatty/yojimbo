@@ -25,11 +25,12 @@ function StatusIndicator({ status }: { status: MachineStatus }) {
 }
 
 export function RemoteMachinesSection() {
-  const { machines, sshKeys, loading, createMachine, updateMachine, deleteMachine, testConnection } =
+  const { machines, sshKeys, loading, createMachine, updateMachine, deleteMachine, testConnection, testTunnel } =
     useMachines();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editMachine, setEditMachine] = useState<RemoteMachine | null>(null);
   const [testingIds, setTestingIds] = useState<Set<string>>(new Set());
+  const [testingTunnelIds, setTestingTunnelIds] = useState<Set<string>>(new Set());
 
   const handleTestConnection = async (id: string) => {
     setTestingIds((prev) => new Set(prev).add(id));
@@ -44,6 +45,26 @@ export function RemoteMachinesSection() {
       toast.error('Failed to test connection');
     } finally {
       setTestingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    }
+  };
+
+  const handleTestTunnel = async (id: string) => {
+    setTestingTunnelIds((prev) => new Set(prev).add(id));
+    try {
+      const result = await testTunnel(id);
+      if (result.active) {
+        toast.success('Tunnel is active');
+      } else {
+        toast.info(result.message || 'No active tunnel');
+      }
+    } catch {
+      toast.error('Failed to test tunnel');
+    } finally {
+      setTestingTunnelIds((prev) => {
         const next = new Set(prev);
         next.delete(id);
         return next;
@@ -160,11 +181,24 @@ export function RemoteMachinesSection() {
                     onClick={() => handleTestConnection(machine.id)}
                     disabled={testingIds.has(machine.id)}
                     className="px-2 py-0.5 text-xs text-theme-muted hover:text-theme-primary border border-surface-500 hover:border-surface-400 rounded transition-colors disabled:opacity-50"
+                    title="Test SSH connection"
                   >
                     {testingIds.has(machine.id) ? (
                       <Spinner size="sm" />
                     ) : (
                       'Test'
+                    )}
+                  </button>
+                  <button
+                    onClick={() => handleTestTunnel(machine.id)}
+                    disabled={testingTunnelIds.has(machine.id)}
+                    className="px-2 py-0.5 text-xs text-theme-muted hover:text-theme-primary border border-surface-500 hover:border-surface-400 rounded transition-colors disabled:opacity-50"
+                    title="Test reverse tunnel (for hooks)"
+                  >
+                    {testingTunnelIds.has(machine.id) ? (
+                      <Spinner size="sm" />
+                    ) : (
+                      'Tunnel'
                     )}
                   </button>
                   <button

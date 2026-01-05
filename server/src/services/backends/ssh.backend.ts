@@ -50,12 +50,99 @@ export class SSHBackend extends TerminalBackend {
   private reconnectAttempts: number = 0;
   private maxReconnectAttempts: number = 5;
   private reconnectDelay: number = 1000;
+  // Sync frame buffering - buffer complete frames before emitting
+  // This is needed because SSH delivers data based on TCP packet boundaries,
+  // which can split DEC mode 2026 sync frames across multiple callbacks
+  private syncOutputBuffer: string = '';
+  private inSyncMode: boolean = false;
+
 
   constructor(id: string, sshConfig: SSHConfig, maxHistorySize?: number) {
     super(id, 'ssh', maxHistorySize ?? CONFIG.runtime.terminalMaxHistoryBytes);
     this.sshConfig = sshConfig;
     this.client = new Client();
     this.setupClientEvents();
+  }
+
+  /**
+   * Process SSH output with sync frame buffering
+   *
+   * SSH delivers data based on TCP packet boundaries (512-4KB chunks),
+   * which can split DEC mode 2026 sync frames across multiple callbacks.
+   * We buffer complete sync frames and emit them atomically to prevent
+   * visual glitches in terminal animations like Claude Code's thinking spinner.
+   */
+  private processSyncOutput(data: string): void {
+    const SYNC_START = '\x1b[?2026h';
+    const SYNC_END = '\x1b[?2026l';
+
+    // Debug: Check for potential blank line causes
+    const DEBUG_ANIMATION = process.env.DEBUG_ANIMATION === '1';
+    if (DEBUG_ANIMATION) {
+      // Look for patterns that might cause blank lines
+      const hasStandaloneNewline = /[^\r]\n/.test(data) || data.startsWith('\n');
+      const hasEmptyLine = /\n\s*\n/.test(data);
+      // eslint-disable-next-line no-control-regex
+      const hasCursorUp = /\x1b\[\d*A/.test(data);
+      // eslint-disable-next-line no-control-regex
+      const hasEraseLine = /\x1b\[2?K/.test(data);
+      const hasSyncMarker = data.includes(SYNC_START) || data.includes(SYNC_END);
+
+      if (hasSyncMarker || hasEmptyLine || (hasStandaloneNewline && hasCursorUp)) {
+        const hexPreview = [...Buffer.from(data.slice(0, 200))]
+          .map(b => b.toString(16).padStart(2, '0')).join(' ');
+        console.log(`[SSH ${this.id}] DEBUG processSyncOutput:`, {
+          len: data.length,
+          hasStandaloneNewline,
+          hasEmptyLine,
+          hasCursorUp,
+          hasEraseLine,
+          hasSyncMarker,
+          inSyncMode: this.inSyncMode,
+          bufferLen: this.syncOutputBuffer.length,
+          preview: JSON.stringify(data.slice(0, 100)),
+          hex: hexPreview,
+        });
+      }
+    }
+
+    let remaining = data;
+
+    while (remaining.length > 0) {
+      if (this.inSyncMode) {
+        // Currently buffering a sync frame - look for end marker
+        const endIdx = remaining.indexOf(SYNC_END);
+        if (endIdx !== -1) {
+          // Found end - complete the buffer and emit atomically
+          this.syncOutputBuffer += remaining.slice(0, endIdx + SYNC_END.length);
+          remaining = remaining.slice(endIdx + SYNC_END.length);
+          this.inSyncMode = false;
+          // Emit complete sync frame as a single atomic unit
+          this.emitData(this.syncOutputBuffer);
+          this.syncOutputBuffer = '';
+        } else {
+          // No end marker found - buffer everything and wait for more data
+          this.syncOutputBuffer += remaining;
+          remaining = '';
+        }
+      } else {
+        // Not in sync mode - look for start marker
+        const startIdx = remaining.indexOf(SYNC_START);
+        if (startIdx !== -1) {
+          // Found start - emit any content before it, then start buffering
+          if (startIdx > 0) {
+            this.emitData(remaining.slice(0, startIdx));
+          }
+          this.inSyncMode = true;
+          this.syncOutputBuffer = SYNC_START;
+          remaining = remaining.slice(startIdx + SYNC_START.length);
+        } else {
+          // No sync markers - emit directly
+          this.emitData(remaining);
+          remaining = '';
+        }
+      }
+    }
   }
 
   /**
@@ -167,7 +254,7 @@ export class SSHBackend extends TerminalBackend {
 
   /**
    * Start a shell session
-   * Uses exec with login shell (-l) to ensure full environment is loaded
+   * Uses shell() with PTY for proper interactive terminal handling
    */
   private startShell(cols = 80, rows = 24): Promise<void> {
     return new Promise((resolve, reject) => {
@@ -178,10 +265,9 @@ export class SSHBackend extends TerminalBackend {
         rows,
       };
 
-      // Use exec with a login shell to ensure proper environment loading
-      // This is more reliable than shell() for getting the full user environment
-      // Using $SHELL -l to respect the user's configured shell
-      this.client.exec('exec $SHELL -l', { pty: ptyOptions }, (err, stream) => {
+      // Use shell() for proper interactive terminal session
+      // This creates a login shell with proper PTY handling
+      this.client.shell(ptyOptions, (err, stream) => {
           if (err) {
             reject(err);
             return;
@@ -190,11 +276,11 @@ export class SSHBackend extends TerminalBackend {
           this.channel = stream;
 
           stream.on('data', (data: Buffer) => {
-            this.emitData(data.toString());
+            this.processSyncOutput(data.toString());
           });
 
           stream.stderr.on('data', (data: Buffer) => {
-            this.emitData(data.toString());
+            this.processSyncOutput(data.toString());
           });
 
           stream.on('close', () => {
@@ -205,7 +291,7 @@ export class SSHBackend extends TerminalBackend {
             }
           });
 
-          // Wait for login shell to be ready before sending commands
+          // Wait for shell to be ready before sending commands
           setTimeout(() => {
             if (this.channel) {
               // Conditionally forward credentials from local machine
@@ -305,6 +391,13 @@ export class SSHBackend extends TerminalBackend {
   async kill(): Promise<boolean> {
     console.log(`[SSH ${this.id}] Killing session`);
     this.alive = false;
+
+    // Flush any buffered sync data before cleanup
+    if (this.syncOutputBuffer) {
+      this.emitData(this.syncOutputBuffer);
+      this.syncOutputBuffer = '';
+      this.inSyncMode = false;
+    }
 
     if (this.channel) {
       this.channel.close();

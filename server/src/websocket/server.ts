@@ -79,6 +79,26 @@ export function initWebSocketServer(server: Server): WebSocketServer {
   // Note: ptyService is now a thin wrapper around terminalManager, so we only
   // need to listen to terminalManager events to avoid duplicate broadcasts
   terminalManager.on('data', (instanceId: string, data: string) => {
+    // Debug: Log sync frames and potential blank line sources
+    const DEBUG_ANIMATION = process.env.DEBUG_ANIMATION === '1';
+    if (DEBUG_ANIMATION) {
+      // eslint-disable-next-line no-control-regex
+      const startCount = (data.match(/\x1b\[\?2026h/g) || []).length;
+      // eslint-disable-next-line no-control-regex
+      const endCount = (data.match(/\x1b\[\?2026l/g) || []).length;
+      if (startCount > 0 || endCount > 0) {
+        console.log(`[WS] Broadcasting to ${instanceId}:`, {
+          len: data.length,
+          syncStart: startCount,
+          syncEnd: endCount,
+          balanced: startCount === endCount,
+        });
+        if (startCount !== endCount) {
+          console.warn(`[WS] UNBALANCED SYNC FRAME in broadcast!`);
+        }
+      }
+    }
+
     broadcastToInstance(instanceId, {
       type: 'terminal:output',
       instanceId,

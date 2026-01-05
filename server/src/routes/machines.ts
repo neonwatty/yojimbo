@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { getDatabase } from '../db/connection.js';
 import { sshConnectionService } from '../services/ssh-connection.service.js';
+import { reverseTunnelService } from '../services/reverse-tunnel.service.js';
 import { broadcast } from '../websocket/server.js';
 import type { RemoteMachine, MachineStatus } from '@cc-orchestrator/shared';
 
@@ -253,6 +254,46 @@ router.post('/:id/test', async (req, res) => {
   } catch (error) {
     console.error('Error testing machine connection:', error);
     res.status(500).json({ success: false, error: 'Failed to test connection' });
+  }
+});
+
+// POST /api/machines/:id/test-tunnel - Test if reverse tunnel is active for a machine
+router.post('/:id/test-tunnel', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const db = getDatabase();
+    const existing = db
+      .prepare('SELECT * FROM remote_machines WHERE id = ?')
+      .get(id) as RemoteMachineRow | undefined;
+
+    if (!existing) {
+      return res.status(404).json({ success: false, error: 'Machine not found' });
+    }
+
+    // Check if tunnel exists for this machine
+    const hasTunnel = reverseTunnelService.hasMachineTunnel(id);
+
+    if (hasTunnel) {
+      res.json({
+        success: true,
+        data: {
+          active: true,
+          message: 'Reverse tunnel is active',
+        },
+      });
+    } else {
+      res.json({
+        success: true,
+        data: {
+          active: false,
+          message: 'No active tunnel. Install hooks on an instance to create a tunnel.',
+        },
+      });
+    }
+  } catch (error) {
+    console.error('Error testing tunnel:', error);
+    res.status(500).json({ success: false, error: 'Failed to test tunnel' });
   }
 });
 

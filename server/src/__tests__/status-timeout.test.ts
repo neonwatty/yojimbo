@@ -21,6 +21,12 @@ vi.mock('../services/feed.service.js', () => ({
   createActivityEvent: vi.fn(),
 }));
 
+vi.mock('../services/local-status-poller.service.js', () => ({
+  localStatusPollerService: {
+    checkLocalClaudeStatus: vi.fn().mockReturnValue('idle'),
+  },
+}));
+
 // Import after mocking
 import { statusTimeoutService } from '../services/status-timeout.service.js';
 import { broadcast } from '../websocket/server.js';
@@ -91,6 +97,8 @@ describe('StatusTimeoutService', () => {
         id: 'instance-1',
         name: 'Test Instance',
         status: 'working',
+        working_dir: '/test/project',
+        machine_id: null, // local instance
       });
       mockRun.mockReturnValue({ changes: 1 });
 
@@ -122,6 +130,8 @@ describe('StatusTimeoutService', () => {
         id: 'instance-1',
         name: 'Test Instance',
         status: 'working',
+        working_dir: '/test/project',
+        machine_id: null,
       });
 
       statusTimeoutService.start();
@@ -181,6 +191,8 @@ describe('StatusTimeoutService', () => {
         id: 'instance-1',
         name: 'Test Instance',
         status: 'idle', // Already idle
+        working_dir: '/test/project',
+        machine_id: null,
       });
 
       statusTimeoutService.start();
@@ -200,6 +212,8 @@ describe('StatusTimeoutService', () => {
         id,
         name: `Instance ${id}`,
         status: 'working',
+        working_dir: '/test/project',
+        machine_id: null,
       }));
       mockRun.mockReturnValue({ changes: 1 });
 

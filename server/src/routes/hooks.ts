@@ -26,16 +26,25 @@ function findInstanceById(instanceId: string): InstanceRow | null {
 }
 
 // Helper to find instance by working directory (fallback)
-function findInstanceByWorkingDir(projectDir: string): InstanceRow | null {
+// machineId: If provided, only match instances on that machine. If null/undefined, only match local instances.
+function findInstanceByWorkingDir(projectDir: string, machineId?: string | null): InstanceRow | null {
   const db = getDatabase();
+
+  // Build machine filter condition
+  // If machineId is provided → match that specific machine
+  // If machineId is null/undefined → match only local instances (machine_id IS NULL)
+  const machineFilter = machineId
+    ? 'AND machine_id = ?'
+    : 'AND machine_id IS NULL';
+  const machineParam = machineId || null;
 
   // Normalize the path (expand ~ and resolve)
   const normalizedDir = projectDir.replace(/^~/, os.homedir());
 
   // Try exact match first
-  let instance = db
-    .prepare('SELECT * FROM instances WHERE working_dir = ? AND closed_at IS NULL')
-    .get(normalizedDir) as InstanceRow | undefined;
+  let instance = machineId
+    ? db.prepare(`SELECT * FROM instances WHERE working_dir = ? AND closed_at IS NULL ${machineFilter}`).get(normalizedDir, machineParam) as InstanceRow | undefined
+    : db.prepare(`SELECT * FROM instances WHERE working_dir = ? AND closed_at IS NULL ${machineFilter}`).get(normalizedDir) as InstanceRow | undefined;
 
   if (instance) return instance;
 
@@ -44,9 +53,9 @@ function findInstanceByWorkingDir(projectDir: string): InstanceRow | null {
     ? projectDir.replace(os.homedir(), '~')
     : projectDir;
 
-  instance = db
-    .prepare('SELECT * FROM instances WHERE working_dir = ? AND closed_at IS NULL')
-    .get(withTilde) as InstanceRow | undefined;
+  instance = machineId
+    ? db.prepare(`SELECT * FROM instances WHERE working_dir = ? AND closed_at IS NULL ${machineFilter}`).get(withTilde, machineParam) as InstanceRow | undefined
+    : db.prepare(`SELECT * FROM instances WHERE working_dir = ? AND closed_at IS NULL ${machineFilter}`).get(withTilde) as InstanceRow | undefined;
 
   if (instance) return instance;
 
@@ -55,22 +64,28 @@ function findInstanceByWorkingDir(projectDir: string): InstanceRow | null {
   const homeMatch = projectDir.match(/^(\/Users\/[^/]+|\/home\/[^/]+)$/);
   if (homeMatch) {
     // Try matching instances with ~ as working_dir
-    instance = db
-      .prepare('SELECT * FROM instances WHERE working_dir = ? AND closed_at IS NULL')
-      .get('~') as InstanceRow | undefined;
+    instance = machineId
+      ? db.prepare(`SELECT * FROM instances WHERE working_dir = ? AND closed_at IS NULL ${machineFilter}`).get('~', machineParam) as InstanceRow | undefined
+      : db.prepare(`SELECT * FROM instances WHERE working_dir = ? AND closed_at IS NULL ${machineFilter}`).get('~') as InstanceRow | undefined;
 
     if (instance) return instance;
   }
 
   // Try partial match (project dir might be a subdirectory)
   // First, get all potential matches and score them
-  const candidates = db
-    .prepare(`
-      SELECT * FROM instances
-      WHERE closed_at IS NULL
-      AND (? LIKE working_dir || '%' OR working_dir LIKE ? || '%' OR working_dir = '~')
-    `)
-    .all(normalizedDir, normalizedDir) as InstanceRow[];
+  const candidates = machineId
+    ? db.prepare(`
+        SELECT * FROM instances
+        WHERE closed_at IS NULL
+        AND (? LIKE working_dir || '%' OR working_dir LIKE ? || '%' OR working_dir = '~')
+        ${machineFilter}
+      `).all(normalizedDir, normalizedDir, machineParam) as InstanceRow[]
+    : db.prepare(`
+        SELECT * FROM instances
+        WHERE closed_at IS NULL
+        AND (? LIKE working_dir || '%' OR working_dir LIKE ? || '%' OR working_dir = '~')
+        ${machineFilter}
+      `).all(normalizedDir, normalizedDir) as InstanceRow[];
 
   if (candidates.length === 0) return null;
 
@@ -157,16 +172,17 @@ function updateInstanceStatus(instanceId: string, status: InstanceStatus): void 
 // POST /api/hooks/status - Receive status updates (working/idle)
 router.post('/status', (req, res) => {
   try {
-    const { event, projectDir, instanceId } = req.body as HookStatusEvent & { instanceId?: string };
+    const { event, projectDir, instanceId, machineId } = req.body as HookStatusEvent & { instanceId?: string; machineId?: string };
 
-    console.log(`🔔 Hook status event: ${event} for ${projectDir} (instanceId: ${instanceId || 'none'})`);
+    console.log(`🔔 Hook status event: ${event} for ${projectDir} (instanceId: ${instanceId || 'none'}, machineId: ${machineId || 'local'})`);
 
     // Prefer matching by instanceId (more reliable)
     let instance = findInstanceById(instanceId || '');
 
     // Only fall back to directory matching if no instanceId was provided
     if (!instance && !instanceId) {
-      instance = findInstanceByWorkingDir(projectDir);
+      // Pass machineId to filter by machine (null = local machine only)
+      instance = findInstanceByWorkingDir(projectDir, machineId);
       if (instance) {
         console.log(`📍 Matched by directory: ${projectDir} -> ${instance.id}`);
       }
@@ -178,7 +194,7 @@ router.post('/status', (req, res) => {
     } else if (instanceId) {
       console.log(`⚠️ No instance found with ID: ${instanceId}`);
     } else {
-      console.log(`⚠️ No instance found for directory: ${projectDir}`);
+      console.log(`⚠️ No instance found for directory: ${projectDir} (machineId: ${machineId || 'local'})`);
     }
 
     res.json({ ok: true });
@@ -192,16 +208,17 @@ router.post('/status', (req, res) => {
 // Note: We no longer distinguish 'awaiting' status - notifications just confirm activity
 router.post('/notification', (req, res) => {
   try {
-    const { projectDir, instanceId } = req.body as HookNotificationEvent & { instanceId?: string };
+    const { projectDir, instanceId, machineId } = req.body as HookNotificationEvent & { instanceId?: string; machineId?: string };
 
-    console.log(`🔔 Hook notification event for ${projectDir} (instanceId: ${instanceId || 'none'})`);
+    console.log(`🔔 Hook notification event for ${projectDir} (instanceId: ${instanceId || 'none'}, machineId: ${machineId || 'local'})`);
 
     // Prefer matching by instanceId (more reliable)
     let instance = findInstanceById(instanceId || '');
 
     // Only fall back to directory matching if no instanceId was provided
     if (!instance && !instanceId) {
-      instance = findInstanceByWorkingDir(projectDir);
+      // Pass machineId to filter by machine (null = local machine only)
+      instance = findInstanceByWorkingDir(projectDir, machineId);
       if (instance) {
         console.log(`📍 Matched by directory: ${projectDir} -> ${instance.id}`);
       }
@@ -213,7 +230,7 @@ router.post('/notification', (req, res) => {
     } else if (instanceId) {
       console.log(`⚠️ No instance found with ID: ${instanceId}`);
     } else {
-      console.log(`⚠️ No instance found for directory: ${projectDir}`);
+      console.log(`⚠️ No instance found for directory: ${projectDir} (machineId: ${machineId || 'local'})`);
     }
 
     res.json({ ok: true });
@@ -226,16 +243,17 @@ router.post('/notification', (req, res) => {
 // POST /api/hooks/stop - Receive stop events
 router.post('/stop', (req, res) => {
   try {
-    const { projectDir, instanceId } = req.body as HookStopEvent & { instanceId?: string };
+    const { projectDir, instanceId, machineId } = req.body as HookStopEvent & { instanceId?: string; machineId?: string };
 
-    console.log(`🔔 Hook stop event for ${projectDir} (instanceId: ${instanceId || 'none'})`);
+    console.log(`🔔 Hook stop event for ${projectDir} (instanceId: ${instanceId || 'none'}, machineId: ${machineId || 'local'})`);
 
     // Prefer matching by instanceId (more reliable)
     let instance = findInstanceById(instanceId || '');
 
     // Only fall back to directory matching if no instanceId was provided
     if (!instance && !instanceId) {
-      instance = findInstanceByWorkingDir(projectDir);
+      // Pass machineId to filter by machine (null = local machine only)
+      instance = findInstanceByWorkingDir(projectDir, machineId);
       if (instance) {
         console.log(`📍 Matched by directory: ${projectDir} -> ${instance.id}`);
       }
@@ -246,7 +264,7 @@ router.post('/stop', (req, res) => {
     } else if (instanceId) {
       console.log(`⚠️ No instance found with ID: ${instanceId}`);
     } else {
-      console.log(`⚠️ No instance found for directory: ${projectDir}`);
+      console.log(`⚠️ No instance found for directory: ${projectDir} (machineId: ${machineId || 'local'})`);
     }
 
     res.json({ ok: true });

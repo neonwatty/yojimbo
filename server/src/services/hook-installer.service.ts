@@ -77,7 +77,7 @@ class HookInstallerService {
       privateKeyPath: machine.ssh_key_path || undefined,
     };
 
-    return this.installHooks(sshConfig, instanceId, orchestratorUrl);
+    return this.installHooks(sshConfig, instanceId, orchestratorUrl, machine.id);
   }
 
   /**
@@ -233,7 +233,8 @@ class HookInstallerService {
   async installHooks(
     config: SSHConfig,
     instanceId: string,
-    orchestratorUrl: string
+    orchestratorUrl: string,
+    machineId?: string
   ): Promise<HookInstallResult> {
     return new Promise((resolve) => {
       const client = new Client();
@@ -278,7 +279,7 @@ class HookInstallerService {
       client.on('ready', async () => {
         try {
           // Generate the hooks configuration
-          const hooksConfig = this.generateHooksConfig(instanceId, orchestratorUrl);
+          const hooksConfig = this.generateHooksConfig(instanceId, orchestratorUrl, machineId);
 
           // Create the script to install hooks
           const installScript = this.generateInstallScript(hooksConfig);
@@ -353,7 +354,7 @@ class HookInstallerService {
    * 2. Multiple instances on the same machine share this config
    * 3. The server matches instances by projectDir (working directory) instead
    */
-  private generateHooksConfig(_instanceId: string, orchestratorUrl: string): object {
+  private generateHooksConfig(_instanceId: string, orchestratorUrl: string, machineId?: string): object {
     // Extract port from orchestratorUrl, but always use localhost
     // because the reverse tunnel forwards localhost:port → orchestrator server
     // The remote machine can't reach orchestratorUrl directly, but the reverse
@@ -370,12 +371,16 @@ class HookInstallerService {
 
     const baseUrl = `http://localhost:${port}`;
 
+    // Include machineId in the payload if provided (for remote machines)
+    // This allows the server to match hook events to the correct instance
+    const machineIdField = machineId ? `,machineId:"${machineId}"` : '';
+
     // Create curl commands for each hook
     // Claude Code hooks receive context via stdin as JSON containing { cwd: "...", ... }
     // We read stdin, extract cwd with jq, transform to our format, and pipe to curl
-    const statusWorkingCmd = `jq '{event:"working",projectDir:.cwd}' | curl -s -X POST "${baseUrl}/api/hooks/status" -H "Content-Type: application/json" -d @-`;
-    const stopCmd = `jq '{projectDir:.cwd}' | curl -s -X POST "${baseUrl}/api/hooks/stop" -H "Content-Type: application/json" -d @-`;
-    const notificationCmd = `jq '{projectDir:.cwd}' | curl -s -X POST "${baseUrl}/api/hooks/notification" -H "Content-Type: application/json" -d @-`;
+    const statusWorkingCmd = `jq '{event:"working",projectDir:.cwd${machineIdField}}' | curl -s -X POST "${baseUrl}/api/hooks/status" -H "Content-Type: application/json" -d @-`;
+    const stopCmd = `jq '{projectDir:.cwd${machineIdField}}' | curl -s -X POST "${baseUrl}/api/hooks/stop" -H "Content-Type: application/json" -d @-`;
+    const notificationCmd = `jq '{projectDir:.cwd${machineIdField}}' | curl -s -X POST "${baseUrl}/api/hooks/notification" -H "Content-Type: application/json" -d @-`;
 
     // Helper to create a hook entry in the new format
     const createHookEntry = (command: string) => ({
@@ -667,8 +672,8 @@ PYTHON_SCRIPT
   /**
    * Get hooks configuration for preview (public method for API)
    */
-  getHooksConfigForPreview(instanceId: string, orchestratorUrl: string): object {
-    return this.generateHooksConfig(instanceId, orchestratorUrl);
+  getHooksConfigForPreview(instanceId: string, orchestratorUrl: string, machineId?: string): object {
+    return this.generateHooksConfig(instanceId, orchestratorUrl, machineId);
   }
 }
 

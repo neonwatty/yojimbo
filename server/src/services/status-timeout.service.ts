@@ -1,6 +1,7 @@
 import { getDatabase } from '../db/connection.js';
 import { broadcast } from '../websocket/server.js';
 import { createActivityEvent } from './feed.service.js';
+import { localStatusPollerService } from './local-status-poller.service.js';
 import type { InstanceStatus } from '@cc-orchestrator/shared';
 
 // Timeout for resetting status to idle (30 seconds)
@@ -85,15 +86,30 @@ class StatusTimeoutService {
    * Reset an instance status to idle
    */
   private resetToIdle(instanceId: string, db: ReturnType<typeof getDatabase>): void {
-    // Get instance info
+    // Get instance info (include working_dir and machine_id for file-based activity check)
     const instance = db
-      .prepare('SELECT id, name, status FROM instances WHERE id = ? AND closed_at IS NULL')
-      .get(instanceId) as { id: string; name: string; status: InstanceStatus } | undefined;
+      .prepare('SELECT id, name, status, working_dir, machine_id FROM instances WHERE id = ? AND closed_at IS NULL')
+      .get(instanceId) as { id: string; name: string; status: InstanceStatus; working_dir: string; machine_id: string | null } | undefined;
 
     if (!instance || instance.status !== 'working') {
       // Instance doesn't exist, is closed, or already not working
       this.activityMap.delete(instanceId);
       return;
+    }
+
+    // For local instances: check file activity before resetting
+    // This handles the case where Claude is "thinking" without using tools
+    if (!instance.machine_id) {
+      const fileStatus = localStatusPollerService.checkLocalClaudeStatus(instance.working_dir);
+      if (fileStatus === 'working') {
+        // File activity detected - extend timeout instead of resetting
+        console.log(`⏱️ Instance ${instanceId} has file activity, extending timeout`);
+        this.activityMap.set(instanceId, {
+          lastActivityAt: Date.now(),
+          status: 'working',
+        });
+        return;
+      }
     }
 
     // Update database

@@ -60,7 +60,7 @@ describe('LocalStatusPollerService', () => {
       expect(status).toBe('idle');
     });
 
-    it('should return working when session file was modified within 30 seconds', () => {
+    it('should return working when session file was modified within 60 seconds', () => {
       vi.mocked(fs.existsSync).mockReturnValue(true);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       vi.mocked(fs.readdirSync).mockReturnValue(['session.jsonl'] as any);
@@ -73,12 +73,12 @@ describe('LocalStatusPollerService', () => {
       expect(status).toBe('working');
     });
 
-    it('should return idle when session file was modified more than 30 seconds ago', () => {
+    it('should return idle when session file was modified more than 60 seconds ago', () => {
       vi.mocked(fs.existsSync).mockReturnValue(true);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       vi.mocked(fs.readdirSync).mockReturnValue(['session.jsonl'] as any);
       vi.mocked(fs.statSync).mockReturnValue({
-        mtimeMs: Date.now() - 60000, // 60 seconds ago
+        mtimeMs: Date.now() - 120000, // 120 seconds ago (more than 60s threshold)
       } as fs.Stats);
 
       const status = localStatusPollerService.checkLocalClaudeStatus('/test/project');

@@ -4,8 +4,9 @@ import { createActivityEvent } from './feed.service.js';
 import { localStatusPollerService } from './local-status-poller.service.js';
 import type { InstanceStatus } from '@cc-orchestrator/shared';
 
-// Timeout for resetting status to idle (30 seconds)
-const ACTIVITY_TIMEOUT_MS = 30000;
+// Timeout for resetting status to idle (60 seconds)
+// Extended from 30s to handle compacting, long thinking, and inter-tool gaps
+const ACTIVITY_TIMEOUT_MS = 60000;
 
 // Check interval (10 seconds)
 const CHECK_INTERVAL_MS = 10000;

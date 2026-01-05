@@ -260,6 +260,41 @@ describe('HookInstallerService', () => {
     });
   });
 
+  describe('machineId in hook payloads', () => {
+    it('should include machineId in hook commands when provided', async () => {
+      const { HookInstallerService } = await import('../services/hook-installer.service.js') as any;
+      const service = new HookInstallerService();
+
+      const config = service['generateHooksConfig']('test-instance', 'http://localhost:3456', 'machine-123');
+      const hooks = (config as any).hooks;
+
+      // Check that machineId is included in the jq command
+      const statusCmd = hooks.UserPromptSubmit[0].hooks[0].command;
+      expect(statusCmd).toContain('machineId');
+      expect(statusCmd).toContain('machine-123');
+
+      const stopCmd = hooks.Stop[0].hooks[0].command;
+      expect(stopCmd).toContain('machineId');
+      expect(stopCmd).toContain('machine-123');
+
+      const notifCmd = hooks.Notification[0].hooks[0].command;
+      expect(notifCmd).toContain('machineId');
+      expect(notifCmd).toContain('machine-123');
+    });
+
+    it('should NOT include machineId when not provided', async () => {
+      const { HookInstallerService } = await import('../services/hook-installer.service.js') as any;
+      const service = new HookInstallerService();
+
+      const config = service['generateHooksConfig']('test-instance', 'http://localhost:3456');
+      const hooks = (config as any).hooks;
+
+      // Check that machineId is NOT in the command
+      const statusCmd = hooks.UserPromptSubmit[0].hooks[0].command;
+      expect(statusCmd).not.toContain('machineId');
+    });
+  });
+
   describe('getHooksConfigForPreview', () => {
     it('should return the same config as generateHooksConfig', async () => {
       const { HookInstallerService } = await import('../services/hook-installer.service.js') as any;

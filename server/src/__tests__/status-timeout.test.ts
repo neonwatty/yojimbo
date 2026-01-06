@@ -91,7 +91,7 @@ describe('StatusTimeoutService', () => {
   });
 
   describe('timeout behavior', () => {
-    it('should reset status to idle after 30 seconds of inactivity', () => {
+    it('should reset status to idle after 60 seconds of inactivity', () => {
       // Mock instance exists and is working
       mockGet.mockReturnValue({
         id: 'instance-1',
@@ -106,8 +106,8 @@ describe('StatusTimeoutService', () => {
       statusTimeoutService.start();
       statusTimeoutService.recordActivity('instance-1', 'working');
 
-      // Advance past timeout (30s) + check interval (10s)
-      vi.advanceTimersByTime(40000);
+      // Advance past timeout (60s) + check interval (10s)
+      vi.advanceTimersByTime(70000);
 
       // Should have broadcast status change
       expect(broadcast).toHaveBeenCalledWith({
@@ -137,16 +137,16 @@ describe('StatusTimeoutService', () => {
       statusTimeoutService.start();
       statusTimeoutService.recordActivity('instance-1', 'working');
 
-      // Advance 20 seconds (less than 30s timeout)
-      vi.advanceTimersByTime(20000);
+      // Advance 30 seconds (less than 60s timeout)
+      vi.advanceTimersByTime(30000);
 
       // Record new activity
       statusTimeoutService.recordActivity('instance-1', 'working');
 
-      // Advance another 20 seconds (total 40s but only 20s since last activity)
-      vi.advanceTimersByTime(20000);
+      // Advance another 40 seconds (total 70s but only 40s since last activity)
+      vi.advanceTimersByTime(40000);
 
-      // Should NOT have broadcast because activity was recorded
+      // Should NOT have broadcast because activity was recorded (40s < 60s timeout)
       expect(broadcast).not.toHaveBeenCalled();
     });
 
@@ -154,8 +154,8 @@ describe('StatusTimeoutService', () => {
       statusTimeoutService.start();
       statusTimeoutService.recordActivity('instance-1', 'idle');
 
-      // Advance past timeout
-      vi.advanceTimersByTime(40000);
+      // Advance past timeout (60s + 10s check interval)
+      vi.advanceTimersByTime(70000);
 
       // Should not have broadcast anything
       expect(broadcast).not.toHaveBeenCalled();
@@ -165,8 +165,8 @@ describe('StatusTimeoutService', () => {
       statusTimeoutService.start();
       statusTimeoutService.recordActivity('instance-1', 'error');
 
-      // Advance past timeout
-      vi.advanceTimersByTime(40000);
+      // Advance past timeout (60s + 10s check interval)
+      vi.advanceTimersByTime(70000);
 
       // Should not have broadcast anything
       expect(broadcast).not.toHaveBeenCalled();
@@ -178,8 +178,8 @@ describe('StatusTimeoutService', () => {
       statusTimeoutService.start();
       statusTimeoutService.recordActivity('instance-1', 'working');
 
-      // Advance past timeout
-      vi.advanceTimersByTime(40000);
+      // Advance past timeout (60s + 10s check interval)
+      vi.advanceTimersByTime(70000);
 
       // Should not throw, and should remove from tracking
       expect(broadcast).not.toHaveBeenCalled();
@@ -198,8 +198,8 @@ describe('StatusTimeoutService', () => {
       statusTimeoutService.start();
       statusTimeoutService.recordActivity('instance-1', 'working');
 
-      // Advance past timeout
-      vi.advanceTimersByTime(40000);
+      // Advance past timeout (60s + 10s check interval)
+      vi.advanceTimersByTime(70000);
 
       // Should not broadcast since status is already idle
       expect(broadcast).not.toHaveBeenCalled();
@@ -222,14 +222,14 @@ describe('StatusTimeoutService', () => {
       // Record activity for first instance
       statusTimeoutService.recordActivity('instance-1', 'working');
 
-      // Advance 20 seconds
-      vi.advanceTimersByTime(20000);
+      // Advance 40 seconds
+      vi.advanceTimersByTime(40000);
 
-      // Record activity for second instance (now 20s behind instance-1)
+      // Record activity for second instance (now 40s behind instance-1)
       statusTimeoutService.recordActivity('instance-2', 'working');
 
-      // Advance 15 more seconds - instance-1 should timeout (35s total), instance-2 at 15s
-      vi.advanceTimersByTime(15000);
+      // Advance 25 more seconds - instance-1 should timeout (65s > 60s), instance-2 at 25s
+      vi.advanceTimersByTime(25000);
 
       // Only instance-1 should have been reset
       expect(broadcast).toHaveBeenCalledTimes(1);

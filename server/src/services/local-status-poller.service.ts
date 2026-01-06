@@ -19,8 +19,8 @@ interface LocalInstanceRow {
  */
 class LocalStatusPollerService {
   private pollInterval: NodeJS.Timeout | null = null;
-  private readonly POLL_INTERVAL_MS = 30000; // 30 seconds
-  private readonly ACTIVITY_THRESHOLD_SECONDS = 30; // Consider "working" if activity within 30s
+  private readonly POLL_INTERVAL_MS = 15000; // 15 seconds - faster detection
+  private readonly ACTIVITY_THRESHOLD_SECONDS = 60; // Consider "working" if activity within 60s
 
   /**
    * Start the polling service

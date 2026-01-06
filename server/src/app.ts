@@ -40,6 +40,7 @@ app.get('/api/config', (_req, res) => {
   res.json({
     serverPort: CONFIG.port,
     platform: os.platform(), // 'darwin' for macOS, 'linux', 'win32', etc.
+    label: CONFIG.label, // Optional label for distinguishing installations
   });
 });
 

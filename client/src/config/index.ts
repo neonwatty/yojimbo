@@ -2,12 +2,14 @@
 interface AppConfig {
   serverPort: number;
   platform: string; // 'darwin' for macOS, 'linux', 'win32', etc.
+  label: string; // Optional label to distinguish installations (e.g., "DEV", "STABLE")
 }
 
 // Default config (used before fetch completes or if fetch fails)
 let config: AppConfig = {
   serverPort: 3456,
   platform: 'unknown',
+  label: '',
 };
 
 let initialized = false;
@@ -30,6 +32,11 @@ export async function initConfig(): Promise<void> {
     }
   } catch (err) {
     console.warn('Failed to fetch config from server, using defaults:', err);
+  }
+
+  // Update document title with label if present
+  if (config.label) {
+    document.title = `[${config.label}] Yojimbo`;
   }
 
   initialized = true;
@@ -59,4 +66,12 @@ export function getConfig(): AppConfig {
  */
 export function isMacOS(): boolean {
   return config.platform === 'darwin';
+}
+
+/**
+ * Get the installation label (e.g., "DEV", "STABLE").
+ * Returns empty string if no label is configured.
+ */
+export function getLabel(): string {
+  return config.label;
 }

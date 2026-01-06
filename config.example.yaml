@@ -1,4 +1,4 @@
-# CC Orchestrator Configuration
+# Yojimbo Configuration
 # Copy this file to config.yaml to customize settings
 # Environment variables override these values
 
@@ -10,3 +10,8 @@ serverPort: 3456
 
 # Client dev server port
 clientPort: 5173
+
+# Optional label to distinguish installations in browser tabs
+# Useful when running multiple instances (e.g., stable vs dev)
+# Examples: "DEV", "STABLE", "🔧 DEV", "⭐ STABLE"
+# label: DEV

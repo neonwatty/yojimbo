@@ -33,6 +33,8 @@ import {
   markEventAsRead,
   markAllEventsAsRead,
   clearAllEvents,
+  getFeedMaxItems,
+  pruneActivityEvents,
 } from '../services/feed.service.js';
 import { broadcast } from '../websocket/server.js';
 
@@ -250,6 +252,89 @@ describe('FeedService', () => {
 
       expect(count).toBe(0);
       expect(broadcast).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('getFeedMaxItems', () => {
+    it('should return default 20 when setting not in database', () => {
+      mockGet.mockReturnValue(undefined);
+
+      const maxItems = getFeedMaxItems();
+
+      expect(maxItems).toBe(20);
+    });
+
+    it('should return value from database when set', () => {
+      mockGet.mockReturnValue({ value: '50' });
+
+      const maxItems = getFeedMaxItems();
+
+      expect(maxItems).toBe(50);
+    });
+
+    it('should clamp value to minimum of 20', () => {
+      mockGet.mockReturnValue({ value: '5' });
+
+      const maxItems = getFeedMaxItems();
+
+      expect(maxItems).toBe(20);
+    });
+
+    it('should clamp value to maximum of 100', () => {
+      mockGet.mockReturnValue({ value: '200' });
+
+      const maxItems = getFeedMaxItems();
+
+      expect(maxItems).toBe(100);
+    });
+
+    it('should return default when value is invalid JSON', () => {
+      mockGet.mockReturnValue({ value: 'invalid' });
+
+      const maxItems = getFeedMaxItems();
+
+      expect(maxItems).toBe(20);
+    });
+  });
+
+  describe('pruneActivityEvents', () => {
+    it('should prune events and broadcast update when changes made', () => {
+      mockGet.mockReturnValue({ value: '20' });
+      mockRun.mockReturnValue({ changes: 5 });
+
+      const count = pruneActivityEvents();
+
+      expect(count).toBe(5);
+      expect(broadcast).toHaveBeenCalledWith({ type: 'feed:updated' });
+    });
+
+    it('should not broadcast when no events to prune', () => {
+      mockGet.mockReturnValue({ value: '20' });
+      mockRun.mockReturnValue({ changes: 0 });
+
+      const count = pruneActivityEvents();
+
+      expect(count).toBe(0);
+      expect(broadcast).not.toHaveBeenCalled();
+    });
+
+    it('should use provided maxItems instead of database value', () => {
+      mockRun.mockReturnValue({ changes: 0 });
+
+      pruneActivityEvents(50);
+
+      // The run should be called with limit 50
+      expect(mockRun).toHaveBeenCalledWith(50);
+    });
+
+    it('should read maxItems from database when not provided', () => {
+      mockGet.mockReturnValue({ value: '75' });
+      mockRun.mockReturnValue({ changes: 0 });
+
+      pruneActivityEvents();
+
+      // The run should be called with limit 75 from database
+      expect(mockRun).toHaveBeenCalledWith(75);
     });
   });
 });

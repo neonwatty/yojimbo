@@ -20,6 +20,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     showActivityInNav,
     feedEnabledEventTypes,
     feedRetentionDays,
+    feedMaxItems,
     summaryIncludePRs,
     summaryIncludeCommits,
     summaryIncludeIssues,
@@ -34,6 +35,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     setShowActivityInNav,
     toggleFeedEventType,
     setFeedRetentionDays,
+    setFeedMaxItems,
     setSummaryIncludePRs,
     setSummaryIncludeCommits,
     setSummaryIncludeIssues,
@@ -429,6 +431,32 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                 {[1, 3, 7, 14, 30].map((days) => (
                   <option key={days} value={days}>
                     {days} {days === 1 ? 'day' : 'days'}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Max Items */}
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-theme-primary">Maximum items</span>
+                <p className="text-xs text-theme-muted mt-0.5">Maximum number of activity items to keep</p>
+              </div>
+              <select
+                value={feedMaxItems}
+                onChange={(e) => {
+                  const value = parseInt(e.target.value);
+                  setFeedMaxItems(value);
+                  // Sync to server and trigger immediate pruning
+                  settingsApi.update({ feedMaxItems: value }).catch(() => {
+                    toast.error('Failed to save setting');
+                  });
+                }}
+                className="bg-surface-800 border border-surface-600 rounded-lg px-3 py-1.5 text-sm text-theme-primary focus:outline-none focus:ring-2 focus:ring-accent/50"
+              >
+                {[20, 50, 75, 100].map((count) => (
+                  <option key={count} value={count}>
+                    {count} items
                   </option>
                 ))}
               </select>

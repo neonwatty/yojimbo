@@ -326,6 +326,7 @@ export interface Settings {
   showActivityInNav: boolean;
   feedEnabledEventTypes: ActivityEventType[];
   feedRetentionDays: number;
+  feedMaxItems: number;
 }
 
 export const DEFAULT_CLAUDE_ALIAS: ClaudeCodeAlias = {
@@ -347,6 +348,7 @@ export const DEFAULT_SETTINGS: Settings = {
   showActivityInNav: true,
   feedEnabledEventTypes: ['completed'],
   feedRetentionDays: 7,
+  feedMaxItems: 20,
 };
 
 // Filesystem API types

@@ -10,7 +10,7 @@ type FilterType = 'all' | ActivityEventType;
 
 export default function ActivityPage() {
   const { events, setEvents, stats, setStats, isLoading, setIsLoading, markAsRead, markAllAsRead } = useFeedStore();
-  const { feedEnabledEventTypes } = useSettingsStore();
+  const { feedEnabledEventTypes, feedMaxItems } = useSettingsStore();
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<FilterType>('all');
 
@@ -19,7 +19,7 @@ export default function ActivityPage() {
     setError(null);
 
     try {
-      const response = await feedApi.list(100);
+      const response = await feedApi.list(feedMaxItems);
       if (response.data) {
         setEvents(response.data);
       }
@@ -32,7 +32,7 @@ export default function ActivityPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [setEvents, setStats, setIsLoading]);
+  }, [feedMaxItems, setEvents, setStats, setIsLoading]);
 
   useEffect(() => {
     fetchEvents();

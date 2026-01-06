@@ -92,3 +92,8 @@ backups/
 !server/data/.gitkeep
 client/playwright-report/
 test-results/
+
+# Test screenshots from MCP workflow testing
+ios-test-*.png
+yojimbo_mobile_*.png
+*_screenshot.png

@@ -26,6 +26,7 @@ interface SettingsState extends Settings {
   setShowActivityInNav: (show: boolean) => void;
   setFeedEnabledEventTypes: (types: ActivityEventType[]) => void;
   setFeedRetentionDays: (days: number) => void;
+  setFeedMaxItems: (maxItems: number) => void;
   toggleFeedEventType: (eventType: ActivityEventType) => void;
 
   // Work Summaries settings
@@ -69,6 +70,7 @@ export const useSettingsStore = create<SettingsState>()(
       showActivityInNav: true,
       feedEnabledEventTypes: ['completed'] as ActivityEventType[],
       feedRetentionDays: 7,
+      feedMaxItems: 20,
       // Work Summaries defaults
       summaryIncludePRs: true,
       summaryIncludeCommits: false,
@@ -134,6 +136,7 @@ export const useSettingsStore = create<SettingsState>()(
       setShowActivityInNav: (showActivityInNav) => set({ showActivityInNav }),
       setFeedEnabledEventTypes: (feedEnabledEventTypes) => set({ feedEnabledEventTypes }),
       setFeedRetentionDays: (feedRetentionDays) => set({ feedRetentionDays }),
+      setFeedMaxItems: (feedMaxItems) => set({ feedMaxItems }),
       toggleFeedEventType: (eventType) =>
         set((state) => {
           const types = state.feedEnabledEventTypes;

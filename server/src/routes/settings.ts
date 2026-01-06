@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { getDatabase } from '../db/connection.js';
+import { pruneActivityEvents } from '../services/feed.service.js';
 import type { Settings, ApiResponse } from '@cc-orchestrator/shared';
 
 const router = Router();
@@ -17,6 +18,7 @@ const DEFAULT_SETTINGS: Settings = {
   showActivityInNav: true,
   feedEnabledEventTypes: ['completed'],
   feedRetentionDays: 7,
+  feedMaxItems: 20,
 };
 
 function getSettingsFromDb(): Settings {
@@ -36,6 +38,8 @@ function getSettingsFromDb(): Settings {
         settings.terminalFontFamily = value;
       } else if (row.key === 'showWelcomeBanner' && typeof value === 'boolean') {
         settings.showWelcomeBanner = value;
+      } else if (row.key === 'feedMaxItems' && typeof value === 'number') {
+        settings.feedMaxItems = Math.max(20, Math.min(100, value));
       }
     } catch {
       // Ignore parse errors
@@ -76,6 +80,12 @@ router.patch('/', (req: Request, res: Response) => {
     });
 
     updateMany(Object.entries(updates));
+
+    // If feedMaxItems was updated, immediately prune events to the new limit
+    if (updates.feedMaxItems !== undefined) {
+      const maxItems = Math.max(20, Math.min(100, updates.feedMaxItems));
+      pruneActivityEvents(maxItems);
+    }
 
     const settings = getSettingsFromDb();
     const response: ApiResponse<Settings> = { success: true, data: settings };

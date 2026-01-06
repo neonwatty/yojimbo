@@ -262,5 +262,34 @@ test.describe('Activity Feed', () => {
       // Check for retention selector (text is "Retention period")
       await expect(basePage.page.locator('text=Retention period')).toBeVisible();
     });
+
+    test('shows maximum items selector', async ({ basePage }) => {
+      await basePage.goto('/instances');
+      await basePage.openSettings();
+
+      // Scroll to Activity Feed section using the heading
+      await basePage.page.getByRole('heading', { name: 'Activity Feed' }).scrollIntoViewIfNeeded();
+
+      // Check for maximum items selector
+      await expect(basePage.page.locator('text=Maximum items')).toBeVisible();
+    });
+
+    test('can change maximum items setting', async ({ basePage }) => {
+      await basePage.goto('/instances');
+      await basePage.openSettings();
+
+      // Scroll to Activity Feed section using the heading
+      await basePage.page.getByRole('heading', { name: 'Activity Feed' }).scrollIntoViewIfNeeded();
+
+      // Find and change the maximum items dropdown
+      const maxItemsSelect = basePage.page.locator('select').filter({ has: basePage.page.locator('option:has-text("20 items")') });
+      await expect(maxItemsSelect).toBeVisible();
+
+      // Change to 50 items
+      await maxItemsSelect.selectOption('50');
+
+      // Verify the change persisted
+      await expect(maxItemsSelect).toHaveValue('50');
+    });
   });
 });

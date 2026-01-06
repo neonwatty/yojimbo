@@ -42,6 +42,17 @@ export function createActivityEvent(
     VALUES (?, ?, ?, ?, ?, ?)
   `).run(id, instanceId, instanceName, eventType, message, metadata ? JSON.stringify(metadata) : null);
 
+  // Prune old events to respect the maximum items limit
+  const maxItems = getFeedMaxItems();
+  db.prepare(`
+    DELETE FROM activity_feed
+    WHERE id NOT IN (
+      SELECT id FROM activity_feed
+      ORDER BY created_at DESC
+      LIMIT ?
+    )
+  `).run(maxItems);
+
   const event: ActivityEvent = {
     id,
     instanceId,
@@ -124,6 +135,50 @@ export function clearAllEvents(): number {
   const result = db.prepare('DELETE FROM activity_feed').run();
 
   if (result.changes > 0) {
+    broadcast({ type: 'feed:updated' });
+  }
+
+  return result.changes;
+}
+
+/**
+ * Get feedMaxItems setting from database, with default fallback
+ */
+export function getFeedMaxItems(): number {
+  const db = getDatabase();
+  const row = db.prepare("SELECT value FROM settings WHERE key = 'feedMaxItems'").get() as { value: string } | undefined;
+  if (row) {
+    try {
+      const value = JSON.parse(row.value);
+      if (typeof value === 'number') {
+        return Math.max(20, Math.min(100, value));
+      }
+    } catch {
+      // Use default
+    }
+  }
+  return 20;
+}
+
+/**
+ * Prune activity events to respect the maximum items limit
+ * Deletes oldest events beyond the limit
+ */
+export function pruneActivityEvents(maxItems?: number): number {
+  const db = getDatabase();
+  const limit = maxItems ?? getFeedMaxItems();
+
+  const result = db.prepare(`
+    DELETE FROM activity_feed
+    WHERE id NOT IN (
+      SELECT id FROM activity_feed
+      ORDER BY created_at DESC
+      LIMIT ?
+    )
+  `).run(limit);
+
+  if (result.changes > 0) {
+    console.log(`🧹 Pruned ${result.changes} activity events (exceeded ${limit} item limit)`);
     broadcast({ type: 'feed:updated' });
   }
 

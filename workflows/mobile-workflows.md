@@ -10,6 +10,7 @@ Core user workflows for Yojimbo on mobile devices (iOS Simulator / phone / table
 - Node.js 18+
 - Yojimbo running locally
 - iOS Simulator (Xcode) or mobile device on same network
+- iOS Simulator MCP server (for automated testing)
 
 ### Start the App
 ```bash
@@ -124,6 +125,90 @@ Create 1-2 test instances from desktop first, then test viewing/managing them on
 | History | Past sessions |
 | Activity | Event feed |
 | Tasks | Task list |
+
+---
+
+## 6. Automation with iOS Simulator MCP
+
+Use the iOS Simulator MCP server to automate mobile UI testing.
+
+### Prerequisites
+1. Xcode installed with iOS Simulator
+2. `idb` (iOS Development Bridge) installed: `brew install idb-companion`
+
+### Setup MCP Server
+Add to your Claude Code MCP configuration:
+```json
+{
+  "mcpServers": {
+    "ios-simulator": {
+      "command": "npx",
+      "args": ["@anthropic/ios-simulator-mcp"]
+    }
+  }
+}
+```
+
+### Simulator Management
+
+#### List Available Simulators
+- `list_simulators` → See all simulators with status
+
+#### Boot and Claim Simulator
+1. `boot_simulator` with UDID → Start specific simulator
+2. `claim_simulator` → Reserve for exclusive use
+3. `open_simulator` → Open Simulator app window
+
+#### Get Current Simulator
+- `get_booted_sim_id` → Get ID of running simulator
+- `get_claimed_simulator` → Get info about claimed simulator
+
+### UI Interaction
+
+#### View Screen State
+- `ui_view` → Get screenshot of current screen
+- `ui_describe_all` → Get accessibility tree of all elements
+- `ui_describe_point` → Get element at specific coordinates
+
+#### Touch Interactions
+- `ui_tap` with x, y → Tap at coordinates
+- `ui_swipe` with start/end coordinates → Swipe gesture
+- `ui_type` with text → Input text
+
+### App Management
+
+#### Install and Launch
+1. `install_app` with app path → Install .app bundle
+2. `launch_app` with bundle ID → Start the app
+
+#### Navigate to Yojimbo in Safari
+```
+1. launch_app with "com.apple.mobilesafari"
+2. ui_tap on URL bar
+3. ui_type "localhost:5175"
+4. ui_tap on Go button
+```
+
+### Recording
+
+#### Take Screenshots
+- `screenshot` with output path → Save PNG screenshot
+
+#### Record Video
+1. `record_video` → Start recording
+2. Perform workflow steps
+3. `stop_recording` → End and save video
+
+### Example: Test Instance Switching
+```
+1. list_simulators → Find available simulator
+2. boot_simulator → Start iPhone simulator
+3. launch_app "com.apple.mobilesafari"
+4. Navigate to localhost:5175
+5. ui_describe_all → Find instance list
+6. ui_swipe left → Switch to next instance
+7. screenshot → Capture result
+```
 
 ---
 

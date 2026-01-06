@@ -10,6 +10,7 @@ Core user workflows for Yojimbo on desktop.
 - Node.js 18+
 - Claude Code CLI installed (`claude` command available)
 - Yojimbo running locally
+- Claude in Chrome extension (for browser automation testing)
 
 ### Start the App
 ```bash
@@ -167,6 +168,63 @@ Most workflows can be tested with local instances. Create 2-3 test instances poi
 | Go Home | `G H` |
 | Go Instances | `G I` |
 | Go History | `G S` |
+
+---
+
+## 8. Browser Automation with Claude in Chrome MCP
+
+Use the Claude in Chrome MCP server to automate browser interactions with Yojimbo.
+
+### Prerequisites
+1. Install Claude in Chrome extension from Chrome Web Store
+2. Enable the MCP server in Claude Code settings
+
+### Setup MCP Server
+Add to your Claude Code MCP configuration:
+```json
+{
+  "mcpServers": {
+    "claude-in-chrome": {
+      "command": "npx",
+      "args": ["@anthropic/claude-in-chrome-mcp"]
+    }
+  }
+}
+```
+
+### Common Automation Tasks
+
+#### Navigate to Yojimbo
+1. Use `tabs_context_mcp` to get browser context
+2. Use `tabs_create_mcp` to create a new tab
+3. Use `navigate` to go to `http://localhost:5175`
+
+#### Interact with UI
+- `read_page` → Get accessibility tree of current view
+- `find` → Locate elements by description (e.g., "New Instance button")
+- `computer` with `left_click` → Click on elements
+- `form_input` → Fill form fields
+
+#### Take Screenshots
+- `computer` with `screenshot` → Capture current state
+- Useful for documenting workflows or debugging
+
+#### Record GIFs
+1. `gif_creator` with `start_recording` → Begin capture
+2. Perform workflow steps
+3. `gif_creator` with `stop_recording` → End capture
+4. `gif_creator` with `export` → Save as GIF
+
+### Example: Create New Instance via Browser
+```
+1. tabs_context_mcp → Get tab context
+2. navigate to localhost:5175
+3. find "New Instance button"
+4. computer left_click on button
+5. form_input instance name
+6. find "Create button"
+7. computer left_click to create
+```
 
 ---
 

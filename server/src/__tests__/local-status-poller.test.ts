@@ -93,7 +93,8 @@ describe('LocalStatusPollerService', () => {
 
       // The session directory should be checked with the home directory
       const homeDir = os.homedir();
-      const encodedDir = `${homeDir}/projects/test`.replace(/\//g, '-').replace(/^-/, '');
+      // Note: Claude keeps the leading dash in encoded paths
+      const encodedDir = `${homeDir}/projects/test`.replace(/\//g, '-');
       const expectedPath = path.join(homeDir, '.claude', 'projects', encodedDir);
 
       expect(fs.existsSync).toHaveBeenCalledWith(expectedPath);

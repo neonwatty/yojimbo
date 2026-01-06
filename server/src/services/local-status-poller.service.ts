@@ -90,7 +90,8 @@ class LocalStatusPollerService {
     const expandedDir = workingDir.replace(/^~/, os.homedir());
 
     // Encode the working directory path like Claude does (replace / with -)
-    const encodedDir = expandedDir.replace(/\//g, '-').replace(/^-/, '');
+    // Note: Claude keeps the leading dash (e.g., -Users-jeremywatt-Desktop-...)
+    const encodedDir = expandedDir.replace(/\//g, '-');
 
     // Claude session directory
     const sessionDir = path.join(os.homedir(), '.claude', 'projects', encodedDir);

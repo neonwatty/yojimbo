@@ -406,7 +406,8 @@ class SSHConnectionService {
     workingDir: string
   ): Promise<{ status: InstanceStatus; error?: string }> {
     // Encode the working directory path like Claude does (replace / with -)
-    const encodedDir = workingDir.replace(/\//g, '-').replace(/^-/, '');
+    // Note: Claude keeps the leading dash (e.g., -Users-jeremywatt-Desktop-...)
+    const encodedDir = workingDir.replace(/\//g, '-');
 
     // Command to:
     // 1. Find the latest .jsonl session file for this project

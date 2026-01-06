@@ -17,6 +17,7 @@ interface YamlConfig {
   host?: string;
   serverPort?: number;
   clientPort?: number;
+  label?: string; // Optional label to distinguish installations (e.g., "DEV", "STABLE")
 }
 
 function loadYamlConfig(): YamlConfig {
@@ -47,6 +48,7 @@ export const CONFIG = {
   host: process.env.HOST || yamlConfig.host || '127.0.0.1',
   clientPort: parseInt(process.env.CLIENT_PORT || String(yamlConfig.clientPort || 5173), 10),
   nodeEnv: process.env.NODE_ENV || 'development',
+  label: process.env.APP_LABEL || yamlConfig.label || '', // Optional label for tab title
 
   // Database
   databasePath: process.env.DATABASE_PATH || './data/orchestrator.db',

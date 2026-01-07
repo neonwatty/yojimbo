@@ -17,6 +17,11 @@ vi.mock('../websocket/server.js', () => ({
   broadcast: vi.fn(),
 }));
 
+vi.mock('../services/status-logger.service.js', () => ({
+  logStatusChange: vi.fn(),
+  logFileActivityCheck: vi.fn(),
+}));
+
 vi.mock('fs', () => ({
   default: {
     existsSync: vi.fn(),
@@ -45,9 +50,9 @@ describe('LocalStatusPollerService', () => {
     it('should return idle when session directory does not exist', () => {
       vi.mocked(fs.existsSync).mockReturnValue(false);
 
-      const status = localStatusPollerService.checkLocalClaudeStatus('/test/project');
+      const result = localStatusPollerService.checkLocalClaudeStatus('/test/project');
 
-      expect(status).toBe('idle');
+      expect(result.status).toBe('idle');
     });
 
     it('should return idle when no session files exist', () => {
@@ -55,9 +60,9 @@ describe('LocalStatusPollerService', () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       vi.mocked(fs.readdirSync).mockReturnValue([] as any);
 
-      const status = localStatusPollerService.checkLocalClaudeStatus('/test/project');
+      const result = localStatusPollerService.checkLocalClaudeStatus('/test/project');
 
-      expect(status).toBe('idle');
+      expect(result.status).toBe('idle');
     });
 
     it('should return working when session file was modified within 60 seconds', () => {
@@ -68,9 +73,10 @@ describe('LocalStatusPollerService', () => {
         mtimeMs: Date.now() - 10000, // 10 seconds ago
       } as fs.Stats);
 
-      const status = localStatusPollerService.checkLocalClaudeStatus('/test/project');
+      const result = localStatusPollerService.checkLocalClaudeStatus('/test/project');
 
-      expect(status).toBe('working');
+      expect(result.status).toBe('working');
+      expect(result.ageSeconds).toBeCloseTo(10, 0);
     });
 
     it('should return idle when session file was modified more than 60 seconds ago', () => {
@@ -81,9 +87,10 @@ describe('LocalStatusPollerService', () => {
         mtimeMs: Date.now() - 120000, // 120 seconds ago (more than 60s threshold)
       } as fs.Stats);
 
-      const status = localStatusPollerService.checkLocalClaudeStatus('/test/project');
+      const result = localStatusPollerService.checkLocalClaudeStatus('/test/project');
 
-      expect(status).toBe('idle');
+      expect(result.status).toBe('idle');
+      expect(result.ageSeconds).toBeCloseTo(120, 0);
     });
 
     it('should expand tilde in working directory path', () => {
@@ -117,10 +124,11 @@ describe('LocalStatusPollerService', () => {
         return { mtimeMs: Date.now() - 120000 } as fs.Stats; // 2 minutes ago
       });
 
-      const status = localStatusPollerService.checkLocalClaudeStatus('/test/project');
+      const result = localStatusPollerService.checkLocalClaudeStatus('/test/project');
 
       // Should be working because the newest file was modified 5 seconds ago
-      expect(status).toBe('working');
+      expect(result.status).toBe('working');
+      expect(result.ageSeconds).toBeCloseTo(5, 0);
     });
   });
 

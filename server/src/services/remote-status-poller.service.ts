@@ -2,6 +2,7 @@ import { getDatabase } from '../db/connection.js';
 import { sshConnectionService } from './ssh-connection.service.js';
 import { broadcast } from '../websocket/server.js';
 import { createActivityEvent } from './feed.service.js';
+import { logStatusChange } from './status-logger.service.js';
 import type { InstanceStatus } from '@cc-orchestrator/shared';
 
 interface RemoteInstanceRow {
@@ -96,11 +97,37 @@ class RemoteStatusPollerService {
       if (result.error) {
         // Connection error - don't change status, just log
         console.warn(`⚠️ Could not check status for ${instance.name}: ${result.error}`);
+        logStatusChange({
+          instanceId: instance.id,
+          instanceName: instance.name,
+          oldStatus: instance.status,
+          newStatus: instance.status, // No change due to error
+          source: 'remote-poll',
+          reason: `SSH error: ${result.error}`,
+          metadata: { machineId: instance.machine_id, workingDir: instance.working_dir },
+        });
         return;
       }
 
       const newStatus = result.status;
       const oldStatus = instance.status;
+
+      // Log status decision (whether changed or not)
+      logStatusChange({
+        instanceId: instance.id,
+        instanceName: instance.name,
+        oldStatus,
+        newStatus,
+        source: 'remote-poll',
+        reason: result.ageSeconds !== undefined
+          ? `File age: ${result.ageSeconds.toFixed(1)}s`
+          : 'No session files found',
+        metadata: {
+          machineId: instance.machine_id,
+          workingDir: instance.working_dir,
+          ageSeconds: result.ageSeconds,
+        },
+      });
 
       // Only update if status changed
       if (newStatus !== oldStatus) {

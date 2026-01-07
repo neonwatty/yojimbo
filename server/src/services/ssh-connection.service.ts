@@ -404,7 +404,7 @@ class SSHConnectionService {
   async checkRemoteClaudeStatus(
     machineId: string,
     workingDir: string
-  ): Promise<{ status: InstanceStatus; error?: string }> {
+  ): Promise<{ status: InstanceStatus; error?: string; ageSeconds?: number }> {
     // Encode the working directory path like Claude does (replace / with -)
     // Note: Claude keeps the leading dash (e.g., -Users-jeremywatt-Desktop-...)
     const encodedDir = workingDir.replace(/\//g, '-');
@@ -449,14 +449,15 @@ class SSHConnectionService {
     // Parse age from session file modification time
     const ageMatch = output.match(/AGE:(\d+)/);
     const age = ageMatch ? parseInt(ageMatch[1], 10) : Infinity;
+    const ageSeconds = isFinite(age) ? age : undefined;
 
     // Determine status:
     // - If file modified within last 30 seconds = working
     // - Otherwise = idle
     if (age <= 30) {
-      return { status: 'working' };
+      return { status: 'working', ageSeconds };
     } else {
-      return { status: 'idle' };
+      return { status: 'idle', ageSeconds };
     }
   }
 }

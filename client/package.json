@@ -14,6 +14,7 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "test:e2e:claude": "TEST_CLAUDE_INTEGRATION=1 playwright test --grep 'Claude Integration'",
+    "test:e2e:status-debug": "TEST_CLAUDE_INTEGRATION=1 playwright test --grep 'Status Debug'",
     "test:e2e:summary": "npx tsx e2e/coverage-summary.ts"
   },
   "dependencies": {

@@ -30,6 +30,10 @@ vi.mock('../services/ssh-connection.service.js', () => ({
   },
 }));
 
+vi.mock('../services/status-logger.service.js', () => ({
+  logStatusChange: vi.fn(),
+}));
+
 // Import after mocking
 import { remoteStatusPollerService } from '../services/remote-status-poller.service.js';
 import { broadcast } from '../websocket/server.js';

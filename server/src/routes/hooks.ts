@@ -4,6 +4,8 @@ import { getDatabase } from '../db/connection.js';
 import { broadcast } from '../websocket/server.js';
 import { createActivityEvent } from '../services/feed.service.js';
 import { statusTimeoutService } from '../services/status-timeout.service.js';
+import { hookPriorityService } from '../services/hook-priority.service.js';
+import { logStatusChange, logHookReceived, logInstanceLookup } from '../services/status-logger.service.js';
 import type { HookStatusEvent, HookNotificationEvent, HookStopEvent, InstanceStatus } from '@cc-orchestrator/shared';
 
 const router = Router();
@@ -129,7 +131,7 @@ function findInstanceByWorkingDir(projectDir: string, machineId?: string | null)
 }
 
 // Update instance status
-function updateInstanceStatus(instanceId: string, status: InstanceStatus): void {
+function updateInstanceStatus(instanceId: string, status: InstanceStatus, hookType: string): void {
   const db = getDatabase();
 
   // Get instance name and previous status
@@ -138,34 +140,45 @@ function updateInstanceStatus(instanceId: string, status: InstanceStatus): void 
 
   if (!instance) return;
 
-  const previousStatus = instance.status;
+  const previousStatus = instance.status as InstanceStatus;
+
+  // Log the status change decision
+  logStatusChange({
+    instanceId,
+    instanceName: instance.name,
+    oldStatus: previousStatus,
+    newStatus: status,
+    source: 'hook',
+    reason: `${hookType} hook received`,
+  });
 
   // Record activity for timeout tracking
   statusTimeoutService.recordActivity(instanceId, status);
 
-  // Update database
-  db.prepare(`
-    UPDATE instances
-    SET status = ?, updated_at = datetime('now')
-    WHERE id = ?
-  `).run(status, instanceId);
+  // Only update database if status actually changed
+  if (previousStatus !== status) {
+    // Update database
+    db.prepare(`
+      UPDATE instances
+      SET status = ?, updated_at = datetime('now')
+      WHERE id = ?
+    `).run(status, instanceId);
 
-  // Broadcast status change
-  broadcast({
-    type: 'status:changed',
-    instanceId,
-    status,
-  });
+    // Broadcast status change
+    broadcast({
+      type: 'status:changed',
+      instanceId,
+      status,
+    });
 
-  console.log(`📊 Instance ${instanceId} status changed to: ${status}`);
-
-  // Create activity events for significant transitions
-  if (status === 'idle' && previousStatus === 'working') {
-    createActivityEvent(instanceId, instance.name, 'completed', `${instance.name} finished working`);
-  } else if (status === 'error' && previousStatus !== 'error') {
-    createActivityEvent(instanceId, instance.name, 'error', `${instance.name} encountered an error`);
-  } else if (status === 'working' && previousStatus === 'idle') {
-    createActivityEvent(instanceId, instance.name, 'started', `${instance.name} started working`);
+    // Create activity events for significant transitions
+    if (status === 'idle' && previousStatus === 'working') {
+      createActivityEvent(instanceId, instance.name, 'completed', `${instance.name} finished working`);
+    } else if (status === 'error' && previousStatus !== 'error') {
+      createActivityEvent(instanceId, instance.name, 'error', `${instance.name} encountered an error`);
+    } else if (status === 'working' && previousStatus === 'idle') {
+      createActivityEvent(instanceId, instance.name, 'started', `${instance.name} started working`);
+    }
   }
 }
 
@@ -174,27 +187,30 @@ router.post('/status', (req, res) => {
   try {
     const { event, projectDir, instanceId, machineId } = req.body as HookStatusEvent & { instanceId?: string; machineId?: string };
 
-    console.log(`🔔 Hook status event: ${event} for ${projectDir} (instanceId: ${instanceId || 'none'}, machineId: ${machineId || 'local'})`);
+    logHookReceived({ hookType: `status:${event}`, projectDir, instanceId, machineId });
 
     // Prefer matching by instanceId (more reliable)
     let instance = findInstanceById(instanceId || '');
+    let matchMethod: 'id' | 'directory' | 'none' = instance ? 'id' : 'none';
 
     // Only fall back to directory matching if no instanceId was provided
     if (!instance && !instanceId) {
       // Pass machineId to filter by machine (null = local machine only)
       instance = findInstanceByWorkingDir(projectDir, machineId);
-      if (instance) {
-        console.log(`📍 Matched by directory: ${projectDir} -> ${instance.id}`);
-      }
+      matchMethod = instance ? 'directory' : 'none';
     }
+
+    logInstanceLookup({
+      found: !!instance,
+      method: matchMethod,
+      instanceId: instance?.id,
+      instanceName: instance?.name,
+      projectDir,
+    });
 
     if (instance) {
       const status: InstanceStatus = event === 'working' ? 'working' : 'idle';
-      updateInstanceStatus(instance.id, status);
-    } else if (instanceId) {
-      console.log(`⚠️ No instance found with ID: ${instanceId}`);
-    } else {
-      console.log(`⚠️ No instance found for directory: ${projectDir} (machineId: ${machineId || 'local'})`);
+      updateInstanceStatus(instance.id, status, `status:${event}`);
     }
 
     res.json({ ok: true });
@@ -210,27 +226,32 @@ router.post('/notification', (req, res) => {
   try {
     const { projectDir, instanceId, machineId } = req.body as HookNotificationEvent & { instanceId?: string; machineId?: string };
 
-    console.log(`🔔 Hook notification event for ${projectDir} (instanceId: ${instanceId || 'none'}, machineId: ${machineId || 'local'})`);
+    logHookReceived({ hookType: 'notification', projectDir, instanceId, machineId });
 
     // Prefer matching by instanceId (more reliable)
     let instance = findInstanceById(instanceId || '');
+    let matchMethod: 'id' | 'directory' | 'none' = instance ? 'id' : 'none';
 
     // Only fall back to directory matching if no instanceId was provided
     if (!instance && !instanceId) {
       // Pass machineId to filter by machine (null = local machine only)
       instance = findInstanceByWorkingDir(projectDir, machineId);
-      if (instance) {
-        console.log(`📍 Matched by directory: ${projectDir} -> ${instance.id}`);
-      }
+      matchMethod = instance ? 'directory' : 'none';
     }
 
+    logInstanceLookup({
+      found: !!instance,
+      method: matchMethod,
+      instanceId: instance?.id,
+      instanceName: instance?.name,
+      projectDir,
+    });
+
     if (instance) {
+      // Record this hook to prevent local polling from overriding
+      hookPriorityService.recordHook(instance.id, 'notification');
       // Notification events now set to idle (Claude is done working, waiting for user)
-      updateInstanceStatus(instance.id, 'idle');
-    } else if (instanceId) {
-      console.log(`⚠️ No instance found with ID: ${instanceId}`);
-    } else {
-      console.log(`⚠️ No instance found for directory: ${projectDir} (machineId: ${machineId || 'local'})`);
+      updateInstanceStatus(instance.id, 'idle', 'notification');
     }
 
     res.json({ ok: true });
@@ -245,26 +266,31 @@ router.post('/stop', (req, res) => {
   try {
     const { projectDir, instanceId, machineId } = req.body as HookStopEvent & { instanceId?: string; machineId?: string };
 
-    console.log(`🔔 Hook stop event for ${projectDir} (instanceId: ${instanceId || 'none'}, machineId: ${machineId || 'local'})`);
+    logHookReceived({ hookType: 'stop', projectDir, instanceId, machineId });
 
     // Prefer matching by instanceId (more reliable)
     let instance = findInstanceById(instanceId || '');
+    let matchMethod: 'id' | 'directory' | 'none' = instance ? 'id' : 'none';
 
     // Only fall back to directory matching if no instanceId was provided
     if (!instance && !instanceId) {
       // Pass machineId to filter by machine (null = local machine only)
       instance = findInstanceByWorkingDir(projectDir, machineId);
-      if (instance) {
-        console.log(`📍 Matched by directory: ${projectDir} -> ${instance.id}`);
-      }
+      matchMethod = instance ? 'directory' : 'none';
     }
 
+    logInstanceLookup({
+      found: !!instance,
+      method: matchMethod,
+      instanceId: instance?.id,
+      instanceName: instance?.name,
+      projectDir,
+    });
+
     if (instance) {
-      updateInstanceStatus(instance.id, 'idle');
-    } else if (instanceId) {
-      console.log(`⚠️ No instance found with ID: ${instanceId}`);
-    } else {
-      console.log(`⚠️ No instance found for directory: ${projectDir} (machineId: ${machineId || 'local'})`);
+      // Record this hook to prevent local polling from overriding
+      hookPriorityService.recordHook(instance.id, 'stop');
+      updateInstanceStatus(instance.id, 'idle', 'stop');
     }
 
     res.json({ ok: true });

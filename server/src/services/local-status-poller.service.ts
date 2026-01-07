@@ -3,6 +3,8 @@ import path from 'path';
 import os from 'os';
 import { getDatabase } from '../db/connection.js';
 import { broadcast } from '../websocket/server.js';
+import { hookPriorityService } from './hook-priority.service.js';
+import { logStatusChange, logFileActivityCheck } from './status-logger.service.js';
 import type { InstanceStatus } from '@cc-orchestrator/shared';
 
 interface LocalInstanceRow {
@@ -69,11 +71,39 @@ class LocalStatusPollerService {
 
     for (const instance of instances) {
       try {
-        const newStatus = this.checkLocalClaudeStatus(instance.working_dir);
+        // Check if a recent hook should take priority over polling
+        if (hookPriorityService.shouldDeferToHook(instance.id)) {
+          const hookInfo = hookPriorityService.getRecentHook(instance.id);
+          logStatusChange({
+            instanceId: instance.id,
+            instanceName: instance.name,
+            oldStatus: instance.status,
+            newStatus: instance.status, // No change - deferred to hook
+            source: 'local-poll',
+            reason: `Deferred to recent ${hookInfo?.hookType} hook (within grace period)`,
+            metadata: { deferredToHook: true, hookType: hookInfo?.hookType },
+          });
+          continue; // Skip this instance - trust the hook
+        }
+
+        const { status: newStatus, ageSeconds } = this.checkLocalClaudeStatus(instance.working_dir, instance.name);
+
+        // Log status decision (whether changed or not)
+        logStatusChange({
+          instanceId: instance.id,
+          instanceName: instance.name,
+          oldStatus: instance.status,
+          newStatus,
+          source: 'local-poll',
+          reason: ageSeconds !== undefined
+            ? `File age: ${ageSeconds.toFixed(1)}s (threshold: ${this.ACTIVITY_THRESHOLD_SECONDS}s)`
+            : 'No session files found',
+          metadata: { ageSeconds, threshold: this.ACTIVITY_THRESHOLD_SECONDS },
+        });
 
         // Only update if status changed
         if (newStatus !== instance.status) {
-          this.updateInstanceStatus(instance.id, newStatus);
+          this.updateInstanceStatus(instance.id, instance.name, instance.status, newStatus);
         }
       } catch (error) {
         console.error(`Error checking local status for ${instance.name}:`, error);
@@ -85,7 +115,7 @@ class LocalStatusPollerService {
    * Check Claude Code status by examining local session files
    * Returns 'working' if recent activity (within threshold), 'idle' otherwise
    */
-  checkLocalClaudeStatus(workingDir: string): InstanceStatus {
+  checkLocalClaudeStatus(workingDir: string, instanceName?: string): { status: InstanceStatus; ageSeconds?: number; sessionDir: string } {
     // Expand ~ to home directory
     const expandedDir = workingDir.replace(/^~/, os.homedir());
 
@@ -98,7 +128,16 @@ class LocalStatusPollerService {
 
     // Check if session directory exists
     if (!fs.existsSync(sessionDir)) {
-      return 'idle';
+      if (instanceName) {
+        logFileActivityCheck({
+          instanceName,
+          sessionDir,
+          fileFound: false,
+          threshold: this.ACTIVITY_THRESHOLD_SECONDS,
+          result: 'idle',
+        });
+      }
+      return { status: 'idle', sessionDir };
     }
 
     try {
@@ -113,7 +152,16 @@ class LocalStatusPollerService {
         .sort((a, b) => b.mtime - a.mtime);
 
       if (files.length === 0) {
-        return 'idle';
+        if (instanceName) {
+          logFileActivityCheck({
+            instanceName,
+            sessionDir,
+            fileFound: false,
+            threshold: this.ACTIVITY_THRESHOLD_SECONDS,
+            result: 'idle',
+          });
+        }
+        return { status: 'idle', sessionDir };
       }
 
       const latestFile = files[0];
@@ -121,37 +169,56 @@ class LocalStatusPollerService {
       const ageSeconds = (now - latestFile.mtime) / 1000;
 
       // If file was modified within threshold, consider it working
-      if (ageSeconds <= this.ACTIVITY_THRESHOLD_SECONDS) {
-        return 'working';
+      const result: InstanceStatus = ageSeconds <= this.ACTIVITY_THRESHOLD_SECONDS ? 'working' : 'idle';
+
+      if (instanceName) {
+        logFileActivityCheck({
+          instanceName,
+          sessionDir,
+          fileFound: true,
+          ageSeconds,
+          threshold: this.ACTIVITY_THRESHOLD_SECONDS,
+          result,
+        });
       }
 
-      return 'idle';
+      return { status: result, ageSeconds, sessionDir };
     } catch (error) {
       // If we can't read the directory, assume idle
-      return 'idle';
+      if (instanceName) {
+        logFileActivityCheck({
+          instanceName,
+          sessionDir,
+          fileFound: false,
+          threshold: this.ACTIVITY_THRESHOLD_SECONDS,
+          result: 'idle',
+        });
+      }
+      return { status: 'idle', sessionDir };
     }
   }
 
   /**
    * Update instance status in database and broadcast change
    */
-  private updateInstanceStatus(instanceId: string, status: InstanceStatus): void {
+  private updateInstanceStatus(instanceId: string, instanceName: string, oldStatus: InstanceStatus, newStatus: InstanceStatus): void {
     const db = getDatabase();
 
     db.prepare(`
       UPDATE instances
       SET status = ?, updated_at = datetime('now')
       WHERE id = ?
-    `).run(status, instanceId);
+    `).run(newStatus, instanceId);
 
     // Broadcast status change via WebSocket
     broadcast({
       type: 'status:changed',
       instanceId,
-      status,
+      status: newStatus,
     });
 
-    console.log(`📊 Local instance ${instanceId} status changed to: ${status}`);
+    // Log is already done in pollAllLocalInstances, this is just the DB update
+    console.log(`📊 Local poll: ${instanceName} (${instanceId.slice(0, 8)}) DB updated: ${oldStatus} → ${newStatus}`);
   }
 }
 

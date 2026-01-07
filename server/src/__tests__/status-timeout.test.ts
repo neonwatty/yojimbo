@@ -27,6 +27,11 @@ vi.mock('../services/local-status-poller.service.js', () => ({
   },
 }));
 
+vi.mock('../services/status-logger.service.js', () => ({
+  logStatusChange: vi.fn(),
+  logTimeoutCheck: vi.fn(),
+}));
+
 // Import after mocking
 import { statusTimeoutService } from '../services/status-timeout.service.js';
 import { broadcast } from '../websocket/server.js';

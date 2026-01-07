@@ -258,6 +258,7 @@ export type WSServerMessageType =
   | 'task:created'
   | 'task:updated'
   | 'task:deleted'
+  | 'log:status'
   | 'error';
 
 export interface FileChangeEvent {
@@ -286,6 +287,27 @@ export interface WSServerMessage {
   task?: GlobalTask;
   taskId?: string;
   error?: string;
+  // Status log fields (for log:status messages)
+  logType?: 'status-change' | 'hook-received' | 'instance-lookup' | 'file-check' | 'timeout-check';
+  timestamp?: number;
+  instanceName?: string;
+  oldStatus?: string;
+  newStatus?: string;
+  changed?: boolean;
+  source?: 'hook' | 'local-poll' | 'remote-poll' | 'timeout';
+  reason?: string;
+  metadata?: Record<string, unknown>;
+  hookType?: string;
+  projectDir?: string;
+  sessionDir?: string;
+  fileFound?: boolean;
+  ageSeconds?: number;
+  threshold?: number;
+  result?: 'working' | 'idle';
+  timeSinceActivityMs?: number;
+  thresholdMs?: number;
+  fileCheckResult?: 'working' | 'idle';
+  action?: 'reset' | 'extend' | 'skip';
 }
 
 // API response types

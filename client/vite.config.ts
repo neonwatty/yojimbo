@@ -34,7 +34,7 @@ function loadConfig(): AppConfig {
 const config = loadConfig();
 const configHost = config.host || '127.0.0.1';
 const serverPort = config.serverPort || 3456;
-const clientPort = config.clientPort || 5173;
+const clientPort = parseInt(process.env.PORT || '', 10) || config.clientPort || 5173;
 
 // For Vite's proxy, always use localhost since it's connecting locally
 // even when the server is bound to 0.0.0.0

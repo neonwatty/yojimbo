@@ -17,17 +17,17 @@ NC := \033[0m # No Color
 ## dev: Start development servers (client + server concurrently)
 dev:
 	@echo "$(CYAN)Starting development servers...$(NC)"
-	npm run dev
+	CI=true npm run dev
 
 ## dev-client: Start only the client development server
 dev-client:
 	@echo "$(CYAN)Starting client development server...$(NC)"
-	npm run dev:client
+	CI=true npm run dev:client
 
 ## dev-server: Start only the server development server
 dev-server:
 	@echo "$(CYAN)Starting server development server...$(NC)"
-	npm run dev:server
+	CI=true npm run dev:server
 
 #===============================================================================
 # Production

@@ -695,14 +695,15 @@ body {
     height: 100%;
     overflow: hidden;
     overscroll-behavior: none;
-    touch-action: none;
+    /* Use pan-y to allow vertical scrolling in child elements while preventing horizontal pan */
+    touch-action: pan-y;
   }
 
   #root {
     height: 100dvh;
     width: 100vw;
     overflow: hidden;
-    touch-action: none;
+    touch-action: pan-y;
   }
 
   /* Disable text selection on touch */
@@ -721,6 +722,15 @@ body {
   /* Allow touch interaction for interactive elements */
   button, a, input, textarea, [role="button"] {
     touch-action: manipulation !important;
+  }
+
+  /* Allow touch scrolling in xterm terminal */
+  .xterm {
+    touch-action: pan-y !important;
+  }
+  .xterm-viewport {
+    touch-action: pan-y !important;
+    -webkit-overflow-scrolling: touch;
   }
 
   /* Touch-friendly active states */

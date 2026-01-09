@@ -739,8 +739,8 @@ function MobileTerminalView({
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
-      {/* Terminal - constrained to viewport width */}
-      <div className="absolute inset-0 overflow-hidden">
+      {/* Terminal - constrained to viewport width, touch-action allows scrolling */}
+      <div className="absolute inset-0" style={{ touchAction: 'pan-y' }}>
         <ErrorBoundary
           fallback={
             <div className="flex items-center justify-center h-full">

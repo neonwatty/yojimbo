@@ -31,7 +31,7 @@ describe('MobileTextInput', () => {
 
       expect(screen.getByTestId('expand-button')).toHaveAttribute(
         'title',
-        'Open text input (for speech-to-text)'
+        'Voice/text input'
       );
     });
   });
@@ -46,14 +46,12 @@ describe('MobileTextInput', () => {
       expect(screen.queryByTestId('mobile-text-input-collapsed')).not.toBeInTheDocument();
     });
 
-    it('collapses when clicking the collapse button', () => {
+    it('collapses when clicking the cancel button', () => {
       render(<MobileTextInput instanceId={mockInstanceId} />);
 
-      // Expand first
       fireEvent.click(screen.getByTestId('expand-button'));
       expect(screen.getByTestId('mobile-text-input-expanded')).toBeInTheDocument();
 
-      // Collapse
       fireEvent.click(screen.getByTestId('collapse-button'));
       expect(screen.getByTestId('mobile-text-input-collapsed')).toBeInTheDocument();
     });
@@ -61,19 +59,13 @@ describe('MobileTextInput', () => {
     it('clears text when collapsing', () => {
       render(<MobileTextInput instanceId={mockInstanceId} />);
 
-      // Expand
       fireEvent.click(screen.getByTestId('expand-button'));
+      fireEvent.change(screen.getByTestId('text-input'), { target: { value: 'test text' } });
+      expect(screen.getByTestId('text-input')).toHaveValue('test text');
 
-      // Type some text
-      const textarea = screen.getByTestId('text-input');
-      fireEvent.change(textarea, { target: { value: 'test text' } });
-      expect(textarea).toHaveValue('test text');
-
-      // Collapse and expand again
       fireEvent.click(screen.getByTestId('collapse-button'));
       fireEvent.click(screen.getByTestId('expand-button'));
 
-      // Text should be cleared
       expect(screen.getByTestId('text-input')).toHaveValue('');
     });
   });
@@ -97,7 +89,7 @@ describe('MobileTextInput', () => {
 
       expect(screen.getByTestId('text-input')).toHaveAttribute(
         'placeholder',
-        'Type or tap mic for speech...'
+        'Type or speak...'
       );
     });
 
@@ -180,52 +172,73 @@ describe('MobileTextInput', () => {
       expect(screen.getByTestId('send-enter-button')).not.toBeDisabled();
     });
 
-    it('sends text with carriage return via API when clicked', () => {
+    it('sends text then carriage return separately via API when clicked', async () => {
       render(<MobileTextInput instanceId={mockInstanceId} />);
 
       fireEvent.click(screen.getByTestId('expand-button'));
       fireEvent.change(screen.getByTestId('text-input'), { target: { value: 'test command' } });
       fireEvent.click(screen.getByTestId('send-enter-button'));
 
-      expect(instancesApi.sendInput).toHaveBeenCalledWith(mockInstanceId, 'test command\r');
+      // Wait for async operations to complete
+      await vi.waitFor(() => {
+        expect(instancesApi.sendInput).toHaveBeenCalledTimes(2);
+      });
+
+      // First call sends the text
+      expect(instancesApi.sendInput).toHaveBeenNthCalledWith(1, mockInstanceId, 'test command');
+      // Second call sends carriage return separately (mimics keyboard input)
+      expect(instancesApi.sendInput).toHaveBeenNthCalledWith(2, mockInstanceId, '\r');
     });
 
-    it('clears text after sending with enter', () => {
+    it('closes modal after sending with enter', async () => {
       render(<MobileTextInput instanceId={mockInstanceId} />);
 
       fireEvent.click(screen.getByTestId('expand-button'));
       fireEvent.change(screen.getByTestId('text-input'), { target: { value: 'test command' } });
       fireEvent.click(screen.getByTestId('send-enter-button'));
 
-      expect(screen.getByTestId('text-input')).toHaveValue('');
+      // Wait for async operations to complete and modal to close
+      await vi.waitFor(() => {
+        expect(screen.getByTestId('mobile-text-input-collapsed')).toBeInTheDocument();
+      });
     });
   });
 
   describe('keyboard shortcuts', () => {
-    it('sends with enter on Cmd+Enter (Mac)', () => {
+    it('sends with enter on Cmd+Enter (Mac)', async () => {
       render(<MobileTextInput instanceId={mockInstanceId} />);
 
       fireEvent.click(screen.getByTestId('expand-button'));
       const textarea = screen.getByTestId('text-input');
       fireEvent.change(textarea, { target: { value: 'test command' } });
 
-      // Simulate Cmd+Enter
       fireEvent.keyDown(textarea, { key: 'Enter', metaKey: true });
 
-      expect(instancesApi.sendInput).toHaveBeenCalledWith(mockInstanceId, 'test command\r');
+      // Wait for async operations to complete
+      await vi.waitFor(() => {
+        expect(instancesApi.sendInput).toHaveBeenCalledTimes(2);
+      });
+
+      expect(instancesApi.sendInput).toHaveBeenNthCalledWith(1, mockInstanceId, 'test command');
+      expect(instancesApi.sendInput).toHaveBeenNthCalledWith(2, mockInstanceId, '\r');
     });
 
-    it('sends with enter on Ctrl+Enter (Windows/Linux)', () => {
+    it('sends with enter on Ctrl+Enter (Windows/Linux)', async () => {
       render(<MobileTextInput instanceId={mockInstanceId} />);
 
       fireEvent.click(screen.getByTestId('expand-button'));
       const textarea = screen.getByTestId('text-input');
       fireEvent.change(textarea, { target: { value: 'test command' } });
 
-      // Simulate Ctrl+Enter
       fireEvent.keyDown(textarea, { key: 'Enter', ctrlKey: true });
 
-      expect(instancesApi.sendInput).toHaveBeenCalledWith(mockInstanceId, 'test command\r');
+      // Wait for async operations to complete
+      await vi.waitFor(() => {
+        expect(instancesApi.sendInput).toHaveBeenCalledTimes(2);
+      });
+
+      expect(instancesApi.sendInput).toHaveBeenNthCalledWith(1, mockInstanceId, 'test command');
+      expect(instancesApi.sendInput).toHaveBeenNthCalledWith(2, mockInstanceId, '\r');
     });
 
     it('does not send on regular Enter', () => {
@@ -235,22 +248,19 @@ describe('MobileTextInput', () => {
       const textarea = screen.getByTestId('text-input');
       fireEvent.change(textarea, { target: { value: 'test command' } });
 
-      // Simulate regular Enter
       fireEvent.keyDown(textarea, { key: 'Enter' });
 
       expect(instancesApi.sendInput).not.toHaveBeenCalled();
     });
   });
 
-  describe('hint text', () => {
-    it('shows hint text when expanded', () => {
+  describe('modal header', () => {
+    it('shows Voice Input title', () => {
       render(<MobileTextInput instanceId={mockInstanceId} />);
 
       fireEvent.click(screen.getByTestId('expand-button'));
 
-      expect(
-        screen.getByText(/Tap mic on keyboard for speech/)
-      ).toBeInTheDocument();
+      expect(screen.getByText('Voice Input')).toBeInTheDocument();
     });
   });
 });

@@ -107,6 +107,52 @@ export function useTerminal(options: UseTerminalOptions = {}) {
       terminalRef.current = terminal;
       fitAddonRef.current = fitAddon;
 
+      // Mobile touch scrolling support
+      // xterm.js doesn't natively support touch scrolling, so we implement it manually
+      // See: https://github.com/xtermjs/xterm.js/issues/5377
+      let touchStartY = 0;
+      let lastTouchY = 0;
+      let isTouchScrolling = false;
+
+      const handleTouchStart = (e: TouchEvent) => {
+        if (e.touches.length === 1) {
+          touchStartY = e.touches[0].clientY;
+          lastTouchY = touchStartY;
+          isTouchScrolling = true;
+        }
+      };
+
+      const handleTouchMove = (e: TouchEvent) => {
+        if (!isTouchScrolling || e.touches.length !== 1) return;
+
+        const currentY = e.touches[0].clientY;
+        const deltaY = lastTouchY - currentY;
+        lastTouchY = currentY;
+
+        // Calculate lines to scroll based on delta
+        // Use line height (fontSize * lineHeight) to determine scroll amount
+        const lineHeight = 13 * 1.2; // fontSize * lineHeight from terminal config
+        const linesToScroll = Math.round(deltaY / lineHeight);
+
+        if (linesToScroll !== 0 && terminalRef.current) {
+          terminalRef.current.scrollLines(linesToScroll);
+          // Prevent default to stop page scrolling while scrolling terminal
+          e.preventDefault();
+        }
+      };
+
+      const handleTouchEnd = () => {
+        isTouchScrolling = false;
+      };
+
+      // Add touch event listeners to the terminal's element
+      const terminalElement = container.querySelector('.xterm-screen');
+      if (terminalElement) {
+        terminalElement.addEventListener('touchstart', handleTouchStart as EventListener, { passive: true });
+        terminalElement.addEventListener('touchmove', handleTouchMove as EventListener, { passive: false });
+        terminalElement.addEventListener('touchend', handleTouchEnd as EventListener, { passive: true });
+      }
+
       // Handle data input
       if (onData) {
         terminal.onData(onData);

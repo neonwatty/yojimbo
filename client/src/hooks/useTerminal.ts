@@ -18,28 +18,31 @@ interface UseTerminalOptions {
   theme?: 'light' | 'dark';
 }
 
+// Ghostty default dark theme colors
+// Source: https://github.com/ghostty-org/ghostty/discussions/5390
 const darkTheme = {
-  background: '#1a1b26',
-  foreground: '#a9b1d6',
-  cursor: '#c0caf5',
-  cursorAccent: '#1a1b26',
-  selectionBackground: '#33467c',
-  black: '#32344a',
-  red: '#f7768e',
-  green: '#9ece6a',
-  yellow: '#e0af68',
-  blue: '#7aa2f7',
-  magenta: '#ad8ee6',
-  cyan: '#449dab',
-  white: '#787c99',
-  brightBlack: '#444b6a',
-  brightRed: '#ff7a93',
-  brightGreen: '#b9f27c',
-  brightYellow: '#ff9e64',
-  brightBlue: '#7da6ff',
-  brightMagenta: '#bb9af7',
-  brightCyan: '#0db9d7',
-  brightWhite: '#acb0d0',
+  background: '#292c33',
+  foreground: '#ffffff',
+  cursor: '#ffffff',
+  cursorAccent: '#363a43',
+  selectionBackground: '#ffffff',
+  selectionForeground: '#292c33',
+  black: '#1d1f21',
+  red: '#bf6b69',
+  green: '#b7bd73',
+  yellow: '#e9c880',
+  blue: '#88a1bb',
+  magenta: '#ad95b8',
+  cyan: '#95bdb7',
+  white: '#c5c8c6',
+  brightBlack: '#666666',
+  brightRed: '#c55757',
+  brightGreen: '#bcc95f',
+  brightYellow: '#e1c65e',
+  brightBlue: '#83a5d6',
+  brightMagenta: '#bc99d4',
+  brightCyan: '#83beb1',
+  brightWhite: '#eaeaea',
 };
 
 const lightTheme = {

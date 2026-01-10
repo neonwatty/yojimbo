@@ -127,7 +127,7 @@ export const Terminal = forwardRef<TerminalRef, TerminalProps>(
         ref={containerRef}
         className="h-full w-full"
         style={{
-          backgroundColor: theme === 'dark' ? '#1a1b26' : '#ffffff',
+          backgroundColor: theme === 'dark' ? '#292c33' : '#ffffff',
           touchAction: 'pan-y',
         }}
       />

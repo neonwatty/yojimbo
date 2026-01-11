@@ -42,7 +42,7 @@ jobs:
             echo "🚀 Starting deployment..."
             echo "========================================"
 
-            cd ~/yojimbo
+            cd ~/Desktop/yojimbo
 
             echo ""
             echo "📥 Pulling latest changes..."

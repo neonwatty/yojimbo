@@ -28,6 +28,7 @@ module.exports = {
       env: {
         NODE_ENV: 'production',
         PORT: 3456,
+        HOST: '0.0.0.0', // Bind to all interfaces for Tailscale access
       },
 
       // Restart behavior

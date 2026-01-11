@@ -1,0 +1,89 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: # Allow manual trigger from GitHub UI
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # Only run if CI passes (this job runs after CI workflow)
+    needs: []
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Tailscale
+        uses: tailscale/github-action@v2
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:ci
+
+      - name: Setup SSH Key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.MAC_MINI_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          # Add Mac mini to known hosts (will be populated on first connect)
+          ssh-keyscan -H ${{ secrets.MAC_MINI_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Deploy to Mac Mini
+        env:
+          MAC_MINI_USER: ${{ secrets.MAC_MINI_USER }}
+          MAC_MINI_HOST: ${{ secrets.MAC_MINI_HOST }}
+        run: |
+          ssh -o StrictHostKeyChecking=no -o ConnectTimeout=30 ${MAC_MINI_USER}@${MAC_MINI_HOST} << 'DEPLOY'
+            set -e
+
+            echo "========================================"
+            echo "🚀 Starting deployment..."
+            echo "========================================"
+
+            cd ~/yojimbo
+
+            echo ""
+            echo "📥 Pulling latest changes..."
+            git fetch origin main
+            git reset --hard origin/main
+
+            echo ""
+            echo "📦 Installing dependencies..."
+            npm ci
+
+            echo ""
+            echo "🔨 Building application..."
+            npm run build
+
+            echo ""
+            echo "🔄 Restarting services..."
+            if pm2 describe yojimbo > /dev/null 2>&1; then
+              pm2 restart yojimbo
+            else
+              pm2 start npm --name yojimbo -- start
+            fi
+
+            echo ""
+            echo "========================================"
+            echo "✅ Deployment complete!"
+            echo "========================================"
+            pm2 status yojimbo
+          DEPLOY
+
+      - name: Deployment Summary
+        if: success()
+        run: |
+          echo "## 🚀 Deployment Successful" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Deployed to:** Mac Mini via Tailscale" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** main" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+
+      - name: Deployment Failed
+        if: failure()
+        run: |
+          echo "## ❌ Deployment Failed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Check the logs above for details." >> $GITHUB_STEP_SUMMARY

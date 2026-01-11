@@ -3,7 +3,7 @@ import { useInstancesStore } from '../store/instancesStore';
 import { useFeedStore } from '../store/feedStore';
 import { useTasksStore } from '../store/tasksStore';
 import { useUIStore } from '../store/uiStore';
-import { instancesApi, feedApi, tasksApi } from '../api/client';
+import { instancesApi, feedApi, tasksApi, keychainApi } from '../api/client';
 import { useWebSocket } from './useWebSocket';
 import { getWsUrl } from '../config';
 import type { Instance, ActivityEvent, GlobalTask } from '@cc-orchestrator/shared';
@@ -135,6 +135,16 @@ export function useInstances() {
         setTaskStats(response.data);
       }
     }).catch(() => {});
+
+    // Check local keychain status on connect - prompt if locked
+    keychainApi.status().then((response) => {
+      if (response.data?.locked) {
+        console.log('🔒 Local keychain is locked, prompting user');
+        showLocalKeychainUnlockPrompt('Keychain is locked. Enter your macOS password to unlock.');
+      }
+    }).catch(() => {
+      // Ignore errors - likely not on macOS
+    });
 
     return () => {
       unsubscribeCreated();

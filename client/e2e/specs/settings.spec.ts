@@ -75,10 +75,9 @@ test.describe('Settings Modal', () => {
     await basePage.goto('/instances');
     await basePage.openSettings();
 
-    // Check version is displayed in the settings modal (format: v0.x.x)
-    // Find the modal container that has the "Settings" heading
-    const settingsModal = basePage.page.locator('div:has(h2:text("Settings"))').first();
-    await expect(settingsModal.locator('text=/v\\d+\\.\\d+\\.\\d+/')).toBeVisible();
+    // Check version is displayed (format: v0.x.x)
+    // Use .first() since version now appears in both sidebar footer and settings modal footer
+    await expect(basePage.page.locator('text=/v\\d+\\.\\d+\\.\\d+/').first()).toBeVisible();
   });
 
   test('shows danger zone with database reset option', async ({ basePage }) => {

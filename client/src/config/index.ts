@@ -34,10 +34,9 @@ export async function initConfig(): Promise<void> {
     console.warn('Failed to fetch config from server, using defaults:', err);
   }
 
-  // Update document title with label if present
-  if (config.label) {
-    document.title = `[${config.label}] Yojimbo`;
-  }
+  // Update document title with environment label
+  const displayLabel = getDisplayLabel();
+  document.title = `[${displayLabel}] Yojimbo`;
 
   // Apply environment class for accent color theming
   document.documentElement.classList.add(isDevMode() ? 'env-dev' : 'env-prod');
@@ -86,4 +85,12 @@ export function getLabel(): string {
 export function isDevMode(): boolean {
   const label = config.label.toUpperCase();
   return label === 'DEV' || label === 'LOCAL' || label === 'DEVELOPMENT';
+}
+
+/**
+ * Get the display label for the environment.
+ * Returns the configured label if set, or "PROD" for production.
+ */
+export function getDisplayLabel(): string {
+  return config.label || 'PROD';
 }

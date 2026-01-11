@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { getLabel, isDevMode } from '../../config';
+import { getDisplayLabel, isDevMode } from '../../config';
 import { useInstancesStore } from '../../store/instancesStore';
 import { useUIStore } from '../../store/uiStore';
 import { StatusDot } from '../common/Status';
@@ -347,15 +347,13 @@ export function LeftSidebar() {
         </div>
         <div className="flex items-center gap-2 pt-1 border-t border-surface-700">
           <span className="text-theme-dim">v{__APP_VERSION__}</span>
-          {getLabel() && (
-            <span className={`text-[9px] px-1 py-0.5 rounded uppercase tracking-wide
-              ${isDevMode()
-                ? 'bg-accent/15 text-accent'
-                : 'bg-frost-4/15 text-frost-3'
-              }`}>
-              {getLabel()}
-            </span>
-          )}
+          <span className={`text-[9px] px-1 py-0.5 rounded uppercase tracking-wide
+            ${isDevMode()
+              ? 'bg-accent/15 text-accent'
+              : 'bg-frost-4/15 text-frost-3'
+            }`}>
+            {getDisplayLabel()}
+          </span>
         </div>
       </div>
 

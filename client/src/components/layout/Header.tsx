@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { getLabel, isDevMode } from '../../config';
+import { getDisplayLabel, isDevMode } from '../../config';
 import { useUIStore } from '../../store/uiStore';
 import { useInstancesStore } from '../../store/instancesStore';
 import { useSettingsStore } from '../../store/settingsStore';
@@ -211,15 +211,13 @@ export default function Header() {
           <span>
             <span className="text-accent font-bold">Yo</span>jimbo
           </span>
-          {getLabel() && (
-            <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium uppercase tracking-wide
-              ${isDevMode()
-                ? 'bg-accent/20 text-accent border border-accent/30'
-                : 'bg-frost-4/20 text-frost-2 border border-frost-4/30'
-              }`}>
-              {getLabel()}
-            </span>
-          )}
+          <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium uppercase tracking-wide
+            ${isDevMode()
+              ? 'bg-accent/20 text-accent border border-accent/30'
+              : 'bg-frost-4/20 text-frost-2 border border-frost-4/30'
+            }`}>
+            {getDisplayLabel()}
+          </span>
         </h1>
         <span className="text-surface-500">│</span>
         <div className="flex items-center gap-3">

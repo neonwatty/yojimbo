@@ -39,6 +39,9 @@ export async function initConfig(): Promise<void> {
     document.title = `[${config.label}] Yojimbo`;
   }
 
+  // Apply environment class for accent color theming
+  document.documentElement.classList.add(isDevMode() ? 'env-dev' : 'env-prod');
+
   initialized = true;
 }
 
@@ -74,4 +77,13 @@ export function isMacOS(): boolean {
  */
 export function getLabel(): string {
   return config.label;
+}
+
+/**
+ * Check if this is a dev installation.
+ * Dev installations have labels like "DEV", "LOCAL", "DEVELOPMENT".
+ */
+export function isDevMode(): boolean {
+  const label = config.label.toUpperCase();
+  return label === 'DEV' || label === 'LOCAL' || label === 'DEVELOPMENT';
 }

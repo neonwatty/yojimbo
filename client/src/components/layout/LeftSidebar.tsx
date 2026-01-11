@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { getLabel, isDevMode } from '../../config';
 import { useInstancesStore } from '../../store/instancesStore';
 import { useUIStore } from '../../store/uiStore';
 import { StatusDot } from '../common/Status';
@@ -340,9 +341,21 @@ export function LeftSidebar() {
 
       {/* Footer stats */}
       <div className="px-3 py-2 border-t border-surface-600 text-xs text-theme-muted">
-        <div className="flex justify-between">
+        <div className="flex justify-between mb-1">
           <span>{instances.filter((i) => i.status === 'working').length} working</span>
           <span>{instances.filter((i) => i.status === 'idle').length} idle</span>
+        </div>
+        <div className="flex items-center gap-2 pt-1 border-t border-surface-700">
+          <span className="text-theme-dim">v{__APP_VERSION__}</span>
+          {getLabel() && (
+            <span className={`text-[9px] px-1 py-0.5 rounded uppercase tracking-wide
+              ${isDevMode()
+                ? 'bg-accent/15 text-accent'
+                : 'bg-frost-4/15 text-frost-3'
+              }`}>
+              {getLabel()}
+            </span>
+          )}
         </div>
       </div>
 

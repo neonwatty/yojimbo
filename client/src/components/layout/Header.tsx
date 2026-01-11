@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { getLabel, isDevMode } from '../../config';
 import { useUIStore } from '../../store/uiStore';
 import { useInstancesStore } from '../../store/instancesStore';
 import { useSettingsStore } from '../../store/settingsStore';
@@ -203,11 +204,22 @@ export default function Header() {
     <header className="h-10 flex items-center justify-between px-3 bg-surface-800 border-b border-surface-600">
       <div className="flex items-center gap-3">
         <h1
-          className="text-sm font-semibold text-theme-primary cursor-pointer hover:text-frost-2 transition-colors"
+          className="text-sm font-semibold text-theme-primary cursor-pointer hover:text-frost-2 transition-colors flex items-center gap-2"
           onClick={() => navigate('/')}
           title="Go to Home"
         >
-          <span className="text-accent font-bold">Yo</span>jimbo
+          <span>
+            <span className="text-accent font-bold">Yo</span>jimbo
+          </span>
+          {getLabel() && (
+            <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium uppercase tracking-wide
+              ${isDevMode()
+                ? 'bg-accent/20 text-accent border border-accent/30'
+                : 'bg-frost-4/20 text-frost-2 border border-frost-4/30'
+              }`}>
+              {getLabel()}
+            </span>
+          )}
         </h1>
         <span className="text-surface-500">│</span>
         <div className="flex items-center gap-3">

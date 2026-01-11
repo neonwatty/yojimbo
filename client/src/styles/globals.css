@@ -76,6 +76,37 @@
   --border-color: #4c566a;
 }
 
+/* ═══════════════════════════════════════════════════════════════════════
+   ENVIRONMENT-BASED ACCENT COLORS
+   Dev = Orange/Amber (warm), Prod = Teal/Cyan (cool)
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* DEV Environment - warm orange (keeps current default) */
+:root.env-dev {
+  --accent: #c9703a;
+  --accent-bright: #d08770;
+  --accent-dim: #a85a32;
+}
+
+.dark.env-dev {
+  --accent: #d08770;
+  --accent-bright: #ebcb8b;
+  --accent-dim: #bf616a;
+}
+
+/* PROD Environment - cool teal/cyan */
+:root.env-prod {
+  --accent: #5e9dab;
+  --accent-bright: #7aada8;
+  --accent-dim: #4d7096;
+}
+
+.dark.env-prod {
+  --accent: #88c0d0;
+  --accent-bright: #8fbcbb;
+  --accent-dim: #5e81ac;
+}
+
 * {
   box-sizing: border-box;
 }

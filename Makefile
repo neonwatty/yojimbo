@@ -1,4 +1,4 @@
-.PHONY: dev start stop build lint lint-fix knip test test-unit test-e2e test-local clean db-reset db-migrate install hooks-install hooks-uninstall help
+.PHONY: dev start stop build lint lint-fix knip test test-unit test-e2e test-local clean db-reset db-migrate install hooks-install hooks-uninstall help pm2-start pm2-stop pm2-restart pm2-reload pm2-logs pm2-status pm2-setup pm2-delete
 
 # Default target
 .DEFAULT_GOAL := help
@@ -49,6 +49,60 @@ stop:
 	@pkill -f "node.*cc-hard-core" 2>/dev/null || echo "No processes found"
 	@pkill -f "tsx.*cc-hard-core" 2>/dev/null || echo "No tsx processes found"
 	@echo "$(GREEN)Done$(NC)"
+
+#===============================================================================
+# PM2 Production Management
+#===============================================================================
+
+## pm2-setup: Initial PM2 setup (install PM2 globally, create logs dir, start app)
+pm2-setup:
+	@echo "$(CYAN)Setting up PM2 for production...$(NC)"
+	@which pm2 > /dev/null || (echo "$(YELLOW)Installing PM2 globally...$(NC)" && npm install -g pm2)
+	@mkdir -p logs
+	@$(MAKE) pm2-start
+	@pm2 save
+	@echo "$(GREEN)PM2 setup complete!$(NC)"
+
+## pm2-start: Start application with PM2
+pm2-start:
+	@echo "$(GREEN)Starting application with PM2...$(NC)"
+	@mkdir -p logs
+	pm2 start ecosystem.config.js
+	@echo "$(GREEN)Application started$(NC)"
+
+## pm2-stop: Stop PM2 managed application
+pm2-stop:
+	@echo "$(YELLOW)Stopping PM2 application...$(NC)"
+	pm2 stop ecosystem.config.js
+	@echo "$(GREEN)Application stopped$(NC)"
+
+## pm2-restart: Restart PM2 managed application
+pm2-restart:
+	@echo "$(CYAN)Restarting PM2 application...$(NC)"
+	pm2 restart ecosystem.config.js
+	@echo "$(GREEN)Application restarted$(NC)"
+
+## pm2-reload: Zero-downtime reload (graceful restart)
+pm2-reload:
+	@echo "$(CYAN)Reloading PM2 application (zero-downtime)...$(NC)"
+	pm2 reload ecosystem.config.js
+	@echo "$(GREEN)Application reloaded$(NC)"
+
+## pm2-logs: Tail PM2 logs
+pm2-logs:
+	pm2 logs yojimbo
+
+## pm2-status: Show PM2 process status
+pm2-status:
+	@echo "$(CYAN)PM2 Status$(NC)"
+	@echo "==========="
+	pm2 status yojimbo
+
+## pm2-delete: Remove application from PM2
+pm2-delete:
+	@echo "$(YELLOW)Removing application from PM2...$(NC)"
+	pm2 delete ecosystem.config.js
+	@echo "$(GREEN)Application removed$(NC)"
 
 #===============================================================================
 # Code Quality

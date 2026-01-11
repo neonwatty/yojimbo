@@ -58,11 +58,18 @@ jobs:
             npm run build
 
             echo ""
+            echo "📁 Creating logs directory..."
+            mkdir -p logs
+
+            echo ""
             echo "🔄 Restarting services..."
             if pm2 describe yojimbo > /dev/null 2>&1; then
-              pm2 restart yojimbo
+              # Zero-downtime reload using ecosystem config
+              pm2 reload ecosystem.config.js
             else
-              pm2 start npm --name yojimbo -- start
+              # First-time setup
+              pm2 start ecosystem.config.js
+              pm2 save
             fi
 
             echo ""

@@ -76,7 +76,8 @@ test.describe('Settings Modal', () => {
     await basePage.openSettings();
 
     // Check version is displayed in the settings modal (format: v0.x.x)
-    const settingsModal = basePage.page.locator('[role="dialog"]');
+    // Find the modal container that has the "Settings" heading
+    const settingsModal = basePage.page.locator('div:has(h2:text("Settings"))').first();
     await expect(settingsModal.locator('text=/v\\d+\\.\\d+\\.\\d+/')).toBeVisible();
   });
 

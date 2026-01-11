@@ -75,8 +75,9 @@ test.describe('Settings Modal', () => {
     await basePage.goto('/instances');
     await basePage.openSettings();
 
-    // Check version is displayed (format: v0.x.x)
-    await expect(basePage.page.locator('text=/v\\d+\\.\\d+\\.\\d+/')).toBeVisible();
+    // Check version is displayed in the settings modal (format: v0.x.x)
+    const settingsModal = basePage.page.locator('[role="dialog"]');
+    await expect(settingsModal.locator('text=/v\\d+\\.\\d+\\.\\d+/')).toBeVisible();
   });
 
   test('shows danger zone with database reset option', async ({ basePage }) => {

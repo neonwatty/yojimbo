@@ -342,6 +342,27 @@ export const keychainApi = {
   status: () =>
     request<ApiResponse<{ locked: boolean; message: string }>>('/keychain/status'),
 
+  // Local keychain auto-unlock (stores password for server startup)
+  saveLocalPassword: (password: string) =>
+    request<ApiResponse<{ message: string }>>('/keychain/local/save', {
+      method: 'POST',
+      body: JSON.stringify({ password }),
+    }),
+
+  hasLocalPassword: () =>
+    request<ApiResponse<{ hasPassword: boolean }>>('/keychain/local/has-password'),
+
+  deleteLocalPassword: () =>
+    request<ApiResponse<{ message: string }>>('/keychain/local', {
+      method: 'DELETE',
+    }),
+
+  testLocalUnlock: (password: string) =>
+    request<ApiResponse<{ message: string }>>('/keychain/local/test-unlock', {
+      method: 'POST',
+      body: JSON.stringify({ password }),
+    }),
+
   // Remote keychain password storage (stores in LOCAL keychain)
   saveRemotePassword: (machineId: string, password: string) =>
     request<ApiResponse<{ message: string }>>(`/keychain/remote/${machineId}/save`, {

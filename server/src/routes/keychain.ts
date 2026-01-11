@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { execSync, spawnSync } from 'child_process';
 import os from 'os';
 import { keychainStorageService } from '../services/keychain-storage.service.js';
+import { localKeychainService } from '../services/local-keychain.service.js';
 import { terminalManager } from '../services/terminal-manager.service.js';
 import { getDatabase } from '../db/connection.js';
 
@@ -296,6 +297,154 @@ router.post('/remote/:instanceId/auto-unlock', async (req: Request, res: Respons
     return res.status(500).json({
       success: false,
       error: 'Failed to auto-unlock keychain',
+    });
+  }
+});
+
+// ============================================
+// Local Keychain Auto-Unlock Endpoints
+// ============================================
+// These endpoints manage auto-unlock for the LOCAL machine's keychain.
+
+/**
+ * POST /api/keychain/local/save
+ * Save the local machine's keychain password for auto-unlock
+ */
+router.post('/local/save', async (req: Request, res: Response) => {
+  try {
+    const { password } = req.body;
+
+    if (!password) {
+      return res.status(400).json({
+        success: false,
+        error: 'Password is required',
+      });
+    }
+
+    const result = await localKeychainService.savePassword(password);
+
+    if (result.success) {
+      return res.json({
+        success: true,
+        message: 'Local keychain password saved securely',
+      });
+    } else {
+      return res.status(400).json({
+        success: false,
+        error: result.error,
+      });
+    }
+  } catch (error) {
+    console.error('Error saving local keychain password:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to save password',
+    });
+  }
+});
+
+/**
+ * GET /api/keychain/local/has-password
+ * Check if a local keychain password is saved
+ */
+router.get('/local/has-password', async (_req: Request, res: Response) => {
+  try {
+    const hasPassword = await localKeychainService.hasPassword();
+
+    return res.json({
+      success: true,
+      data: { hasPassword },
+    });
+  } catch (error) {
+    console.error('Error checking local keychain password:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to check password status',
+    });
+  }
+});
+
+/**
+ * DELETE /api/keychain/local
+ * Delete the saved local keychain password
+ */
+router.delete('/local', async (_req: Request, res: Response) => {
+  try {
+    const result = await localKeychainService.deletePassword();
+
+    if (result.success) {
+      return res.json({
+        success: true,
+        message: 'Local keychain password deleted',
+      });
+    } else {
+      return res.status(400).json({
+        success: false,
+        error: result.error,
+      });
+    }
+  } catch (error) {
+    console.error('Error deleting local keychain password:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to delete password',
+    });
+  }
+});
+
+/**
+ * POST /api/keychain/local/test-unlock
+ * Test unlocking the local keychain with a given password (doesn't save)
+ */
+router.post('/local/test-unlock', (req: Request, res: Response) => {
+  try {
+    const { password } = req.body;
+
+    if (!password) {
+      return res.status(400).json({
+        success: false,
+        error: 'Password is required',
+      });
+    }
+
+    if (os.platform() !== 'darwin') {
+      return res.status(400).json({
+        success: false,
+        error: 'Keychain unlock is only supported on macOS',
+      });
+    }
+
+    const keychainPath = `${os.homedir()}/Library/Keychains/login.keychain-db`;
+
+    const result = spawnSync('security', ['unlock-keychain', keychainPath], {
+      input: password + '\n',
+      encoding: 'utf8',
+      timeout: 10000,
+    });
+
+    if (result.status === 0) {
+      return res.json({
+        success: true,
+        message: 'Password is correct - keychain unlocked',
+      });
+    } else {
+      const stderr = result.stderr || '';
+      let errorMessage = 'Failed to unlock keychain';
+
+      if (stderr.includes('password') || stderr.includes('incorrect')) {
+        errorMessage = 'Incorrect password';
+      }
+
+      return res.status(400).json({
+        success: false,
+        error: errorMessage,
+      });
+    }
+  } catch (error) {
+    console.error('Error testing local keychain unlock:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to test unlock',
     });
   }
 });

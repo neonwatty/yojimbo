@@ -87,6 +87,8 @@ export function useTerminal(options: UseTerminalOptions = {}) {
 
       const terminal = new Terminal({
         cursorBlink: true,
+        cursorStyle: 'block',
+        cursorInactiveStyle: 'outline',
         fontFamily: 'Menlo, Monaco, "Courier New", monospace',
         fontSize: 13,
         lineHeight: 1.2,

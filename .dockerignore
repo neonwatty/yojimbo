@@ -1,0 +1,59 @@
+# Dependencies
+node_modules
+**/node_modules
+
+# Build artifacts (we rebuild in Docker)
+client/dist
+server/dist
+shared/dist
+
+# Development files
+.git
+.github
+.vscode
+.idea
+*.log
+*.md
+!README.md
+
+# Local config and data
+config.yaml
+.config.yaml
+.env
+.env.local
+server/data
+data
+logs
+backups
+
+# Test files
+test-results
+coverage
+*.test.ts
+*.spec.ts
+__tests__
+playwright-report
+playwright/.cache
+
+# IDE and OS files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Documentation and misc
+mockups
+ui_iterations
+plans
+workflows
+CHANGELOG.md
+CONTRIBUTING.md
+LICENSE
+Makefile
+ecosystem.config.js
+knip.json
+.eslintrc.json
+tsconfig.base.json
+
+# Claude Code specific
+.claude

@@ -1,4 +1,4 @@
-# Build stage
+# Build stage - Yojimbo Docker build
 FROM node:20-bookworm AS builder
 
 # Install build dependencies for native modules (node-pty, better-sqlite3)

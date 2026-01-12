@@ -52,8 +52,6 @@ LICENSE
 Makefile
 ecosystem.config.js
 knip.json
-.eslintrc.json
-tsconfig.base.json
 
 # Claude Code specific
 .claude

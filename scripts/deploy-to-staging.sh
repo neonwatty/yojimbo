@@ -35,7 +35,7 @@ echo -e "${YELLOW}Updating code on staging server...${NC}"
 $SSH_CMD "source ~/.nvm/nvm.sh && nvm use 20 && cd $REMOTE_DIR && \
     git fetch origin && \
     git checkout $BRANCH && \
-    git pull origin $BRANCH"
+    git reset --hard origin/$BRANCH"
 
 # Install dependencies and build
 echo -e "${YELLOW}Installing dependencies and building...${NC}"
@@ -43,9 +43,9 @@ $SSH_CMD "source ~/.nvm/nvm.sh && nvm use 20 && cd $REMOTE_DIR && \
     npm ci && \
     npm run build"
 
-# Restart the app
+# Restart the app (delete and start to pick up env changes)
 echo -e "${YELLOW}Restarting application...${NC}"
-$SSH_CMD "source ~/.nvm/nvm.sh && nvm use 20 && pm2 restart yojimbo-staging"
+$SSH_CMD "source ~/.nvm/nvm.sh && nvm use 20 && cd $REMOTE_DIR && pm2 delete yojimbo-staging 2>/dev/null || true && pm2 start ecosystem.config.cjs && pm2 save"
 
 # Wait for the app to start
 echo -e "${YELLOW}Waiting for app to start...${NC}"

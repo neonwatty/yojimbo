@@ -76,7 +76,8 @@ test.describe('Settings Modal', () => {
     await basePage.openSettings();
 
     // Check version is displayed (format: v0.x.x)
-    await expect(basePage.page.locator('text=/v\\d+\\.\\d+\\.\\d+/')).toBeVisible();
+    // Use .first() since version now appears in both sidebar footer and settings modal footer
+    await expect(basePage.page.locator('text=/v\\d+\\.\\d+\\.\\d+/').first()).toBeVisible();
   });
 
   test('shows danger zone with database reset option', async ({ basePage }) => {

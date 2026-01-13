@@ -2,7 +2,7 @@
   "$schema": "https://unpkg.com/knip@5/schema.json",
   "workspaces": {
     ".": {
-      "entry": ["scripts/*.js"],
+      "entry": ["scripts/*.js", "ecosystem.config.js"],
       "ignoreDependencies": ["node-pty"]
     },
     "client": {

@@ -18,28 +18,31 @@ interface UseTerminalOptions {
   theme?: 'light' | 'dark';
 }
 
+// Ghostty default dark theme colors
+// Source: https://github.com/ghostty-org/ghostty/discussions/5390
 const darkTheme = {
-  background: '#1a1b26',
-  foreground: '#a9b1d6',
-  cursor: '#c0caf5',
-  cursorAccent: '#1a1b26',
-  selectionBackground: '#33467c',
-  black: '#32344a',
-  red: '#f7768e',
-  green: '#9ece6a',
-  yellow: '#e0af68',
-  blue: '#7aa2f7',
-  magenta: '#ad8ee6',
-  cyan: '#449dab',
-  white: '#787c99',
-  brightBlack: '#444b6a',
-  brightRed: '#ff7a93',
-  brightGreen: '#b9f27c',
-  brightYellow: '#ff9e64',
-  brightBlue: '#7da6ff',
-  brightMagenta: '#bb9af7',
-  brightCyan: '#0db9d7',
-  brightWhite: '#acb0d0',
+  background: '#292c33',
+  foreground: '#ffffff',
+  cursor: '#ffffff',
+  cursorAccent: '#363a43',
+  selectionBackground: '#ffffff',
+  selectionForeground: '#292c33',
+  black: '#1d1f21',
+  red: '#bf6b69',
+  green: '#b7bd73',
+  yellow: '#e9c880',
+  blue: '#88a1bb',
+  magenta: '#ad95b8',
+  cyan: '#95bdb7',
+  white: '#c5c8c6',
+  brightBlack: '#666666',
+  brightRed: '#c55757',
+  brightGreen: '#bcc95f',
+  brightYellow: '#e1c65e',
+  brightBlue: '#83a5d6',
+  brightMagenta: '#bc99d4',
+  brightCyan: '#83beb1',
+  brightWhite: '#eaeaea',
 };
 
 const lightTheme = {
@@ -84,6 +87,8 @@ export function useTerminal(options: UseTerminalOptions = {}) {
 
       const terminal = new Terminal({
         cursorBlink: true,
+        cursorStyle: 'block',
+        cursorInactiveStyle: 'outline',
         fontFamily: 'Menlo, Monaco, "Courier New", monospace',
         fontSize: 13,
         lineHeight: 1.2,
@@ -106,6 +111,52 @@ export function useTerminal(options: UseTerminalOptions = {}) {
 
       terminalRef.current = terminal;
       fitAddonRef.current = fitAddon;
+
+      // Mobile touch scrolling support
+      // xterm.js doesn't natively support touch scrolling, so we implement it manually
+      // See: https://github.com/xtermjs/xterm.js/issues/5377
+      let touchStartY = 0;
+      let lastTouchY = 0;
+      let isTouchScrolling = false;
+
+      const handleTouchStart = (e: TouchEvent) => {
+        if (e.touches.length === 1) {
+          touchStartY = e.touches[0].clientY;
+          lastTouchY = touchStartY;
+          isTouchScrolling = true;
+        }
+      };
+
+      const handleTouchMove = (e: TouchEvent) => {
+        if (!isTouchScrolling || e.touches.length !== 1) return;
+
+        const currentY = e.touches[0].clientY;
+        const deltaY = lastTouchY - currentY;
+        lastTouchY = currentY;
+
+        // Calculate lines to scroll based on delta
+        // Use line height (fontSize * lineHeight) to determine scroll amount
+        const lineHeight = 13 * 1.2; // fontSize * lineHeight from terminal config
+        const linesToScroll = Math.round(deltaY / lineHeight);
+
+        if (linesToScroll !== 0 && terminalRef.current) {
+          terminalRef.current.scrollLines(linesToScroll);
+          // Prevent default to stop page scrolling while scrolling terminal
+          e.preventDefault();
+        }
+      };
+
+      const handleTouchEnd = () => {
+        isTouchScrolling = false;
+      };
+
+      // Add touch event listeners to the terminal's element
+      const terminalElement = container.querySelector('.xterm-screen');
+      if (terminalElement) {
+        terminalElement.addEventListener('touchstart', handleTouchStart as EventListener, { passive: true });
+        terminalElement.addEventListener('touchmove', handleTouchMove as EventListener, { passive: false });
+        terminalElement.addEventListener('touchend', handleTouchEnd as EventListener, { passive: true });
+      }
 
       // Handle data input
       if (onData) {

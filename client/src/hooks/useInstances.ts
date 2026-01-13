@@ -2,7 +2,8 @@ import { useEffect, useCallback } from 'react';
 import { useInstancesStore } from '../store/instancesStore';
 import { useFeedStore } from '../store/feedStore';
 import { useTasksStore } from '../store/tasksStore';
-import { instancesApi, feedApi, tasksApi } from '../api/client';
+import { useUIStore } from '../store/uiStore';
+import { instancesApi, feedApi, tasksApi, keychainApi } from '../api/client';
 import { useWebSocket } from './useWebSocket';
 import { getWsUrl } from '../config';
 import type { Instance, ActivityEvent, GlobalTask } from '@cc-orchestrator/shared';
@@ -11,6 +12,7 @@ export function useInstances() {
   const { instances, setInstances, setLoading, addInstance, updateInstance, removeInstance, setCurrentCwd } = useInstancesStore();
   const { addEvent, setStats } = useFeedStore();
   const { addTask, updateTask: updateTaskInStore, removeTask, setStats: setTaskStats } = useTasksStore();
+  const { showLocalKeychainUnlockPrompt } = useUIStore();
 
   const { subscribe, isConnected } = useWebSocket(getWsUrl(), {
     onOpen: () => {
@@ -109,6 +111,13 @@ export function useInstances() {
       }).catch(() => {});
     });
 
+    // Local keychain unlock failure
+    const unsubscribeKeychainFailed = subscribe('keychain:unlock-failed', (data: unknown) => {
+      const { keychainError } = data as { keychainError?: string };
+      console.log('🔒 Local keychain unlock failed:', keychainError);
+      showLocalKeychainUnlockPrompt(keychainError);
+    });
+
     // Re-fetch instances after WebSocket connects to catch any status updates
     // that occurred before we subscribed (fixes race condition)
     fetchInstances();
@@ -127,6 +136,16 @@ export function useInstances() {
       }
     }).catch(() => {});
 
+    // Check local keychain status on connect - prompt if locked
+    keychainApi.status().then((response) => {
+      if (response.data?.locked) {
+        console.log('🔒 Local keychain is locked, prompting user');
+        showLocalKeychainUnlockPrompt('Keychain is locked. Enter your macOS password to unlock.');
+      }
+    }).catch(() => {
+      // Ignore errors - likely not on macOS
+    });
+
     return () => {
       unsubscribeCreated();
       unsubscribeUpdated();
@@ -138,8 +157,9 @@ export function useInstances() {
       unsubscribeTaskCreated();
       unsubscribeTaskUpdated();
       unsubscribeTaskDeleted();
+      unsubscribeKeychainFailed();
     };
-  }, [isConnected, subscribe, addInstance, updateInstance, removeInstance, setCurrentCwd, fetchInstances, addEvent, setStats, addTask, updateTaskInStore, removeTask, setTaskStats]);
+  }, [isConnected, subscribe, addInstance, updateInstance, removeInstance, setCurrentCwd, fetchInstances, addEvent, setStats, addTask, updateTaskInStore, removeTask, setTaskStats, showLocalKeychainUnlockPrompt]);
 
   // Fetch instances on mount
   useEffect(() => {

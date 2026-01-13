@@ -34,10 +34,13 @@ export async function initConfig(): Promise<void> {
     console.warn('Failed to fetch config from server, using defaults:', err);
   }
 
-  // Update document title with label if present
-  if (config.label) {
-    document.title = `[${config.label}] Yojimbo`;
-  }
+  // Update document title with environment label
+  const displayLabel = getDisplayLabel();
+  document.title = `[${displayLabel}] Yojimbo`;
+
+  // Apply environment class for accent color theming
+  const envMode = getEnvMode();
+  document.documentElement.classList.add(`env-${envMode}`);
 
   initialized = true;
 }
@@ -74,4 +77,39 @@ export function isMacOS(): boolean {
  */
 export function getLabel(): string {
   return config.label;
+}
+
+/**
+ * Check if this is a dev installation.
+ * Dev installations have labels like "DEV", "LOCAL", "DEVELOPMENT".
+ */
+export function isDevMode(): boolean {
+  const label = config.label.toUpperCase();
+  return label === 'DEV' || label === 'LOCAL' || label === 'DEVELOPMENT';
+}
+
+/**
+ * Check if this is a staging installation.
+ * Staging installations have labels like "STAGE", "STAGING".
+ */
+export function isStageMode(): boolean {
+  const label = config.label.toUpperCase();
+  return label === 'STAGE' || label === 'STAGING';
+}
+
+/**
+ * Get the environment mode: 'dev', 'stage', or 'prod'.
+ */
+export function getEnvMode(): 'dev' | 'stage' | 'prod' {
+  if (isDevMode()) return 'dev';
+  if (isStageMode()) return 'stage';
+  return 'prod';
+}
+
+/**
+ * Get the display label for the environment.
+ * Returns the configured label if set, or "PROD" for production.
+ */
+export function getDisplayLabel(): string {
+  return config.label || 'PROD';
 }

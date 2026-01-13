@@ -259,6 +259,7 @@ export type WSServerMessageType =
   | 'task:updated'
   | 'task:deleted'
   | 'log:status'
+  | 'keychain:unlock-failed'
   | 'error';
 
 export interface FileChangeEvent {
@@ -287,6 +288,8 @@ export interface WSServerMessage {
   task?: GlobalTask;
   taskId?: string;
   error?: string;
+  // Keychain unlock failure fields
+  keychainError?: string;
   // Status log fields (for log:status messages)
   logType?: 'status-change' | 'hook-received' | 'instance-lookup' | 'file-check' | 'timeout-check';
   timestamp?: number;

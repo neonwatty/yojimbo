@@ -43,6 +43,9 @@ interface UIState {
   newInstanceDefaultMode: 'terminal' | 'claude-code' | null;
   newInstanceSuggestedName: string | null;
   showTasksPanel: boolean;
+  // Local keychain unlock modal state
+  showLocalKeychainModal: boolean;
+  localKeychainError: string | null;
   // File browser state for Plans panel
   plansBrowserWidth: number;
   plansBrowserCollapsed: boolean;
@@ -80,6 +83,9 @@ interface UIState {
   setNewInstanceSuggestedName: (name: string | null) => void;
   openNewInstanceModal: (options?: { defaultMode?: 'terminal' | 'claude-code'; suggestedName?: string }) => void;
   setShowTasksPanel: (show: boolean) => void;
+  // Local keychain modal
+  setShowLocalKeychainModal: (show: boolean) => void;
+  showLocalKeychainUnlockPrompt: (error?: string) => void;
   // File browser setters
   setPlansBrowserWidth: (width: number) => void;
   togglePlansBrowserCollapsed: () => void;
@@ -109,6 +115,9 @@ export const useUIStore = create<UIState>()(
       newInstanceDefaultMode: null,
       newInstanceSuggestedName: null,
       showTasksPanel: false,
+      // Local keychain modal state (not persisted)
+      showLocalKeychainModal: false,
+      localKeychainError: null,
       // Command palette state (not persisted)
       showCommandPalette: false,
       pendingKeySequence: null,
@@ -142,6 +151,8 @@ export const useUIStore = create<UIState>()(
         newInstanceSuggestedName: options?.suggestedName || null
       }),
       setShowTasksPanel: (showTasksPanel) => set({ showTasksPanel }),
+      setShowLocalKeychainModal: (showLocalKeychainModal) => set({ showLocalKeychainModal, localKeychainError: showLocalKeychainModal ? null : null }),
+      showLocalKeychainUnlockPrompt: (error) => set({ showLocalKeychainModal: true, localKeychainError: error || null }),
       setPlansBrowserWidth: (plansBrowserWidth) => set({ plansBrowserWidth }),
       togglePlansBrowserCollapsed: () => set((state) => ({ plansBrowserCollapsed: !state.plansBrowserCollapsed })),
       setMockupsBrowserWidth: (mockupsBrowserWidth) => set({ mockupsBrowserWidth }),

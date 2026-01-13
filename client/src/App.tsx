@@ -13,6 +13,7 @@ import InstancesPage from './pages/InstancesPage';
 import HistoryPage from './pages/HistoryPage';
 import ActivityPage from './pages/ActivityPage';
 import { ShortcutsModal, SettingsModal, NewInstanceModal } from './components/modals';
+import { LocalKeychainUnlockModal } from './components/modals/LocalKeychainUnlockModal';
 import { CommandPalette } from './components/common/CommandPalette';
 import { ToastContainer } from './components/common/Toast';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
@@ -28,10 +29,13 @@ function App() {
     showSettingsModal,
     showNewInstanceModal,
     showCommandPalette,
+    showLocalKeychainModal,
+    localKeychainError,
     setShowShortcutsModal,
     setShowSettingsModal,
     setShowNewInstanceModal,
     setShowCommandPalette,
+    setShowLocalKeychainModal,
     setShowTasksPanel,
     toggleLeftSidebar,
     toggleEditorPanel,
@@ -247,6 +251,11 @@ function App() {
       <NewInstanceModal isOpen={showNewInstanceModal} onClose={() => setShowNewInstanceModal(false)} />
       <ShortcutsModal isOpen={showShortcutsModal} onClose={() => setShowShortcutsModal(false)} />
       <SettingsModal isOpen={showSettingsModal} onClose={() => setShowSettingsModal(false)} />
+      <LocalKeychainUnlockModal
+        isOpen={showLocalKeychainModal}
+        onClose={() => setShowLocalKeychainModal(false)}
+        errorMessage={localKeychainError || undefined}
+      />
 
       {/* Toast Notifications */}
       <ToastContainer />

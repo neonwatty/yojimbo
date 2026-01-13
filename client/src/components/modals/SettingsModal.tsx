@@ -3,6 +3,7 @@ import { useSettingsStore } from '../../store/settingsStore';
 import { settingsApi } from '../../api/client';
 import { toast } from '../../store/toastStore';
 import { Icons } from '../common/Icons';
+import { LocalKeychainSection } from '../settings/LocalKeychainSection';
 import { RemoteMachinesSection } from '../settings/RemoteMachinesSection';
 import type { ClaudeCodeAlias, ActivityEventType } from '@cc-orchestrator/shared';
 
@@ -361,6 +362,9 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
               ))}
             </div>
           </div>
+
+          {/* Local Keychain Section */}
+          <LocalKeychainSection />
 
           {/* Remote Machines Section */}
           <RemoteMachinesSection />

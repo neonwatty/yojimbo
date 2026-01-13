@@ -1,11 +1,12 @@
 import { createServer } from 'http';
 import app from './app.js';
-import { initWebSocketServer } from './websocket/server.js';
+import { initWebSocketServer, broadcast } from './websocket/server.js';
 import { initDatabase, getDatabase, cleanupStalePortForwards } from './db/connection.js';
 import { startSessionWatcher, stopSessionWatcher } from './services/session-watcher.service.js';
 import { remoteStatusPollerService } from './services/remote-status-poller.service.js';
 import { localStatusPollerService } from './services/local-status-poller.service.js';
 import { statusTimeoutService } from './services/status-timeout.service.js';
+import { localKeychainService } from './services/local-keychain.service.js';
 import CONFIG from './config/index.js';
 
 async function main() {
@@ -52,6 +53,21 @@ async function main() {
   // Start status timeout service
   console.log('⏱️ Starting status timeout service...');
   statusTimeoutService.start();
+
+  // Attempt local keychain auto-unlock (macOS only)
+  console.log('🔐 Checking local keychain...');
+  const keychainResult = await localKeychainService.attemptAutoUnlock();
+  if (!keychainResult.success && !keychainResult.skipped) {
+    console.log('🔒 Local keychain auto-unlock failed, will notify clients');
+    // Broadcast failure to connected clients (they may not be connected yet at startup)
+    // The client will also check keychain status on load as a fallback
+    setTimeout(() => {
+      broadcast({
+        type: 'keychain:unlock-failed',
+        keychainError: keychainResult.error || 'Failed to unlock keychain',
+      });
+    }, 2000); // Delay to give clients time to connect
+  }
 
   // Start server
   server.listen(CONFIG.port, CONFIG.host, () => {

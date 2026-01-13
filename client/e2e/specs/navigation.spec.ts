@@ -6,9 +6,10 @@ test.describe('App Branding', () => {
     await expect(basePage.page.locator('h1:has-text("Yojimbo")')).toBeVisible();
   });
 
-  test('page title is Yojimbo - Claude Code Orchestrator', async ({ basePage }) => {
+  test('page title includes environment label and Yojimbo', async ({ basePage }) => {
     await basePage.goto('/instances');
-    await expect(basePage.page).toHaveTitle('Yojimbo - Claude Code Orchestrator');
+    // Title format: [PROD] Yojimbo or [DEV] Yojimbo
+    await expect(basePage.page).toHaveTitle(/\[(PROD|DEV|LOCAL)\] Yojimbo/);
   });
 });
 

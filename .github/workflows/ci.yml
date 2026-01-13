@@ -42,6 +42,14 @@ jobs:
       - run: npm ci
       - run: npm run knip
 
+  validate-config:
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate PM2 ecosystem config
+        run: node -e "require('./ecosystem.config.js')"
+
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 5

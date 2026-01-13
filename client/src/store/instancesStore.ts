@@ -30,9 +30,15 @@ export const useInstancesStore = create<InstancesState>((set) => ({
   setLoading: (isLoading) => set({ isLoading }),
 
   addInstance: (instance) =>
-    set((state) => ({
-      instances: [...state.instances, instance],
-    })),
+    set((state) => {
+      // Avoid duplicates - check if instance already exists
+      if (state.instances.some((i) => i.id === instance.id)) {
+        return state;
+      }
+      return {
+        instances: [...state.instances, instance],
+      };
+    }),
 
   updateInstance: (id, updates) =>
     set((state) => ({

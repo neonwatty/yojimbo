@@ -6,7 +6,7 @@
 set -e
 
 # Configuration
-STAGING_HOST="192.168.1.19"
+STAGING_HOST="Jeremys-Mac-mini.local"
 STAGING_USER="neonwatty"
 SSH_KEY="$HOME/.ssh/id_ed25519"
 REMOTE_DIR="/Users/neonwatty/yojimbo"

@@ -94,6 +94,19 @@
   --accent-dim: #bf616a;
 }
 
+/* STAGE Environment - aurora purple */
+:root.env-stage {
+  --accent: #9b7bb8;
+  --accent-bright: #b48ead;
+  --accent-dim: #7c5a9c;
+}
+
+.dark.env-stage {
+  --accent: #b48ead;
+  --accent-bright: #c9a5c4;
+  --accent-dim: #9b7bb8;
+}
+
 /* PROD Environment - cool teal/cyan */
 :root.env-prod {
   --accent: #5e9dab;

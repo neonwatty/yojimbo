@@ -39,7 +39,8 @@ export async function initConfig(): Promise<void> {
   document.title = `[${displayLabel}] Yojimbo`;
 
   // Apply environment class for accent color theming
-  document.documentElement.classList.add(isDevMode() ? 'env-dev' : 'env-prod');
+  const envMode = getEnvMode();
+  document.documentElement.classList.add(`env-${envMode}`);
 
   initialized = true;
 }
@@ -85,6 +86,24 @@ export function getLabel(): string {
 export function isDevMode(): boolean {
   const label = config.label.toUpperCase();
   return label === 'DEV' || label === 'LOCAL' || label === 'DEVELOPMENT';
+}
+
+/**
+ * Check if this is a staging installation.
+ * Staging installations have labels like "STAGE", "STAGING".
+ */
+export function isStageMode(): boolean {
+  const label = config.label.toUpperCase();
+  return label === 'STAGE' || label === 'STAGING';
+}
+
+/**
+ * Get the environment mode: 'dev', 'stage', or 'prod'.
+ */
+export function getEnvMode(): 'dev' | 'stage' | 'prod' {
+  if (isDevMode()) return 'dev';
+  if (isStageMode()) return 'stage';
+  return 'prod';
 }
 
 /**

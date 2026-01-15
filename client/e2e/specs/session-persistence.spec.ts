@@ -5,7 +5,8 @@ test.describe('Session Persistence', () => {
     await apiClient.cleanupAllInstances();
   });
 
-  test('preserves plans panel open state across refresh', async ({ instancesPage }) => {
+  // NOTE: Plans panel is currently hidden - skip this test until re-enabled
+  test.skip('preserves plans panel open state across refresh', async ({ instancesPage }) => {
     await instancesPage.gotoInstances();
     await instancesPage.createNewInstance();
     await expect(instancesPage.page).toHaveURL(/.*\/instances\/[a-zA-Z0-9-]+$/);

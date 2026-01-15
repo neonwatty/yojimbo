@@ -46,6 +46,10 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const [isResetting, setIsResetting] = useState(false);
   const [isResettingStatus, setIsResettingStatus] = useState(false);
 
+  // Local hooks state
+  const [localHooksInstalled, setLocalHooksInstalled] = useState<boolean | null>(null);
+  const [isInstallingHooks, setIsInstallingHooks] = useState(false);
+
   // Alias editing state
   const [editingAliasId, setEditingAliasId] = useState<string | null>(null);
   const [editingAlias, setEditingAlias] = useState<Partial<ClaudeCodeAlias>>({});
@@ -62,6 +66,21 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
       setIsAddingAlias(false);
       setNewAliasName('');
       setNewAliasCommand('');
+    }
+  }, [isOpen]);
+
+  // Check local hooks status when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      settingsApi.checkLocalHooks()
+        .then((response) => {
+          if (response.data) {
+            setLocalHooksInstalled(response.data.installed);
+          }
+        })
+        .catch(() => {
+          setLocalHooksInstalled(null);
+        });
     }
   }, [isOpen]);
 
@@ -113,6 +132,21 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
       toast.error('Failed to reset instance status');
     } finally {
       setIsResettingStatus(false);
+    }
+  };
+
+  const handleInstallLocalHooks = async () => {
+    setIsInstallingHooks(true);
+    try {
+      const response = await settingsApi.installLocalHooks();
+      if (response.data?.installed) {
+        toast.success('Local hooks installed successfully');
+        setLocalHooksInstalled(true);
+      }
+    } catch {
+      toast.error('Failed to install local hooks');
+    } finally {
+      setIsInstallingHooks(false);
     }
   };
 
@@ -556,6 +590,30 @@ Write a {{type}} work summary:`}
           {/* Maintenance */}
           <div className="pt-4 mt-4 border-t border-surface-600">
             <h3 className="text-xs font-semibold text-theme-muted uppercase tracking-wider mb-3">Maintenance</h3>
+
+            {/* Install Local Hooks */}
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <span className="text-theme-primary">Install Local Hooks</span>
+                <p className="text-xs text-theme-muted mt-0.5">
+                  Install Claude Code hooks for status tracking in Yojimbo terminals
+                </p>
+                {localHooksInstalled !== null && (
+                  <p className={`text-xs mt-0.5 ${localHooksInstalled ? 'text-green-400' : 'text-yellow-400'}`}>
+                    {localHooksInstalled ? 'Hooks are installed' : 'Hooks not installed'}
+                  </p>
+                )}
+              </div>
+              <button
+                onClick={handleInstallLocalHooks}
+                disabled={isInstallingHooks}
+                className="px-3 py-1.5 bg-accent text-white rounded-lg text-sm font-medium hover:bg-accent/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isInstallingHooks ? 'Installing...' : localHooksInstalled ? 'Reinstall' : 'Install'}
+              </button>
+            </div>
+
+            {/* Reset Instance Status */}
             <div className="flex items-center justify-between">
               <div>
                 <span className="text-theme-primary">Reset Instance Status</span>

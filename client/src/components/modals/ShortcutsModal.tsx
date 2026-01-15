@@ -40,8 +40,9 @@ const shortcuts = [
     category: 'Panels',
     items: [
       { keys: ['⌘', 'B'], description: 'Toggle sessions sidebar' },
-      { keys: ['⌘', 'E'], description: 'Toggle plans panel' },
-      { keys: ['⌘', 'M'], description: 'Toggle mockups panel' },
+      // Plans and Mockups hidden - uncomment to restore
+      // { keys: ['⌘', 'E'], description: 'Toggle plans panel' },
+      // { keys: ['⌘', 'M'], description: 'Toggle mockups panel' },
       { keys: ['⌘', '`'], description: 'Toggle terminal panel' },
     ],
   },

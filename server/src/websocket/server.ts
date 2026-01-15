@@ -280,15 +280,8 @@ function handleMessage(ws: WebSocket, message: WSClientMessage): void {
           }
         }
 
-        // Auto-unsubscribe this client from other instances (exclusive subscription)
-        // This handles the case where client navigates between instances without sending unsubscribe
-        for (const [otherInstanceId, subscribers] of subscriptions.entries()) {
-          if (otherInstanceId !== message.instanceId && subscribers.has(ws)) {
-            subscribers.delete(ws);
-            console.log(`Client auto-unsubscribed from instance ${otherInstanceId} (navigated away)`);
-          }
-        }
-
+        // Allow non-exclusive subscriptions - clients can subscribe to multiple instances
+        // This is needed when viewing multiple terminals on the instances page
         if (!subscriptions.has(message.instanceId)) {
           subscriptions.set(message.instanceId, new Set());
         }

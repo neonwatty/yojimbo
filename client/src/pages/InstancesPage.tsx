@@ -8,8 +8,9 @@ import { Terminal, type TerminalRef } from '../components/terminal';
 import { CardLayout } from '../components/instances/CardLayout';
 import { ListLayout } from '../components/instances/ListLayout';
 import { InstanceSkeletons } from '../components/instances/InstanceSkeleton';
-import { PlansPanel } from '../components/plans';
-import { MockupsPanel } from '../components/mockups/MockupsPanel';
+// Plans and Mockups hidden - uncomment to restore
+// import { PlansPanel } from '../components/plans';
+// import { MockupsPanel } from '../components/mockups/MockupsPanel';
 import { PortForwardsPanel } from '../components/PortForwardsPanel';
 import { StatusDot, StatusBadge } from '../components/common/Status';
 import { EditableName } from '../components/common/EditableName';
@@ -28,10 +29,11 @@ export default function InstancesPage() {
   const { instances, setActiveInstanceId, updateInstance, removeInstance, reorderInstances, currentCwds, isLoading } = useInstancesStore();
   const {
     layout,
-    editorPanelOpen, toggleEditorPanel, setEditorPanelOpen,
-    mockupsPanelOpen, setMockupsPanelOpen, mockupsPanelWidth, setMockupsPanelWidth,
+    // Plans and Mockups hidden from UI but state still managed for future restore
+    editorPanelOpen, setEditorPanelOpen,
+    mockupsPanelOpen, setMockupsPanelOpen, mockupsPanelWidth,
     terminalPanelOpen, toggleTerminalPanel, setTerminalPanelOpen,
-    panelWidth, setPanelWidth,
+    panelWidth,
     setShowNewInstanceModal
   } = useUIStore();
   const { theme } = useSettingsStore();
@@ -349,6 +351,7 @@ export default function InstancesPage() {
             )}
           </div>
           <div className="flex items-center gap-1">
+            {/* Plans and Mockups buttons hidden - uncomment to restore
             <button
               onClick={toggleEditorPanel}
               className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs transition-colors
@@ -369,6 +372,7 @@ export default function InstancesPage() {
               <Icons.code />
               <span>Mockups</span>
             </button>
+            */}
             <button
               onClick={toggleTerminalPanel}
               className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs transition-colors
@@ -484,7 +488,7 @@ export default function InstancesPage() {
             </div>
           )}
 
-          {/* Plans Panel */}
+          {/* Plans Panel - hidden, uncomment to restore
           <PlansPanel
             instanceId={instance.id}
             workingDir={currentCwds[instance.id] || instance.workingDir}
@@ -493,8 +497,9 @@ export default function InstancesPage() {
             width={panelWidth}
             onWidthChange={setPanelWidth}
           />
+          */}
 
-          {/* Mockups Panel */}
+          {/* Mockups Panel - hidden, uncomment to restore
           <MockupsPanel
             workingDir={currentCwds[instance.id] || instance.workingDir}
             isOpen={mockupsPanelOpen}
@@ -502,13 +507,14 @@ export default function InstancesPage() {
             width={mockupsPanelWidth}
             onWidthChange={setMockupsPanelWidth}
           />
+          */}
 
           {/* Empty state when all panels are closed */}
           {!terminalPanelOpen && !editorPanelOpen && !mockupsPanelOpen && (
             <div className="flex-1 flex items-center justify-center bg-surface-800">
               <div className="text-center text-theme-muted">
                 <Icons.terminal />
-                <p className="mt-2 text-sm">Use the buttons above to show Terminal, Plans, or Mockups</p>
+                <p className="mt-2 text-sm">Use the Terminal button above to show the terminal</p>
               </div>
             </div>
           )}

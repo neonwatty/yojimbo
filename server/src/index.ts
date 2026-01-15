@@ -46,9 +46,10 @@ async function main() {
   console.log('🔄 Starting remote status poller...');
   remoteStatusPollerService.start();
 
-  // Start local status poller
-  console.log('🔍 Starting local status poller...');
-  localStatusPollerService.start();
+  // Local status poller disabled - status now tracked only via hooks from Yojimbo terminals
+  // This prevents external Claude sessions from affecting Yojimbo instance status
+  // console.log('🔍 Starting local status poller...');
+  // localStatusPollerService.start();
 
   // Start status timeout service
   console.log('⏱️ Starting status timeout service...');

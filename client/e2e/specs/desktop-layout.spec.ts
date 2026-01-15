@@ -127,12 +127,10 @@ test.describe('Desktop Layout', () => {
     // Wait for terminal to load
     await expect(basePage.page.locator('.xterm-screen')).toBeVisible({ timeout: 10000 });
 
-    // Plans button should be visible in the header
-    const plansButton = basePage.page.getByRole('button', { name: /plans/i });
-    await expect(plansButton).toBeVisible();
-
-    // Terminal button should be visible
+    // Terminal button should be visible in the header
     const terminalButton = basePage.page.getByRole('button', { name: /terminal/i });
     await expect(terminalButton).toBeVisible();
+
+    // Note: Plans and Mockups panels are hidden in this version
   });
 });

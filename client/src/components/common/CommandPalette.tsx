@@ -85,14 +85,15 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
         action: toggleLeftSidebar,
         keywords: ['hide', 'show', 'navigation'],
       },
-      {
-        id: 'toggle-plans',
-        label: 'Toggle Plans Panel',
-        shortcut: ['Cmd', 'E'],
-        category: 'panels',
-        action: toggleEditorPanel,
-        keywords: ['editor', 'markdown'],
-      },
+      // Plans panel hidden - uncomment to restore
+      // {
+      //   id: 'toggle-plans',
+      //   label: 'Toggle Plans Panel',
+      //   shortcut: ['Cmd', 'E'],
+      //   category: 'panels',
+      //   action: toggleEditorPanel,
+      //   keywords: ['editor', 'markdown'],
+      // },
       {
         id: 'toggle-terminal',
         label: 'Toggle Terminal',

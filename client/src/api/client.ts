@@ -223,6 +223,15 @@ export const settingsApi = {
     request<ApiResponse<{ reset: boolean; count: number }>>('/settings/reset-instance-status', {
       method: 'POST',
     }),
+
+  installLocalHooks: (serverUrl?: string) =>
+    request<ApiResponse<{ installed: boolean; message: string }>>('/settings/install-local-hooks', {
+      method: 'POST',
+      body: JSON.stringify({ serverUrl }),
+    }),
+
+  checkLocalHooks: () =>
+    request<ApiResponse<{ installed: boolean; hookTypes: string[] }>>('/settings/check-local-hooks'),
 };
 
 // Filesystem API

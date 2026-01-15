@@ -72,6 +72,23 @@ export interface PortForward {
   createdAt: string;
 }
 
+// Listening Port Detection types
+export interface DetectedPort {
+  port: number;
+  pid: number | null;
+  processName: string | null;
+  bindAddress: string; // '127.0.0.1', '0.0.0.0', '*', or specific IP
+  isAccessible: boolean; // true if bound to 0.0.0.0 or *, false if localhost only
+  detectedAt: string;
+}
+
+export interface InstancePorts {
+  instanceId: string;
+  ports: DetectedPort[];
+  tailscaleIp: string | null;
+  lastScannedAt: string;
+}
+
 // SSH Key types
 export interface SSHKey {
   name: string;
@@ -251,6 +268,7 @@ export type WSServerMessageType =
   | 'port:detected'
   | 'port:forwarded'
   | 'port:closed'
+  | 'ports:updated'
   | 'machine:created'
   | 'machine:updated'
   | 'machine:deleted'
@@ -282,6 +300,7 @@ export interface WSServerMessage {
   fileChange?: FileChangeEvent;
   event?: ActivityEvent;
   portForward?: PortForward;
+  instancePorts?: InstancePorts;
   machine?: RemoteMachine;
   machineId?: string;
   machineStatus?: { machineId: string; status: MachineStatus };

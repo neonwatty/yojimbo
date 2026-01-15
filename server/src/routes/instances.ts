@@ -5,6 +5,7 @@ import { terminalManager } from '../services/terminal-manager.service.js';
 import { sshConnectionService } from '../services/ssh-connection.service.js';
 import { hookInstallerService } from '../services/hook-installer.service.js';
 import { reverseTunnelService } from '../services/reverse-tunnel.service.js';
+import { portDetectionService } from '../services/port-detection.service.js';
 import { broadcast } from '../websocket/server.js';
 import type { Instance, CreateInstanceRequest, UpdateInstanceRequest, InstanceStatus, MachineType } from '@cc-orchestrator/shared';
 
@@ -224,6 +225,9 @@ router.delete('/:id', async (req, res) => {
 
     // Close reverse tunnel if it exists (for remote instances)
     await reverseTunnelService.closeTunnel(id);
+
+    // Clear port detection cache
+    portDetectionService.clearInstance(id);
 
     // Kill terminal backend if running
     await terminalManager.kill(id);
@@ -517,6 +521,45 @@ router.get('/:id/hooks-config', (req, res) => {
   } catch (error) {
     console.error('Error getting hooks config:', error);
     res.status(500).json({ success: false, error: 'Failed to get hooks config' });
+  }
+});
+
+// GET /api/instances/:id/listening-ports - Get listening ports for an instance
+router.get('/:id/listening-ports', async (req, res) => {
+  try {
+    const db = getDatabase();
+    const { id } = req.params;
+    const { refresh } = req.query;
+
+    // Check if instance exists
+    const existing = db.prepare('SELECT * FROM instances WHERE id = ? AND closed_at IS NULL').get(id) as InstanceRow | undefined;
+    if (!existing) {
+      return res.status(404).json({ success: false, error: 'Instance not found' });
+    }
+
+    // Only support local instances for now
+    if (existing.machine_type !== 'local') {
+      return res.status(400).json({
+        success: false,
+        error: 'Port detection is only available for local instances',
+      });
+    }
+
+    // Get ports (optionally force refresh)
+    let instancePorts;
+    if (refresh === 'true') {
+      instancePorts = await portDetectionService.refreshInstance(id);
+    } else {
+      instancePorts = portDetectionService.getInstancePorts(id);
+    }
+
+    res.json({
+      success: true,
+      data: instancePorts,
+    });
+  } catch (error) {
+    console.error('Error getting listening ports:', error);
+    res.status(500).json({ success: false, error: 'Failed to get listening ports' });
   }
 });
 

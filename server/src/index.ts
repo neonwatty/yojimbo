@@ -7,6 +7,7 @@ import { remoteStatusPollerService } from './services/remote-status-poller.servi
 import { localStatusPollerService } from './services/local-status-poller.service.js';
 import { statusTimeoutService } from './services/status-timeout.service.js';
 import { localKeychainService } from './services/local-keychain.service.js';
+import { portDetectionService } from './services/port-detection.service.js';
 import CONFIG from './config/index.js';
 
 async function main() {
@@ -55,6 +56,10 @@ async function main() {
   console.log('⏱️ Starting status timeout service...');
   statusTimeoutService.start();
 
+  // Start port detection service
+  console.log('🔌 Starting port detection service...');
+  portDetectionService.start();
+
   // Attempt local keychain auto-unlock (macOS only)
   console.log('🔐 Checking local keychain...');
   const keychainResult = await localKeychainService.attemptAutoUnlock();
@@ -84,6 +89,7 @@ async function main() {
     remoteStatusPollerService.stop();
     localStatusPollerService.stop();
     statusTimeoutService.stop();
+    portDetectionService.stop();
     server.close(() => {
       console.log('👋 Server closed');
       process.exit(0);

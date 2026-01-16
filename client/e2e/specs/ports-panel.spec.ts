@@ -49,14 +49,15 @@ test.describe('Ports Panel', () => {
     const portsButton = basePage.page.getByRole('button', { name: /ports/i });
     await portsButton.click();
 
-    // Panel should appear with "Listening Ports" header
-    await expect(basePage.page.getByText('Listening Ports')).toBeVisible({ timeout: 5000 });
+    // Panel should appear with "Ports" header
+    const portsHeader = basePage.page.locator('[class*="border-l"]').getByText('Ports', { exact: true });
+    await expect(portsHeader).toBeVisible({ timeout: 5000 });
 
     // Click again to close
     await portsButton.click();
 
     // Panel header should be hidden
-    await expect(basePage.page.getByText('Listening Ports')).not.toBeVisible();
+    await expect(portsHeader).not.toBeVisible();
   });
 
   test('ports panel shows empty state when no ports detected', async ({ basePage, apiClient }) => {
@@ -78,7 +79,7 @@ test.describe('Ports Panel', () => {
 
     // Should see empty state message
     await expect(
-      basePage.page.getByText(/no listening ports detected/i)
+      basePage.page.getByText(/no ports detected/i)
     ).toBeVisible({ timeout: 5000 });
   });
 
@@ -101,7 +102,7 @@ test.describe('Ports Panel', () => {
 
     // Should see instructions about binding to 0.0.0.0
     await expect(
-      basePage.page.getByText(/bind to 0\.0\.0\.0/i)
+      basePage.page.getByText(/--host 0\.0\.0\.0/i)
     ).toBeVisible({ timeout: 5000 });
   });
 
@@ -144,13 +145,14 @@ test.describe('Ports Panel', () => {
     const portsButton = basePage.page.getByRole('button', { name: /ports/i });
     await portsButton.click();
 
-    // Panel should appear
-    await expect(basePage.page.getByText('Listening Ports')).toBeVisible({ timeout: 5000 });
+    // Panel should appear - look for the Ports header in the side panel
+    const portsPanel = basePage.page.locator('[class*="border-l"]').filter({
+      has: basePage.page.getByText('Ports', { exact: true })
+    });
+    await expect(portsPanel).toBeVisible({ timeout: 5000 });
 
     // Look for the resize handle (usually on the left edge of right panels)
-    const panel = basePage.page.locator('[class*="border-l"]').filter({
-      has: basePage.page.getByText('Listening Ports')
-    });
+    const panel = portsPanel;
 
     // The panel should be visible and have some width
     await expect(panel).toBeVisible();
@@ -202,7 +204,10 @@ test.describe('Ports Panel', () => {
     await basePage.page.fill('[placeholder="Search commands..."]', 'ports');
     await basePage.page.getByText('Toggle Ports Panel').click();
 
-    // Panel should now be visible
-    await expect(basePage.page.getByText('Listening Ports')).toBeVisible({ timeout: 5000 });
+    // Panel should now be visible - look for Ports header in side panel
+    const portsPanel = basePage.page.locator('[class*="border-l"]').filter({
+      has: basePage.page.getByText('Ports', { exact: true })
+    });
+    await expect(portsPanel).toBeVisible({ timeout: 5000 });
   });
 });

@@ -13,8 +13,10 @@ const DEFAULT_UI_STATE = {
   editorPanelOpen: false,
   mockupsPanelOpen: false,
   terminalPanelOpen: true,
+  portsPanelOpen: false,
   panelWidth: 380,
   mockupsPanelWidth: 480,
+  portsPanelWidth: 320,
   terminalHeight: 200,
   browserHeight: 180,
   plansBrowserWidth: 192,
@@ -33,8 +35,10 @@ interface UIState {
   editorPanelOpen: boolean;
   mockupsPanelOpen: boolean;
   terminalPanelOpen: boolean;
+  portsPanelOpen: boolean;
   panelWidth: number;
   mockupsPanelWidth: number;
+  portsPanelWidth: number;
   terminalHeight: number;
   browserHeight: number;
   showShortcutsModal: boolean;
@@ -72,8 +76,11 @@ interface UIState {
   setMockupsPanelOpen: (open: boolean) => void;
   toggleTerminalPanel: () => void;
   setTerminalPanelOpen: (open: boolean) => void;
+  togglePortsPanel: () => void;
+  setPortsPanelOpen: (open: boolean) => void;
   setPanelWidth: (width: number) => void;
   setMockupsPanelWidth: (width: number) => void;
+  setPortsPanelWidth: (width: number) => void;
   setTerminalHeight: (height: number) => void;
   setBrowserHeight: (height: number) => void;
   setShowShortcutsModal: (show: boolean) => void;
@@ -136,8 +143,11 @@ export const useUIStore = create<UIState>()(
       setMockupsPanelOpen: (mockupsPanelOpen) => set({ mockupsPanelOpen }),
       toggleTerminalPanel: () => set((state) => ({ terminalPanelOpen: !state.terminalPanelOpen })),
       setTerminalPanelOpen: (terminalPanelOpen) => set({ terminalPanelOpen }),
+      togglePortsPanel: () => set((state) => ({ portsPanelOpen: !state.portsPanelOpen })),
+      setPortsPanelOpen: (portsPanelOpen) => set({ portsPanelOpen }),
       setPanelWidth: (panelWidth) => set({ panelWidth }),
       setMockupsPanelWidth: (mockupsPanelWidth) => set({ mockupsPanelWidth }),
+      setPortsPanelWidth: (portsPanelWidth) => set({ portsPanelWidth }),
       setTerminalHeight: (terminalHeight) => set({ terminalHeight }),
       setBrowserHeight: (browserHeight) => set({ browserHeight }),
       setShowShortcutsModal: (showShortcutsModal) => set({ showShortcutsModal }),
@@ -183,8 +193,10 @@ export const useUIStore = create<UIState>()(
         editorPanelOpen: state.editorPanelOpen,
         mockupsPanelOpen: state.mockupsPanelOpen,
         terminalPanelOpen: state.terminalPanelOpen,
+        portsPanelOpen: state.portsPanelOpen,
         panelWidth: state.panelWidth,
         mockupsPanelWidth: state.mockupsPanelWidth,
+        portsPanelWidth: state.portsPanelWidth,
         terminalHeight: state.terminalHeight,
         browserHeight: state.browserHeight,
         plansBrowserWidth: state.plansBrowserWidth,

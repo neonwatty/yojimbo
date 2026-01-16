@@ -30,6 +30,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
     toggleLeftSidebar,
     toggleEditorPanel,
     toggleTerminalPanel,
+    togglePortsPanel,
     setShowSettingsModal,
     setShowShortcutsModal,
     setShowNewInstanceModal,
@@ -102,6 +103,13 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
         action: toggleTerminalPanel,
         keywords: ['console', 'shell'],
       },
+      {
+        id: 'toggle-ports',
+        label: 'Toggle Ports Panel',
+        category: 'panels',
+        action: togglePortsPanel,
+        keywords: ['network', 'listening', 'tailscale', 'server'],
+      },
 
       // Actions
       {
@@ -133,7 +141,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
     }));
 
     return [...baseActions, ...instanceActions];
-  }, [instances, navigate, toggleLeftSidebar, toggleEditorPanel, toggleTerminalPanel, setShowSettingsModal, setShowShortcutsModal]);
+  }, [instances, navigate, toggleLeftSidebar, toggleEditorPanel, toggleTerminalPanel, togglePortsPanel, setShowSettingsModal, setShowShortcutsModal]);
 
   // Filter actions based on query
   const filteredActions = useMemo(() => {

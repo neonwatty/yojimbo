@@ -12,6 +12,7 @@ import { InstanceSkeletons } from '../components/instances/InstanceSkeleton';
 // import { PlansPanel } from '../components/plans';
 // import { MockupsPanel } from '../components/mockups/MockupsPanel';
 import { PortForwardsPanel } from '../components/PortForwardsPanel';
+import { PortsPanel } from '../components/ports';
 import { StatusDot, StatusBadge } from '../components/common/Status';
 import { EditableName } from '../components/common/EditableName';
 import { ErrorBoundary } from '../components/common/ErrorBoundary';
@@ -33,6 +34,7 @@ export default function InstancesPage() {
     editorPanelOpen, setEditorPanelOpen,
     mockupsPanelOpen, setMockupsPanelOpen, mockupsPanelWidth,
     terminalPanelOpen, toggleTerminalPanel, setTerminalPanelOpen,
+    portsPanelOpen, togglePortsPanel, setPortsPanelOpen, portsPanelWidth, setPortsPanelWidth,
     panelWidth,
     setShowNewInstanceModal
   } = useUIStore();
@@ -50,6 +52,7 @@ export default function InstancesPage() {
     if (id && prevInstanceIdRef.current !== undefined && prevInstanceIdRef.current !== id) {
       setEditorPanelOpen(false);
       setMockupsPanelOpen(false);
+      setPortsPanelOpen(false);
       setTerminalPanelOpen(true);
 
       // Auto-focus terminal after instance switch
@@ -61,7 +64,7 @@ export default function InstancesPage() {
       });
     }
     prevInstanceIdRef.current = id;
-  }, [id, setEditorPanelOpen, setMockupsPanelOpen, setTerminalPanelOpen]);
+  }, [id, setEditorPanelOpen, setMockupsPanelOpen, setPortsPanelOpen, setTerminalPanelOpen]);
 
   // Auto-close panels when window is too narrow to maintain 300px minimum terminal width
   useEffect(() => {
@@ -383,6 +386,19 @@ export default function InstancesPage() {
               <Icons.terminal />
               <span>Terminal</span>
             </button>
+            {/* Ports panel - only for local instances */}
+            {instance.machineType === 'local' && (
+              <button
+                onClick={togglePortsPanel}
+                className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs transition-colors
+                  ${portsPanelOpen
+                    ? 'bg-frost-4/30 text-frost-2 border border-frost-4/50'
+                    : 'text-theme-dim hover:text-theme-primary hover:bg-surface-700'}`}
+              >
+                <Icons.link />
+                <span>Ports</span>
+              </button>
+            )}
             <span className="text-surface-600 mx-1">│</span>
             {/* Reset Status button - shown when instance is working */}
             {instance.status === 'working' && (
@@ -509,8 +525,19 @@ export default function InstancesPage() {
           />
           */}
 
+          {/* Ports Panel - only for local instances */}
+          {instance.machineType === 'local' && (
+            <PortsPanel
+              instanceId={instance.id}
+              isOpen={portsPanelOpen}
+              onClose={() => setPortsPanelOpen(false)}
+              width={portsPanelWidth}
+              onWidthChange={setPortsPanelWidth}
+            />
+          )}
+
           {/* Empty state when all panels are closed */}
-          {!terminalPanelOpen && !editorPanelOpen && !mockupsPanelOpen && (
+          {!terminalPanelOpen && !editorPanelOpen && !mockupsPanelOpen && !portsPanelOpen && (
             <div className="flex-1 flex items-center justify-center bg-surface-800">
               <div className="text-center text-theme-muted">
                 <Icons.terminal />

@@ -22,6 +22,7 @@ export function NewInstanceModal({ isOpen, onClose }: NewInstanceModalProps) {
     lastUsedDirectory,
     lastInstanceMode,
     claudeCodeAliases,
+    resumeClaudeSession,
     setLastUsedDirectory,
     setLastInstanceMode,
     getDefaultAlias,
@@ -188,9 +189,12 @@ export function NewInstanceModal({ isOpen, onClose }: NewInstanceModalProps) {
         const selectedAlias = claudeCodeAliases.find((a) => a.id === selectedAliasId);
         if (selectedAlias) {
           startupCommand = selectedAlias.command;
-          // Append --resume flag if a session is selected
           if (selectedSessionId) {
+            // Specific session selected - resume that session
             startupCommand = `${startupCommand} --resume ${selectedSessionId}`;
+          } else if (resumeClaudeSession) {
+            // No specific session but auto-resume enabled - resume most recent
+            startupCommand = `${startupCommand} --resume`;
           }
         }
       }

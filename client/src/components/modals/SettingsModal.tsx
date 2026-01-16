@@ -18,6 +18,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     terminalFontSize,
     terminalFontFamily,
     claudeCodeAliases,
+    resumeClaudeSession,
     showActivityInNav,
     feedEnabledEventTypes,
     feedRetentionDays,
@@ -33,6 +34,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     updateAlias,
     removeAlias,
     setDefaultAlias,
+    setResumeClaudeSession,
     setShowActivityInNav,
     toggleFeedEventType,
     setFeedRetentionDays,
@@ -394,6 +396,28 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                   )}
                 </div>
               ))}
+            </div>
+
+            {/* Auto-resume toggle */}
+            <div className="flex items-center justify-between mt-4 pt-4 border-t border-surface-700">
+              <div>
+                <span className="text-theme-primary">Auto-resume last session</span>
+                <p className="text-xs text-theme-muted mt-0.5">
+                  Automatically resume your most recent Claude Code session
+                </p>
+              </div>
+              <button
+                onClick={() => setResumeClaudeSession(!resumeClaudeSession)}
+                className={`relative w-11 h-6 rounded-full transition-colors ${
+                  resumeClaudeSession ? 'bg-accent' : 'bg-surface-600'
+                }`}
+              >
+                <div
+                  className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
+                    resumeClaudeSession ? 'translate-x-5' : 'translate-x-0.5'
+                  }`}
+                />
+              </button>
             </div>
           </div>
 

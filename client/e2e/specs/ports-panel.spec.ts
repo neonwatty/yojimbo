@@ -28,7 +28,7 @@ test.describe('Ports Panel', () => {
     await expect(basePage.page.locator('.xterm-screen')).toBeVisible({ timeout: 10000 });
 
     // Ports button should be visible in the header
-    const portsButton = basePage.page.getByRole('button', { name: /ports/i });
+    const portsButton = basePage.page.getByRole('button', { name: 'Ports', exact: true });
     await expect(portsButton).toBeVisible();
   });
 
@@ -45,15 +45,15 @@ test.describe('Ports Panel', () => {
     // Wait for terminal to load
     await expect(basePage.page.locator('.xterm-screen')).toBeVisible({ timeout: 10000 });
 
-    // Click ports button to open panel
-    const portsButton = basePage.page.getByRole('button', { name: /ports/i });
+    // Click ports button to open panel - use exact match to avoid matching "Refresh ports"
+    const portsButton = basePage.page.getByRole('button', { name: 'Ports', exact: true });
     await portsButton.click();
 
     // Panel should appear with "Ports" header
     const portsHeader = basePage.page.locator('[class*="border-l"]').getByText('Ports', { exact: true });
     await expect(portsHeader).toBeVisible({ timeout: 5000 });
 
-    // Click again to close
+    // Click again to close - use the same button selector
     await portsButton.click();
 
     // Panel header should be hidden
@@ -74,7 +74,7 @@ test.describe('Ports Panel', () => {
     await expect(basePage.page.locator('.xterm-screen')).toBeVisible({ timeout: 10000 });
 
     // Click ports button to open panel
-    const portsButton = basePage.page.getByRole('button', { name: /ports/i });
+    const portsButton = basePage.page.getByRole('button', { name: 'Ports', exact: true });
     await portsButton.click();
 
     // Should see empty state message
@@ -83,7 +83,7 @@ test.describe('Ports Panel', () => {
     ).toBeVisible({ timeout: 5000 });
   });
 
-  test('ports panel shows instructions for making ports accessible', async ({ basePage, apiClient }) => {
+  test('ports panel shows instructions for starting a dev server', async ({ basePage, apiClient }) => {
     // Create a local instance
     const instance = await apiClient.createInstance({
       name: 'instructions-test',
@@ -96,13 +96,13 @@ test.describe('Ports Panel', () => {
     // Wait for terminal to load
     await expect(basePage.page.locator('.xterm-screen')).toBeVisible({ timeout: 10000 });
 
-    // Click ports button to open panel
-    const portsButton = basePage.page.getByRole('button', { name: /ports/i });
+    // Click ports button to open panel - use exact match to avoid matching "Refresh ports"
+    const portsButton = basePage.page.getByRole('button', { name: 'Ports', exact: true });
     await portsButton.click();
 
-    // Should see instructions about binding to 0.0.0.0
+    // Should see instructions about starting a dev server in empty state
     await expect(
-      basePage.page.getByText(/--host 0\.0\.0\.0/i)
+      basePage.page.getByText(/start a dev server/i)
     ).toBeVisible({ timeout: 5000 });
   });
 
@@ -120,7 +120,7 @@ test.describe('Ports Panel', () => {
     await expect(basePage.page.locator('.xterm-screen')).toBeVisible({ timeout: 10000 });
 
     // Click ports button to open panel
-    const portsButton = basePage.page.getByRole('button', { name: /ports/i });
+    const portsButton = basePage.page.getByRole('button', { name: 'Ports', exact: true });
     await portsButton.click();
 
     // Should see refresh button
@@ -142,7 +142,7 @@ test.describe('Ports Panel', () => {
     await expect(basePage.page.locator('.xterm-screen')).toBeVisible({ timeout: 10000 });
 
     // Click ports button to open panel
-    const portsButton = basePage.page.getByRole('button', { name: /ports/i });
+    const portsButton = basePage.page.getByRole('button', { name: 'Ports', exact: true });
     await portsButton.click();
 
     // Panel should appear - look for the Ports header in the side panel

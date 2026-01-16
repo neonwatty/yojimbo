@@ -22,6 +22,10 @@ interface SettingsState extends Settings {
   setLastUsedDirectory: (dir: string) => void;
   setLastInstanceMode: (mode: InstanceMode) => void;
 
+  // Claude Code session settings
+  resumeClaudeSession: boolean;
+  setResumeClaudeSession: (resume: boolean) => void;
+
   // Activity Feed settings
   setShowActivityInNav: (show: boolean) => void;
   setFeedEnabledEventTypes: (types: ActivityEventType[]) => void;
@@ -66,6 +70,7 @@ export const useSettingsStore = create<SettingsState>()(
       claudeCodeAliases: defaultAliases,
       lastUsedDirectory: '~',
       lastInstanceMode: 'claude-code',
+      resumeClaudeSession: true,
       // Activity Feed defaults
       showActivityInNav: true,
       feedEnabledEventTypes: ['completed'] as ActivityEventType[],
@@ -131,6 +136,9 @@ export const useSettingsStore = create<SettingsState>()(
       // Instance creation preferences
       setLastUsedDirectory: (lastUsedDirectory) => set({ lastUsedDirectory }),
       setLastInstanceMode: (lastInstanceMode) => set({ lastInstanceMode }),
+
+      // Claude Code session settings
+      setResumeClaudeSession: (resumeClaudeSession) => set({ resumeClaudeSession }),
 
       // Activity Feed settings
       setShowActivityInNav: (showActivityInNav) => set({ showActivityInNav }),

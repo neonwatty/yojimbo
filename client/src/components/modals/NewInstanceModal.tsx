@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSettingsStore } from '../../store/settingsStore';
 import { useUIStore } from '../../store/uiStore';
+import { useInstancesStore } from '../../store/instancesStore';
 import { instancesApi, filesystemApi, sessionsApi, machinesApi } from '../../api/client';
 import { useMachines } from '../../hooks/useMachines';
 import { toast } from '../../store/toastStore';
@@ -21,6 +22,7 @@ export function NewInstanceModal({ isOpen, onClose }: NewInstanceModalProps) {
     lastUsedDirectory,
     lastInstanceMode,
     claudeCodeAliases,
+    resumeClaudeSession,
     setLastUsedDirectory,
     setLastInstanceMode,
     getDefaultAlias,
@@ -30,6 +32,7 @@ export function NewInstanceModal({ isOpen, onClose }: NewInstanceModalProps) {
   const setNewInstanceDefaultMode = useUIStore((state) => state.setNewInstanceDefaultMode);
   const newInstanceSuggestedName = useUIStore((state) => state.newInstanceSuggestedName);
   const setNewInstanceSuggestedName = useUIStore((state) => state.setNewInstanceSuggestedName);
+  const addInstance = useInstancesStore((state) => state.addInstance);
 
   const { machines } = useMachines();
 
@@ -186,9 +189,12 @@ export function NewInstanceModal({ isOpen, onClose }: NewInstanceModalProps) {
         const selectedAlias = claudeCodeAliases.find((a) => a.id === selectedAliasId);
         if (selectedAlias) {
           startupCommand = selectedAlias.command;
-          // Append --resume flag if a session is selected
           if (selectedSessionId) {
+            // Specific session selected - resume that session
             startupCommand = `${startupCommand} --resume ${selectedSessionId}`;
+          } else if (resumeClaudeSession) {
+            // No specific session but auto-resume enabled - resume most recent
+            startupCommand = `${startupCommand} --resume`;
           }
         }
       }
@@ -205,6 +211,9 @@ export function NewInstanceModal({ isOpen, onClose }: NewInstanceModalProps) {
         // Save preferences
         setLastUsedDirectory(workingDir);
         setLastInstanceMode(mode);
+
+        // Add instance to store immediately to avoid race condition with WebSocket broadcast
+        addInstance(response.data);
 
         toast.success('Instance created');
         onClose();

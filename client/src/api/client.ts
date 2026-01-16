@@ -24,6 +24,7 @@ import type {
   UpdateMachineRequest,
   SSHKey,
   PortForward,
+  InstancePorts,
   GlobalTask,
   TaskStats,
   CreateTaskRequest,
@@ -138,6 +139,9 @@ export const instancesApi = {
       configJson: string;
       instructions: string[];
     }>>(`/instances/${id}/hooks-config?orchestratorUrl=${encodeURIComponent(orchestratorUrl)}`),
+
+  getListeningPorts: (id: string, refresh = false) =>
+    request<ApiResponse<InstancePorts>>(`/instances/${id}/listening-ports${refresh ? '?refresh=true' : ''}`),
 };
 
 // Session API
@@ -223,6 +227,15 @@ export const settingsApi = {
     request<ApiResponse<{ reset: boolean; count: number }>>('/settings/reset-instance-status', {
       method: 'POST',
     }),
+
+  installLocalHooks: (serverUrl?: string) =>
+    request<ApiResponse<{ installed: boolean; message: string }>>('/settings/install-local-hooks', {
+      method: 'POST',
+      body: JSON.stringify({ serverUrl }),
+    }),
+
+  checkLocalHooks: () =>
+    request<ApiResponse<{ installed: boolean; hookTypes: string[] }>>('/settings/check-local-hooks'),
 };
 
 // Filesystem API

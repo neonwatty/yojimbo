@@ -30,6 +30,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
     toggleLeftSidebar,
     toggleEditorPanel,
     toggleTerminalPanel,
+    togglePortsPanel,
     setShowSettingsModal,
     setShowShortcutsModal,
     setShowNewInstanceModal,
@@ -85,14 +86,15 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
         action: toggleLeftSidebar,
         keywords: ['hide', 'show', 'navigation'],
       },
-      {
-        id: 'toggle-plans',
-        label: 'Toggle Plans Panel',
-        shortcut: ['Cmd', 'E'],
-        category: 'panels',
-        action: toggleEditorPanel,
-        keywords: ['editor', 'markdown'],
-      },
+      // Plans panel hidden - uncomment to restore
+      // {
+      //   id: 'toggle-plans',
+      //   label: 'Toggle Plans Panel',
+      //   shortcut: ['Cmd', 'E'],
+      //   category: 'panels',
+      //   action: toggleEditorPanel,
+      //   keywords: ['editor', 'markdown'],
+      // },
       {
         id: 'toggle-terminal',
         label: 'Toggle Terminal',
@@ -100,6 +102,13 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
         category: 'panels',
         action: toggleTerminalPanel,
         keywords: ['console', 'shell'],
+      },
+      {
+        id: 'toggle-ports',
+        label: 'Toggle Ports Panel',
+        category: 'panels',
+        action: togglePortsPanel,
+        keywords: ['network', 'listening', 'tailscale', 'server'],
       },
 
       // Actions
@@ -132,7 +141,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
     }));
 
     return [...baseActions, ...instanceActions];
-  }, [instances, navigate, toggleLeftSidebar, toggleEditorPanel, toggleTerminalPanel, setShowSettingsModal, setShowShortcutsModal]);
+  }, [instances, navigate, toggleLeftSidebar, toggleEditorPanel, toggleTerminalPanel, togglePortsPanel, setShowSettingsModal, setShowShortcutsModal]);
 
   // Filter actions based on query
   const filteredActions = useMemo(() => {

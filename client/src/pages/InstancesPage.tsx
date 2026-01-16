@@ -8,9 +8,11 @@ import { Terminal, type TerminalRef } from '../components/terminal';
 import { CardLayout } from '../components/instances/CardLayout';
 import { ListLayout } from '../components/instances/ListLayout';
 import { InstanceSkeletons } from '../components/instances/InstanceSkeleton';
-import { PlansPanel } from '../components/plans';
-import { MockupsPanel } from '../components/mockups/MockupsPanel';
+// Plans and Mockups hidden - uncomment to restore
+// import { PlansPanel } from '../components/plans';
+// import { MockupsPanel } from '../components/mockups/MockupsPanel';
 import { PortForwardsPanel } from '../components/PortForwardsPanel';
+import { PortsPanel } from '../components/ports';
 import { StatusDot, StatusBadge } from '../components/common/Status';
 import { EditableName } from '../components/common/EditableName';
 import { ErrorBoundary } from '../components/common/ErrorBoundary';
@@ -28,10 +30,12 @@ export default function InstancesPage() {
   const { instances, setActiveInstanceId, updateInstance, removeInstance, reorderInstances, currentCwds, isLoading } = useInstancesStore();
   const {
     layout,
-    editorPanelOpen, toggleEditorPanel, setEditorPanelOpen,
-    mockupsPanelOpen, setMockupsPanelOpen, mockupsPanelWidth, setMockupsPanelWidth,
+    // Plans and Mockups hidden from UI but state still managed for future restore
+    editorPanelOpen, setEditorPanelOpen,
+    mockupsPanelOpen, setMockupsPanelOpen, mockupsPanelWidth,
     terminalPanelOpen, toggleTerminalPanel, setTerminalPanelOpen,
-    panelWidth, setPanelWidth,
+    portsPanelOpen, togglePortsPanel, setPortsPanelOpen, portsPanelWidth, setPortsPanelWidth,
+    panelWidth,
     setShowNewInstanceModal
   } = useUIStore();
   const { theme } = useSettingsStore();
@@ -48,6 +52,7 @@ export default function InstancesPage() {
     if (id && prevInstanceIdRef.current !== undefined && prevInstanceIdRef.current !== id) {
       setEditorPanelOpen(false);
       setMockupsPanelOpen(false);
+      setPortsPanelOpen(false);
       setTerminalPanelOpen(true);
 
       // Auto-focus terminal after instance switch
@@ -59,7 +64,7 @@ export default function InstancesPage() {
       });
     }
     prevInstanceIdRef.current = id;
-  }, [id, setEditorPanelOpen, setMockupsPanelOpen, setTerminalPanelOpen]);
+  }, [id, setEditorPanelOpen, setMockupsPanelOpen, setPortsPanelOpen, setTerminalPanelOpen]);
 
   // Auto-close panels when window is too narrow to maintain 300px minimum terminal width
   useEffect(() => {
@@ -349,6 +354,7 @@ export default function InstancesPage() {
             )}
           </div>
           <div className="flex items-center gap-1">
+            {/* Plans and Mockups buttons hidden - uncomment to restore
             <button
               onClick={toggleEditorPanel}
               className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs transition-colors
@@ -369,6 +375,7 @@ export default function InstancesPage() {
               <Icons.code />
               <span>Mockups</span>
             </button>
+            */}
             <button
               onClick={toggleTerminalPanel}
               className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs transition-colors
@@ -379,6 +386,19 @@ export default function InstancesPage() {
               <Icons.terminal />
               <span>Terminal</span>
             </button>
+            {/* Ports panel - only for local instances */}
+            {instance.machineType === 'local' && (
+              <button
+                onClick={togglePortsPanel}
+                className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs transition-colors
+                  ${portsPanelOpen
+                    ? 'bg-frost-4/30 text-frost-2 border border-frost-4/50'
+                    : 'text-theme-dim hover:text-theme-primary hover:bg-surface-700'}`}
+              >
+                <Icons.link />
+                <span>Ports</span>
+              </button>
+            )}
             <span className="text-surface-600 mx-1">│</span>
             {/* Reset Status button - shown when instance is working */}
             {instance.status === 'working' && (
@@ -484,7 +504,7 @@ export default function InstancesPage() {
             </div>
           )}
 
-          {/* Plans Panel */}
+          {/* Plans Panel - hidden, uncomment to restore
           <PlansPanel
             instanceId={instance.id}
             workingDir={currentCwds[instance.id] || instance.workingDir}
@@ -493,8 +513,9 @@ export default function InstancesPage() {
             width={panelWidth}
             onWidthChange={setPanelWidth}
           />
+          */}
 
-          {/* Mockups Panel */}
+          {/* Mockups Panel - hidden, uncomment to restore
           <MockupsPanel
             workingDir={currentCwds[instance.id] || instance.workingDir}
             isOpen={mockupsPanelOpen}
@@ -502,13 +523,25 @@ export default function InstancesPage() {
             width={mockupsPanelWidth}
             onWidthChange={setMockupsPanelWidth}
           />
+          */}
+
+          {/* Ports Panel - only for local instances */}
+          {instance.machineType === 'local' && (
+            <PortsPanel
+              instanceId={instance.id}
+              isOpen={portsPanelOpen}
+              onClose={() => setPortsPanelOpen(false)}
+              width={portsPanelWidth}
+              onWidthChange={setPortsPanelWidth}
+            />
+          )}
 
           {/* Empty state when all panels are closed */}
-          {!terminalPanelOpen && !editorPanelOpen && !mockupsPanelOpen && (
+          {!terminalPanelOpen && !editorPanelOpen && !mockupsPanelOpen && !portsPanelOpen && (
             <div className="flex-1 flex items-center justify-center bg-surface-800">
               <div className="text-center text-theme-muted">
                 <Icons.terminal />
-                <p className="mt-2 text-sm">Use the buttons above to show Terminal, Plans, or Mockups</p>
+                <p className="mt-2 text-sm">Use the Terminal button above to show the terminal</p>
               </div>
             </div>
           )}

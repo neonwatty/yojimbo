@@ -1,5 +1,4 @@
 import { Router } from 'express';
-import os from 'os';
 import { getDatabase } from '../db/connection.js';
 import { broadcast } from '../websocket/server.js';
 import { createActivityEvent } from '../services/feed.service.js';
@@ -25,109 +24,6 @@ function findInstanceById(instanceId: string): InstanceRow | null {
   return (db
     .prepare('SELECT * FROM instances WHERE id = ? AND closed_at IS NULL')
     .get(instanceId) as InstanceRow | undefined) || null;
-}
-
-// Helper to find instance by working directory (fallback)
-// machineId: If provided, only match instances on that machine. If null/undefined, only match local instances.
-function findInstanceByWorkingDir(projectDir: string, machineId?: string | null): InstanceRow | null {
-  const db = getDatabase();
-
-  // Build machine filter condition
-  // If machineId is provided → match that specific machine
-  // If machineId is null/undefined → match only local instances (machine_id IS NULL)
-  const machineFilter = machineId
-    ? 'AND machine_id = ?'
-    : 'AND machine_id IS NULL';
-  const machineParam = machineId || null;
-
-  // Normalize the path (expand ~ and resolve)
-  const normalizedDir = projectDir.replace(/^~/, os.homedir());
-
-  // Try exact match first
-  let instance = machineId
-    ? db.prepare(`SELECT * FROM instances WHERE working_dir = ? AND closed_at IS NULL ${machineFilter}`).get(normalizedDir, machineParam) as InstanceRow | undefined
-    : db.prepare(`SELECT * FROM instances WHERE working_dir = ? AND closed_at IS NULL ${machineFilter}`).get(normalizedDir) as InstanceRow | undefined;
-
-  if (instance) return instance;
-
-  // Try with ~ prefix (for local machine)
-  const withTilde = projectDir.startsWith(os.homedir())
-    ? projectDir.replace(os.homedir(), '~')
-    : projectDir;
-
-  instance = machineId
-    ? db.prepare(`SELECT * FROM instances WHERE working_dir = ? AND closed_at IS NULL ${machineFilter}`).get(withTilde, machineParam) as InstanceRow | undefined
-    : db.prepare(`SELECT * FROM instances WHERE working_dir = ? AND closed_at IS NULL ${machineFilter}`).get(withTilde) as InstanceRow | undefined;
-
-  if (instance) return instance;
-
-  // For remote machines: check if projectDir looks like a home directory
-  // Pattern: /Users/<username> or /home/<username>
-  const homeMatch = projectDir.match(/^(\/Users\/[^/]+|\/home\/[^/]+)$/);
-  if (homeMatch) {
-    // Try matching instances with ~ as working_dir
-    instance = machineId
-      ? db.prepare(`SELECT * FROM instances WHERE working_dir = ? AND closed_at IS NULL ${machineFilter}`).get('~', machineParam) as InstanceRow | undefined
-      : db.prepare(`SELECT * FROM instances WHERE working_dir = ? AND closed_at IS NULL ${machineFilter}`).get('~') as InstanceRow | undefined;
-
-    if (instance) return instance;
-  }
-
-  // Try partial match (project dir might be a subdirectory)
-  // First, get all potential matches and score them
-  const candidates = machineId
-    ? db.prepare(`
-        SELECT * FROM instances
-        WHERE closed_at IS NULL
-        AND (? LIKE working_dir || '%' OR working_dir LIKE ? || '%' OR working_dir = '~')
-        ${machineFilter}
-      `).all(normalizedDir, normalizedDir, machineParam) as InstanceRow[]
-    : db.prepare(`
-        SELECT * FROM instances
-        WHERE closed_at IS NULL
-        AND (? LIKE working_dir || '%' OR working_dir LIKE ? || '%' OR working_dir = '~')
-        ${machineFilter}
-      `).all(normalizedDir, normalizedDir) as InstanceRow[];
-
-  if (candidates.length === 0) return null;
-
-  // Score candidates: prefer exact/longer matches over partial matches
-  // Also expand ~ in working_dir for proper comparison
-  let bestMatch: InstanceRow | null = null;
-  let bestScore = -1;
-
-  for (const candidate of candidates) {
-    let candidateDir = candidate.working_dir;
-
-    // For ~ working_dir on remote machines, we can't expand it properly
-    // but we can check if projectDir looks like it's under a home directory
-    if (candidateDir === '~') {
-      const homePattern = /^(\/Users\/[^/]+|\/home\/[^/]+)/;
-      const match = projectDir.match(homePattern);
-      if (match) {
-        candidateDir = match[1]; // Use the detected home path
-      }
-    }
-
-    // Calculate match score
-    let score = 0;
-    if (normalizedDir === candidateDir) {
-      score = 1000; // Exact match
-    } else if (normalizedDir.startsWith(candidateDir + '/')) {
-      // projectDir is under working_dir (e.g., /Users/foo/project under /Users/foo)
-      score = candidateDir.length;
-    } else if (candidateDir.startsWith(normalizedDir + '/')) {
-      // working_dir is under projectDir - less preferred
-      score = normalizedDir.length - 500;
-    }
-
-    if (score > bestScore) {
-      bestScore = score;
-      bestMatch = candidate;
-    }
-  }
-
-  return bestMatch;
 }
 
 // Update instance status
@@ -189,20 +85,13 @@ router.post('/status', (req, res) => {
 
     logHookReceived({ hookType: `status:${event}`, projectDir, instanceId, machineId });
 
-    // Prefer matching by instanceId (more reliable)
-    let instance = findInstanceById(instanceId || '');
-    let matchMethod: 'id' | 'directory' | 'none' = instance ? 'id' : 'none';
-
-    // Only fall back to directory matching if no instanceId was provided
-    if (!instance && !instanceId) {
-      // Pass machineId to filter by machine (null = local machine only)
-      instance = findInstanceByWorkingDir(projectDir, machineId);
-      matchMethod = instance ? 'directory' : 'none';
-    }
+    // Only match by instanceId - no directory fallback
+    // This ensures external Claude sessions (without CC_INSTANCE_ID) don't affect Yojimbo instances
+    const instance = findInstanceById(instanceId || '');
 
     logInstanceLookup({
       found: !!instance,
-      method: matchMethod,
+      method: instance ? 'id' : 'none',
       instanceId: instance?.id,
       instanceName: instance?.name,
       projectDir,
@@ -228,20 +117,12 @@ router.post('/notification', (req, res) => {
 
     logHookReceived({ hookType: 'notification', projectDir, instanceId, machineId });
 
-    // Prefer matching by instanceId (more reliable)
-    let instance = findInstanceById(instanceId || '');
-    let matchMethod: 'id' | 'directory' | 'none' = instance ? 'id' : 'none';
-
-    // Only fall back to directory matching if no instanceId was provided
-    if (!instance && !instanceId) {
-      // Pass machineId to filter by machine (null = local machine only)
-      instance = findInstanceByWorkingDir(projectDir, machineId);
-      matchMethod = instance ? 'directory' : 'none';
-    }
+    // Only match by instanceId - no directory fallback
+    const instance = findInstanceById(instanceId || '');
 
     logInstanceLookup({
       found: !!instance,
-      method: matchMethod,
+      method: instance ? 'id' : 'none',
       instanceId: instance?.id,
       instanceName: instance?.name,
       projectDir,
@@ -268,20 +149,12 @@ router.post('/stop', (req, res) => {
 
     logHookReceived({ hookType: 'stop', projectDir, instanceId, machineId });
 
-    // Prefer matching by instanceId (more reliable)
-    let instance = findInstanceById(instanceId || '');
-    let matchMethod: 'id' | 'directory' | 'none' = instance ? 'id' : 'none';
-
-    // Only fall back to directory matching if no instanceId was provided
-    if (!instance && !instanceId) {
-      // Pass machineId to filter by machine (null = local machine only)
-      instance = findInstanceByWorkingDir(projectDir, machineId);
-      matchMethod = instance ? 'directory' : 'none';
-    }
+    // Only match by instanceId - no directory fallback
+    const instance = findInstanceById(instanceId || '');
 
     logInstanceLookup({
       found: !!instance,
-      method: matchMethod,
+      method: instance ? 'id' : 'none',
       instanceId: instance?.id,
       instanceName: instance?.name,
       projectDir,

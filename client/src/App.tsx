@@ -123,19 +123,20 @@ function App() {
         return;
       }
 
-      // Cmd/Ctrl + E: Toggle plans panel
-      if (isMod && e.key === 'e') {
-        e.preventDefault();
-        toggleEditorPanel();
-        return;
-      }
+      // Plans and Mockups shortcuts hidden - uncomment to restore
+      // // Cmd/Ctrl + E: Toggle plans panel
+      // if (isMod && e.key === 'e') {
+      //   e.preventDefault();
+      //   toggleEditorPanel();
+      //   return;
+      // }
 
-      // Cmd/Ctrl + M: Toggle mockups panel
-      if (isMod && e.key === 'm') {
-        e.preventDefault();
-        toggleMockupsPanel();
-        return;
-      }
+      // // Cmd/Ctrl + M: Toggle mockups panel
+      // if (isMod && e.key === 'm') {
+      //   e.preventDefault();
+      //   toggleMockupsPanel();
+      //   return;
+      // }
 
       // Cmd/Ctrl + `: Toggle terminal panel
       if (isMod && e.key === '`') {

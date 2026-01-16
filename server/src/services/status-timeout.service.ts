@@ -1,7 +1,6 @@
 import { getDatabase } from '../db/connection.js';
 import { broadcast } from '../websocket/server.js';
 import { createActivityEvent } from './feed.service.js';
-import { localStatusPollerService } from './local-status-poller.service.js';
 import { logStatusChange, logTimeoutCheck } from './status-logger.service.js';
 import type { InstanceStatus } from '@cc-orchestrator/shared';
 
@@ -106,27 +105,8 @@ class StatusTimeoutService {
       return;
     }
 
-    // For local instances: check file activity before resetting
-    // This handles the case where Claude is "thinking" without using tools
-    if (!instance.machine_id) {
-      const { status: fileStatus } = localStatusPollerService.checkLocalClaudeStatus(instance.working_dir, instance.name);
-      if (fileStatus === 'working') {
-        // File activity detected - extend timeout instead of resetting
-        logTimeoutCheck({
-          instanceId,
-          instanceName: instance.name,
-          timeSinceActivity,
-          threshold: ACTIVITY_TIMEOUT_MS,
-          fileCheckResult: 'working',
-          action: 'extend',
-        });
-        this.activityMap.set(instanceId, {
-          lastActivityAt: Date.now(),
-          status: 'working',
-        });
-        return;
-      }
-    }
+    // Note: Local file checking disabled - status now tracked only via hooks from Yojimbo terminals
+    // This ensures external Claude sessions don't affect Yojimbo instance status
 
     // Log timeout check before reset
     logTimeoutCheck({

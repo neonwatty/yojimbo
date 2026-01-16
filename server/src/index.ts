@@ -7,6 +7,7 @@ import { remoteStatusPollerService } from './services/remote-status-poller.servi
 import { localStatusPollerService } from './services/local-status-poller.service.js';
 import { statusTimeoutService } from './services/status-timeout.service.js';
 import { localKeychainService } from './services/local-keychain.service.js';
+import { portDetectionService } from './services/port-detection.service.js';
 import CONFIG from './config/index.js';
 
 async function main() {
@@ -46,13 +47,18 @@ async function main() {
   console.log('🔄 Starting remote status poller...');
   remoteStatusPollerService.start();
 
-  // Start local status poller
-  console.log('🔍 Starting local status poller...');
-  localStatusPollerService.start();
+  // Local status poller disabled - status now tracked only via hooks from Yojimbo terminals
+  // This prevents external Claude sessions from affecting Yojimbo instance status
+  // console.log('🔍 Starting local status poller...');
+  // localStatusPollerService.start();
 
   // Start status timeout service
   console.log('⏱️ Starting status timeout service...');
   statusTimeoutService.start();
+
+  // Start port detection service
+  console.log('🔌 Starting port detection service...');
+  portDetectionService.start();
 
   // Attempt local keychain auto-unlock (macOS only)
   console.log('🔐 Checking local keychain...');
@@ -83,6 +89,7 @@ async function main() {
     remoteStatusPollerService.stop();
     localStatusPollerService.stop();
     statusTimeoutService.stop();
+    portDetectionService.stop();
     server.close(() => {
       console.log('👋 Server closed');
       process.exit(0);

@@ -49,46 +49,6 @@ vi.mock('../services/terminal-manager.service.js', () => ({
 
 // Import after mocking
 import { portDetectionService } from '../services/port-detection.service.js';
-import { getDatabase } from '../db/connection.js';
-import { broadcast } from '../websocket/server.js';
-
-// Sample lsof output for testing
-const SAMPLE_LSOF_OUTPUT = `COMMAND     PID   USER   FD   TYPE             DEVICE SIZE/OFF NODE NAME
-node      12345 jeremy   22u  IPv4 0x1234567890abcdef      0t0  TCP *:3000 (LISTEN)
-node      12345 jeremy   23u  IPv4 0x1234567890abcdef      0t0  TCP 127.0.0.1:3001 (LISTEN)
-vite      12346 jeremy   24u  IPv6 0x1234567890abcdef      0t0  TCP [::]:5173 (LISTEN)
-node      12347 jeremy   25u  IPv4 0x1234567890abcdef      0t0  TCP 0.0.0.0:8080 (LISTEN)
-`;
-
-// Helper to set up exec mock responses based on command
-function setupExecMock(responses: Record<string, string | Error>) {
-  // Store original mock result reference
-  const originalMockResult = mockExecResult;
-
-  // Create a mock implementation that handles each command
-  vi.mocked(require('util').promisify).mockImplementation(() => {
-    return async (command: string) => {
-      execCallLog.push(command);
-
-      // Find matching response
-      for (const [pattern, response] of Object.entries(responses)) {
-        if (command.includes(pattern)) {
-          if (response instanceof Error) {
-            throw response;
-          }
-          return { stdout: response };
-        }
-      }
-
-      // Default response
-      return { stdout: '' };
-    };
-  });
-
-  return () => {
-    mockExecResult = originalMockResult;
-  };
-}
 
 describe('PortDetectionService', () => {
   beforeEach(() => {

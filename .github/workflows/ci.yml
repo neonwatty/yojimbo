@@ -8,7 +8,7 @@ on:
       - 'plans/**/*.md'
       - 'notes/**/*.md'
   pull_request:
-    branches: [main]
+    branches: [main, develop]
     paths-ignore:
       - 'README.md'
       - 'plans/**/*.md'

@@ -89,6 +89,19 @@ export interface InstancePorts {
   lastScannedAt: string;
 }
 
+// HTML Files Viewer types
+export interface HtmlFile {
+  id: string;           // MD5 hash of path
+  name: string;         // Filename (e.g., "mockup.html")
+  path: string;         // Full filesystem path
+  addedAt: string;      // ISO timestamp
+}
+
+export interface InstanceHtmlFiles {
+  instanceId: string;
+  files: HtmlFile[];
+}
+
 // SSH Key types
 export interface SSHKey {
   name: string;

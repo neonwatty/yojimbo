@@ -25,6 +25,8 @@ import type {
   SSHKey,
   PortForward,
   InstancePorts,
+  InstanceHtmlFiles,
+  HtmlFile,
   GlobalTask,
   TaskStats,
   CreateTaskRequest,
@@ -443,5 +445,31 @@ export const tasksApi = {
     request<ApiResponse<void>>('/tasks/reorder', {
       method: 'POST',
       body: JSON.stringify(data),
+    }),
+};
+
+// HTML Files API
+export const htmlFilesApi = {
+  list: (instanceId: string) =>
+    request<ApiResponse<InstanceHtmlFiles>>(`/instances/${instanceId}/html-files`),
+
+  add: (instanceId: string, path: string) =>
+    request<ApiResponse<HtmlFile>>(`/instances/${instanceId}/html-files`, {
+      method: 'POST',
+      body: JSON.stringify({ path }),
+    }),
+
+  remove: (instanceId: string, fileId: string) =>
+    request<ApiResponse<void>>(`/instances/${instanceId}/html-files/${fileId}`, {
+      method: 'DELETE',
+    }),
+
+  getContent: (instanceId: string, fileId: string) =>
+    request<ApiResponse<{ content: string }>>(`/instances/${instanceId}/html-files/${fileId}/content`),
+
+  upload: (instanceId: string, fileName: string, content: string) =>
+    request<ApiResponse<HtmlFile>>(`/instances/${instanceId}/html-files/upload`, {
+      method: 'POST',
+      body: JSON.stringify({ fileName, content }),
     }),
 };

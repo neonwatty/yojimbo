@@ -232,15 +232,18 @@ export function LeftSidebar() {
               <Tooltip key={inst.id} text={getWorkingDirDisplay(inst)} position="right">
                 <div
                   onClick={() => handleSelectInstance(inst.id)}
-                  className={`group w-full flex items-center gap-2 px-2 py-1.5 rounded text-left transition-colors mb-0.5 cursor-pointer
+                  className={`group w-full flex items-center gap-2 px-2 py-1.5 rounded text-left transition-all mb-0.5 cursor-pointer
                     ${expandedId === inst.id
-                      ? 'bg-frost-4/30 text-frost-2 border border-frost-4/50'
+                      ? 'bg-accent text-surface-900 dark:text-white shadow-md shadow-accent/30'
                       : activeInstanceId === inst.id
                       ? 'bg-surface-700 text-theme-primary'
                       : 'text-theme-dim hover:bg-surface-700 hover:text-theme-primary'}`}
                 >
                   {shortcutNum && (
-                    <span className="w-4 h-4 rounded bg-surface-600 text-[10px] flex items-center justify-center text-theme-dim font-mono flex-shrink-0">
+                    <span className={`w-4 h-4 rounded text-[10px] flex items-center justify-center font-mono flex-shrink-0
+                      ${expandedId === inst.id
+                        ? 'bg-white/30 dark:bg-white/20 text-surface-900 dark:text-white'
+                        : 'bg-surface-600 text-theme-dim'}`}>
                       {shortcutNum}
                     </span>
                   )}
@@ -285,15 +288,18 @@ export function LeftSidebar() {
             <Tooltip key={inst.id} text={getWorkingDirDisplay(inst)} position="right">
               <div
                 onClick={() => handleSelectInstance(inst.id)}
-                className={`group w-full flex items-center gap-2 px-2 py-1.5 rounded text-left transition-colors mb-0.5 cursor-pointer
+                className={`group w-full flex items-center gap-2 px-2 py-1.5 rounded text-left transition-all mb-0.5 cursor-pointer
                   ${expandedId === inst.id
-                    ? 'bg-frost-4/30 text-frost-2 border border-frost-4/50'
+                    ? 'bg-accent text-surface-900 dark:text-white shadow-md shadow-accent/30'
                     : activeInstanceId === inst.id
                     ? 'bg-surface-700 text-theme-primary'
                     : 'text-theme-dim hover:bg-surface-700 hover:text-theme-primary'}`}
               >
                 {shortcutNum && (
-                  <span className="w-4 h-4 rounded bg-surface-600 text-[10px] flex items-center justify-center text-theme-dim font-mono flex-shrink-0">
+                  <span className={`w-4 h-4 rounded text-[10px] flex items-center justify-center font-mono flex-shrink-0
+                    ${expandedId === inst.id
+                      ? 'bg-white/30 dark:bg-white/20 text-surface-900 dark:text-white'
+                      : 'bg-surface-600 text-theme-dim'}`}>
                     {shortcutNum}
                   </span>
                 )}

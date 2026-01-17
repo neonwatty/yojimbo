@@ -6,6 +6,7 @@ import { sshConnectionService } from '../services/ssh-connection.service.js';
 import { hookInstallerService } from '../services/hook-installer.service.js';
 import { reverseTunnelService } from '../services/reverse-tunnel.service.js';
 import { portDetectionService } from '../services/port-detection.service.js';
+import { htmlFilesService } from '../services/html-files.service.js';
 import { broadcast } from '../websocket/server.js';
 import type { Instance, CreateInstanceRequest, UpdateInstanceRequest, InstanceStatus, MachineType } from '@cc-orchestrator/shared';
 
@@ -228,6 +229,9 @@ router.delete('/:id', async (req, res) => {
 
     // Clear port detection cache
     portDetectionService.clearInstance(id);
+
+    // Clear HTML files cache
+    htmlFilesService.clearInstance(id);
 
     // Kill terminal backend if running
     await terminalManager.kill(id);
@@ -560,6 +564,163 @@ router.get('/:id/listening-ports', async (req, res) => {
   } catch (error) {
     console.error('Error getting listening ports:', error);
     res.status(500).json({ success: false, error: 'Failed to get listening ports' });
+  }
+});
+
+// GET /api/instances/:id/html-files - List HTML files for an instance
+router.get('/:id/html-files', (req, res) => {
+  try {
+    const db = getDatabase();
+    const { id } = req.params;
+
+    // Check if instance exists
+    const existing = db.prepare('SELECT * FROM instances WHERE id = ? AND closed_at IS NULL').get(id) as InstanceRow | undefined;
+    if (!existing) {
+      return res.status(404).json({ success: false, error: 'Instance not found' });
+    }
+
+    // Only support local instances
+    if (existing.machine_type !== 'local') {
+      return res.status(400).json({
+        success: false,
+        error: 'HTML files viewer is only available for local instances',
+      });
+    }
+
+    const htmlFiles = htmlFilesService.getFiles(id);
+    res.json({ success: true, data: htmlFiles });
+  } catch (error) {
+    console.error('Error getting HTML files:', error);
+    res.status(500).json({ success: false, error: 'Failed to get HTML files' });
+  }
+});
+
+// POST /api/instances/:id/html-files - Add an HTML file to an instance
+router.post('/:id/html-files', async (req, res) => {
+  try {
+    const db = getDatabase();
+    const { id } = req.params;
+    const { path } = req.body;
+
+    if (!path) {
+      return res.status(400).json({ success: false, error: 'Path is required' });
+    }
+
+    // Check if instance exists
+    const existing = db.prepare('SELECT * FROM instances WHERE id = ? AND closed_at IS NULL').get(id) as InstanceRow | undefined;
+    if (!existing) {
+      return res.status(404).json({ success: false, error: 'Instance not found' });
+    }
+
+    // Only support local instances
+    if (existing.machine_type !== 'local') {
+      return res.status(400).json({
+        success: false,
+        error: 'HTML files viewer is only available for local instances',
+      });
+    }
+
+    const htmlFile = await htmlFilesService.addFile(id, path);
+    res.status(201).json({ success: true, data: htmlFile });
+  } catch (error) {
+    console.error('Error adding HTML file:', error);
+    const message = error instanceof Error ? error.message : 'Failed to add HTML file';
+    res.status(400).json({ success: false, error: message });
+  }
+});
+
+// POST /api/instances/:id/html-files/upload - Upload an HTML file with content
+router.post('/:id/html-files/upload', (req, res) => {
+  try {
+    const db = getDatabase();
+    const { id } = req.params;
+    const { fileName, content } = req.body;
+
+    if (!fileName || !content) {
+      return res.status(400).json({ success: false, error: 'fileName and content are required' });
+    }
+
+    // Check if instance exists
+    const existing = db.prepare('SELECT * FROM instances WHERE id = ? AND closed_at IS NULL').get(id) as InstanceRow | undefined;
+    if (!existing) {
+      return res.status(404).json({ success: false, error: 'Instance not found' });
+    }
+
+    // Only support local instances
+    if (existing.machine_type !== 'local') {
+      return res.status(400).json({
+        success: false,
+        error: 'HTML files viewer is only available for local instances',
+      });
+    }
+
+    const htmlFile = htmlFilesService.addFileWithContent(id, fileName, content);
+    res.status(201).json({ success: true, data: htmlFile });
+  } catch (error) {
+    console.error('Error uploading HTML file:', error);
+    const message = error instanceof Error ? error.message : 'Failed to upload HTML file';
+    res.status(400).json({ success: false, error: message });
+  }
+});
+
+// DELETE /api/instances/:id/html-files/:fileId - Remove an HTML file from an instance
+router.delete('/:id/html-files/:fileId', (req, res) => {
+  try {
+    const db = getDatabase();
+    const { id, fileId } = req.params;
+
+    // Check if instance exists
+    const existing = db.prepare('SELECT * FROM instances WHERE id = ? AND closed_at IS NULL').get(id) as InstanceRow | undefined;
+    if (!existing) {
+      return res.status(404).json({ success: false, error: 'Instance not found' });
+    }
+
+    const removed = htmlFilesService.removeFile(id, fileId);
+    if (!removed) {
+      return res.status(404).json({ success: false, error: 'File not found' });
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error removing HTML file:', error);
+    res.status(500).json({ success: false, error: 'Failed to remove HTML file' });
+  }
+});
+
+// GET /api/instances/:id/html-files/:fileId/content - Get HTML file content
+router.get('/:id/html-files/:fileId/content', async (req, res) => {
+  try {
+    const db = getDatabase();
+    const { id, fileId } = req.params;
+
+    // Check if instance exists
+    const existing = db.prepare('SELECT * FROM instances WHERE id = ? AND closed_at IS NULL').get(id) as InstanceRow | undefined;
+    if (!existing) {
+      return res.status(404).json({ success: false, error: 'Instance not found' });
+    }
+
+    // Get the file entry
+    const file = htmlFilesService.getFile(id, fileId);
+    if (!file) {
+      return res.status(404).json({ success: false, error: 'File not found' });
+    }
+
+    // Check if it's an uploaded file (content stored in memory)
+    if (file.path.startsWith('uploaded://')) {
+      const content = htmlFilesService.getUploadedContent(fileId);
+      if (!content) {
+        return res.status(404).json({ success: false, error: 'File content not found' });
+      }
+      return res.json({ success: true, data: { content } });
+    }
+
+    // Read content from disk
+    const content = await htmlFilesService.getFileContent(file.path);
+    res.json({ success: true, data: { content } });
+  } catch (error) {
+    console.error('Error getting HTML file content:', error);
+    const message = error instanceof Error ? error.message : 'Failed to get file content';
+    res.status(400).json({ success: false, error: message });
   }
 });
 

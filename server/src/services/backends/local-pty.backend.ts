@@ -124,7 +124,9 @@ export class LocalPTYBackend extends TerminalBackend {
   async kill(): Promise<boolean> {
     if (this.ptyProcess) {
       console.log(`🛑 Killing PTY: ${this.id}`);
-      this.ptyProcess.kill();
+      // Use SIGKILL instead of default SIGHUP to avoid killing the entire process group
+      // SIGHUP propagates to all processes in the group, which would exit other Claude Code instances
+      this.ptyProcess.kill('SIGKILL');
       this.ptyProcess = null;
       this.alive = false;
       return true;

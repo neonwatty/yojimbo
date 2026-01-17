@@ -13,6 +13,7 @@ import { InstanceSkeletons } from '../components/instances/InstanceSkeleton';
 // import { MockupsPanel } from '../components/mockups/MockupsPanel';
 import { PortForwardsPanel } from '../components/PortForwardsPanel';
 import { PortsPanel } from '../components/ports';
+import { HtmlFilesPanel } from '../components/html-files';
 import { StatusDot, StatusBadge } from '../components/common/Status';
 import { EditableName } from '../components/common/EditableName';
 import { ErrorBoundary } from '../components/common/ErrorBoundary';
@@ -35,6 +36,7 @@ export default function InstancesPage() {
     mockupsPanelOpen, setMockupsPanelOpen, mockupsPanelWidth,
     terminalPanelOpen, toggleTerminalPanel, setTerminalPanelOpen,
     portsPanelOpen, togglePortsPanel, setPortsPanelOpen, portsPanelWidth, setPortsPanelWidth,
+    htmlFilesPanelOpen, toggleHtmlFilesPanel, setHtmlFilesPanelOpen, htmlFilesPanelWidth, setHtmlFilesPanelWidth,
     panelWidth,
     setShowNewInstanceModal
   } = useUIStore();
@@ -53,6 +55,7 @@ export default function InstancesPage() {
       setEditorPanelOpen(false);
       setMockupsPanelOpen(false);
       setPortsPanelOpen(false);
+      setHtmlFilesPanelOpen(false);
       setTerminalPanelOpen(true);
 
       // Auto-focus terminal after instance switch
@@ -64,7 +67,7 @@ export default function InstancesPage() {
       });
     }
     prevInstanceIdRef.current = id;
-  }, [id, setEditorPanelOpen, setMockupsPanelOpen, setPortsPanelOpen, setTerminalPanelOpen]);
+  }, [id, setEditorPanelOpen, setMockupsPanelOpen, setPortsPanelOpen, setHtmlFilesPanelOpen, setTerminalPanelOpen]);
 
   // Auto-close panels when window is too narrow to maintain 300px minimum terminal width
   useEffect(() => {
@@ -399,6 +402,19 @@ export default function InstancesPage() {
                 <span>Ports</span>
               </button>
             )}
+            {/* HTML Files panel - only for local instances */}
+            {instance.machineType === 'local' && (
+              <button
+                onClick={toggleHtmlFilesPanel}
+                className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs transition-colors
+                  ${htmlFilesPanelOpen
+                    ? 'bg-frost-4/30 text-frost-2 border border-frost-4/50'
+                    : 'text-theme-dim hover:text-theme-primary hover:bg-surface-700'}`}
+              >
+                <Icons.code />
+                <span>HTML</span>
+              </button>
+            )}
             <span className="text-surface-600 mx-1">│</span>
             {/* Reset Status button - shown when instance is working */}
             {instance.status === 'working' && (
@@ -536,8 +552,19 @@ export default function InstancesPage() {
             />
           )}
 
+          {/* HTML Files Panel - only for local instances */}
+          {instance.machineType === 'local' && (
+            <HtmlFilesPanel
+              instanceId={instance.id}
+              isOpen={htmlFilesPanelOpen}
+              onClose={() => setHtmlFilesPanelOpen(false)}
+              width={htmlFilesPanelWidth}
+              onWidthChange={setHtmlFilesPanelWidth}
+            />
+          )}
+
           {/* Empty state when all panels are closed */}
-          {!terminalPanelOpen && !editorPanelOpen && !mockupsPanelOpen && !portsPanelOpen && (
+          {!terminalPanelOpen && !editorPanelOpen && !mockupsPanelOpen && !portsPanelOpen && !htmlFilesPanelOpen && (
             <div className="flex-1 flex items-center justify-center bg-surface-800">
               <div className="text-center text-theme-muted">
                 <Icons.terminal />

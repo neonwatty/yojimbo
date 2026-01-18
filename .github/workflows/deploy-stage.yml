@@ -32,8 +32,10 @@ jobs:
         env:
           MAC_MINI_USER: ${{ secrets.MAC_MINI_STAGING_USER }}
           MAC_MINI_HOST: ${{ secrets.MAC_MINI_STAGING_HOST }}
+          SHORT_SHA: ${{ github.sha }}
         run: |
-          ssh -o StrictHostKeyChecking=no -o ConnectTimeout=30 ${MAC_MINI_USER}@${MAC_MINI_HOST} << 'DEPLOY'
+          SHORT_SHA=${SHORT_SHA:0:7}
+          ssh -o StrictHostKeyChecking=no -o ConnectTimeout=30 ${MAC_MINI_USER}@${MAC_MINI_HOST} "SHORT_SHA=${SHORT_SHA}" bash << 'DEPLOY'
             set -e
 
             # Source nvm
@@ -57,8 +59,8 @@ jobs:
             npm ci
 
             echo ""
-            echo "🔨 Building application..."
-            npm run build
+            echo "🔨 Building application (staging-${SHORT_SHA})..."
+            VITE_APP_VERSION="staging-${SHORT_SHA}" npm run build
 
             echo ""
             echo "📁 Creating logs directory..."

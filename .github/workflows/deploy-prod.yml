@@ -55,8 +55,8 @@ jobs:
             npm ci
 
             echo ""
-            echo "🔨 Building application..."
-            npm run build
+            echo "🔨 Building application with version ${RELEASE_TAG}..."
+            VITE_APP_VERSION=${RELEASE_TAG} npm run build
 
             echo ""
             echo "📁 Creating logs directory..."

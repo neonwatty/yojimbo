@@ -2,7 +2,7 @@ name: Deploy to Staging
 
 on:
   push:
-    branches: [stage]
+    branches: [main]
   workflow_dispatch: # Allow manual trigger from GitHub UI
 
 jobs:
@@ -49,8 +49,8 @@ jobs:
 
             echo ""
             echo "📥 Pulling latest changes..."
-            git fetch origin stage
-            git reset --hard origin/stage
+            git fetch origin main
+            git reset --hard origin/main
 
             echo ""
             echo "📦 Installing dependencies..."
@@ -88,7 +88,7 @@ jobs:
           echo "## 🎭 Staging Deployment Successful" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Deployed to:** Mac Mini (Staging) via Tailscale" >> $GITHUB_STEP_SUMMARY
-          echo "**Branch:** stage" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** main" >> $GITHUB_STEP_SUMMARY
           echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
 
       - name: Deployment Failed

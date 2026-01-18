@@ -40,13 +40,14 @@ const clientPort = process.env.CLIENT_PORT ? parseInt(process.env.CLIENT_PORT, 1
 // even when the server is bound to 0.0.0.0
 const proxyTarget = '127.0.0.1';
 
-// Load version from package.json
+// Load version: prefer environment variable (set during CI builds), fallback to package.json
 const packageJson = JSON.parse(fs.readFileSync(path.resolve(__dirname, './package.json'), 'utf-8'));
+const appVersion = process.env.VITE_APP_VERSION || packageJson.version;
 
 export default defineConfig({
   plugins: [react()],
   define: {
-    __APP_VERSION__: JSON.stringify(packageJson.version),
+    __APP_VERSION__: JSON.stringify(appVersion),
   },
   resolve: {
     alias: {

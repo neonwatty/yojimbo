@@ -2,7 +2,7 @@ name: Deploy to Staging
 
 on:
   push:
-    branches: [stage]
+    branches: [main]
   workflow_dispatch: # Allow manual trigger from GitHub UI
 
 jobs:
@@ -32,8 +32,10 @@ jobs:
         env:
           MAC_MINI_USER: ${{ secrets.MAC_MINI_STAGING_USER }}
           MAC_MINI_HOST: ${{ secrets.MAC_MINI_STAGING_HOST }}
+          SHORT_SHA: ${{ github.sha }}
         run: |
-          ssh -o StrictHostKeyChecking=no -o ConnectTimeout=30 ${MAC_MINI_USER}@${MAC_MINI_HOST} << 'DEPLOY'
+          SHORT_SHA=${SHORT_SHA:0:7}
+          ssh -o StrictHostKeyChecking=no -o ConnectTimeout=30 ${MAC_MINI_USER}@${MAC_MINI_HOST} "SHORT_SHA=${SHORT_SHA}" bash << 'DEPLOY'
             set -e
 
             # Source nvm
@@ -49,16 +51,16 @@ jobs:
 
             echo ""
             echo "📥 Pulling latest changes..."
-            git fetch origin stage
-            git reset --hard origin/stage
+            git fetch origin main
+            git reset --hard origin/main
 
             echo ""
             echo "📦 Installing dependencies..."
             npm ci
 
             echo ""
-            echo "🔨 Building application..."
-            npm run build
+            echo "🔨 Building application (staging-${SHORT_SHA})..."
+            VITE_APP_VERSION="staging-${SHORT_SHA}" npm run build
 
             echo ""
             echo "📁 Creating logs directory..."
@@ -88,7 +90,7 @@ jobs:
           echo "## 🎭 Staging Deployment Successful" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Deployed to:** Mac Mini (Staging) via Tailscale" >> $GITHUB_STEP_SUMMARY
-          echo "**Branch:** stage" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** main" >> $GITHUB_STEP_SUMMARY
           echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
 
       - name: Deployment Failed

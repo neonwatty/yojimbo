@@ -1,8 +1,8 @@
 name: Deploy to Production
 
 on:
-  push:
-    branches: [main]
+  release:
+    types: [published]
   workflow_dispatch: # Allow manual trigger from GitHub UI
 
 jobs:
@@ -34,8 +34,9 @@ jobs:
         env:
           MAC_MINI_USER: ${{ secrets.MAC_MINI_USER }}
           MAC_MINI_HOST: ${{ secrets.MAC_MINI_HOST }}
+          RELEASE_TAG: ${{ github.event.release.tag_name || github.ref_name }}
         run: |
-          ssh -o StrictHostKeyChecking=no -o ConnectTimeout=30 ${MAC_MINI_USER}@${MAC_MINI_HOST} << 'DEPLOY'
+          ssh -o StrictHostKeyChecking=no -o ConnectTimeout=30 ${MAC_MINI_USER}@${MAC_MINI_HOST} << DEPLOY
             set -e
 
             echo "========================================"
@@ -45,17 +46,17 @@ jobs:
             cd ~/Desktop/yojimbo
 
             echo ""
-            echo "📥 Pulling latest changes..."
-            git fetch origin main
-            git reset --hard origin/main
+            echo "📥 Fetching and checking out release tag ${RELEASE_TAG}..."
+            git fetch --tags origin
+            git checkout ${RELEASE_TAG}
 
             echo ""
             echo "📦 Installing dependencies..."
             npm ci
 
             echo ""
-            echo "🔨 Building application..."
-            npm run build
+            echo "🔨 Building application with version ${RELEASE_TAG}..."
+            VITE_APP_VERSION=${RELEASE_TAG} npm run build
 
             echo ""
             echo "📁 Creating logs directory..."
@@ -82,10 +83,10 @@ jobs:
       - name: Deployment Summary
         if: success()
         run: |
-          echo "## 🚀 Deployment Successful" >> $GITHUB_STEP_SUMMARY
+          echo "## 🚀 Production Deployment Successful" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Deployed to:** Mac Mini via Tailscale" >> $GITHUB_STEP_SUMMARY
-          echo "**Branch:** main" >> $GITHUB_STEP_SUMMARY
+          echo "**Deployed to:** Mac Mini (Production) via Tailscale" >> $GITHUB_STEP_SUMMARY
+          echo "**Release:** ${{ github.event.release.tag_name || github.ref_name }}" >> $GITHUB_STEP_SUMMARY
           echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
 
       - name: Deployment Failed

@@ -35,12 +35,12 @@ jobs:
           SHORT_SHA: ${{ github.sha }}
         run: |
           SHORT_SHA=${SHORT_SHA:0:7}
-          ssh -o StrictHostKeyChecking=no -o ConnectTimeout=30 ${MAC_MINI_USER}@${MAC_MINI_HOST} "SHORT_SHA=${SHORT_SHA}" bash << 'DEPLOY'
+          ssh -o StrictHostKeyChecking=no -o ConnectTimeout=30 ${MAC_MINI_USER}@${MAC_MINI_HOST} << DEPLOY
             set -e
 
             # Source nvm
-            export NVM_DIR="$HOME/.nvm"
-            [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+            export NVM_DIR="\$HOME/.nvm"
+            [ -s "\$NVM_DIR/nvm.sh" ] && . "\$NVM_DIR/nvm.sh"
             nvm use 20
 
             echo "========================================"

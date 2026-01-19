@@ -33,6 +33,7 @@ import type {
   UpdateTaskRequest,
   DispatchTaskRequest,
   ReorderTasksRequest,
+  Release,
 } from '@cc-orchestrator/shared';
 import { toast } from '../store/toastStore';
 
@@ -472,4 +473,9 @@ export const htmlFilesApi = {
       method: 'POST',
       body: JSON.stringify({ fileName, content }),
     }),
+};
+
+// Releases API
+export const releasesApi = {
+  list: () => request<ApiResponse<Release[]>>('/releases'),
 };

@@ -498,3 +498,13 @@ export interface CommandExecution {
   status: CommandStatus;
   resultCount?: number;
 }
+
+// Release types for What's New feature
+export interface Release {
+  version: string;
+  name: string;
+  body: string;
+  publishedAt: string;
+  url: string;
+  isPrerelease: boolean;
+}

@@ -5,6 +5,7 @@ import { toast } from '../../store/toastStore';
 import { Icons } from '../common/Icons';
 import { LocalKeychainSection } from '../settings/LocalKeychainSection';
 import { RemoteMachinesSection } from '../settings/RemoteMachinesSection';
+import { WhatsNewModal } from './WhatsNewModal';
 import type { ClaudeCodeAlias, ActivityEventType } from '@cc-orchestrator/shared';
 
 interface SettingsModalProps {
@@ -47,6 +48,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const [resetConfirmation, setResetConfirmation] = useState('');
   const [isResetting, setIsResetting] = useState(false);
   const [isResettingStatus, setIsResettingStatus] = useState(false);
+  const [showWhatsNew, setShowWhatsNew] = useState(false);
 
   // Local hooks state
   const [localHooksInstalled, setLocalHooksInstalled] = useState<boolean | null>(null);
@@ -682,7 +684,13 @@ Write a {{type}} work summary:`}
 
         {/* Footer */}
         <div className="px-4 sm:px-6 py-3 border-t border-surface-600 flex items-center justify-between" style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
-          <span className="text-xs text-theme-muted">v{__APP_VERSION__}</span>
+          <button
+            onClick={() => setShowWhatsNew(true)}
+            className="text-xs text-theme-muted hover:text-accent transition-colors"
+            title="View release notes"
+          >
+            v{__APP_VERSION__}
+          </button>
           <span className="text-xs text-theme-muted hidden sm:inline">
             Press{' '}
             <kbd className="px-1.5 py-0.5 bg-surface-800 border border-surface-500 rounded text-xs font-mono">
@@ -692,6 +700,12 @@ Write a {{type}} work summary:`}
           </span>
         </div>
       </div>
+
+      {/* What's New Modal */}
+      <WhatsNewModal
+        isOpen={showWhatsNew}
+        onClose={() => setShowWhatsNew(false)}
+      />
     </div>
   );
 }

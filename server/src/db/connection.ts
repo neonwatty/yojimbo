@@ -125,6 +125,27 @@ export function initDatabase(): Database.Database {
       FOREIGN KEY (dispatched_instance_id) REFERENCES instances(id) ON DELETE SET NULL
     );
 
+    -- projects table (for Smart Tasks project registry)
+    CREATE TABLE IF NOT EXISTS projects (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      path TEXT NOT NULL UNIQUE,
+      git_remote TEXT,
+      repo_name TEXT,
+      last_activity_at TEXT,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    );
+
+    -- project_instances junction table (many-to-many)
+    CREATE TABLE IF NOT EXISTS project_instances (
+      project_id TEXT NOT NULL,
+      instance_id TEXT NOT NULL,
+      PRIMARY KEY (project_id, instance_id),
+      FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+      FOREIGN KEY (instance_id) REFERENCES instances(id) ON DELETE CASCADE
+    );
+
     -- indexes
     CREATE INDEX IF NOT EXISTS idx_instances_status ON instances(status);
     CREATE INDEX IF NOT EXISTS idx_instances_pinned ON instances(is_pinned);
@@ -139,6 +160,11 @@ export function initDatabase(): Database.Database {
     CREATE INDEX IF NOT EXISTS idx_global_tasks_status ON global_tasks(status);
     CREATE INDEX IF NOT EXISTS idx_global_tasks_order ON global_tasks(display_order);
     CREATE INDEX IF NOT EXISTS idx_global_tasks_instance ON global_tasks(dispatched_instance_id);
+    CREATE INDEX IF NOT EXISTS idx_projects_path ON projects(path);
+    CREATE INDEX IF NOT EXISTS idx_projects_repo ON projects(repo_name);
+    CREATE INDEX IF NOT EXISTS idx_projects_activity ON projects(last_activity_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_project_instances_project ON project_instances(project_id);
+    CREATE INDEX IF NOT EXISTS idx_project_instances_instance ON project_instances(instance_id);
   `;
 
   db.exec(schema);

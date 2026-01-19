@@ -18,6 +18,8 @@ import portForwardsRouter from './routes/port-forwards.js';
 import keychainRouter from './routes/keychain.js';
 import tasksRouter from './routes/tasks.js';
 import releasesRouter from './routes/releases.js';
+import projectsRouter from './routes/projects.js';
+import smartTasksRouter from './routes/smart-tasks.js';
 import CONFIG from './config/index.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -61,6 +63,8 @@ app.use('/api/instances', portForwardsRouter);
 app.use('/api/keychain', keychainRouter);
 app.use('/api/tasks', tasksRouter);
 app.use('/api/releases', releasesRouter);
+app.use('/api/projects', projectsRouter);
+app.use('/api/smart-tasks', smartTasksRouter);
 
 // Health check
 app.get('/api/health', (_req, res) => {

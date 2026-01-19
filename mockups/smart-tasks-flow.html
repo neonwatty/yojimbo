@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Yojimbo - Smart Tasks Flow Mockup</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* Nord-inspired color system */
+    :root {
+      --surface-900: #2e3440;
+      --surface-800: #3b4252;
+      --surface-700: #434c5e;
+      --surface-600: #4c566a;
+      --surface-500: #5e6779;
+      --text-primary: #eceff4;
+      --text-secondary: #e5e9f0;
+      --text-muted: #d8dee9;
+      --text-dim: #7b88a1;
+      --accent: #d08770;
+      --accent-bright: #ebcb8b;
+      --frost-1: #8fbcbb;
+      --frost-2: #88c0d0;
+      --frost-3: #81a1c1;
+      --frost-4: #5e81ac;
+      --state-working: #a3be8c;
+      --state-awaiting: #ebcb8b;
+      --state-idle: #7b88a1;
+      --state-error: #bf616a;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'JetBrains Mono', monospace;
+      background: var(--surface-900);
+      color: var(--text-primary);
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+    }
+
+    .screen {
+      display: none;
+      min-height: 100vh;
+      padding: 1rem;
+    }
+
+    .screen.active {
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Custom colors for Tailwind */
+    .bg-surface-900 { background-color: var(--surface-900); }
+    .bg-surface-800 { background-color: var(--surface-800); }
+    .bg-surface-700 { background-color: var(--surface-700); }
+    .bg-surface-600 { background-color: var(--surface-600); }
+    .text-theme-primary { color: var(--text-primary); }
+    .text-theme-secondary { color: var(--text-secondary); }
+    .text-theme-muted { color: var(--text-muted); }
+    .text-theme-dim { color: var(--text-dim); }
+    .bg-accent { background-color: var(--accent); }
+    .text-accent { color: var(--accent); }
+    .border-surface-600 { border-color: var(--surface-600); }
+    .border-surface-500 { border-color: var(--surface-500); }
+    .bg-frost-2 { background-color: var(--frost-2); }
+    .text-frost-2 { color: var(--frost-2); }
+    .bg-frost-3 { background-color: var(--frost-3); }
+    .text-frost-3 { color: var(--frost-3); }
+    .bg-frost-4 { background-color: var(--frost-4); }
+    .text-frost-4 { color: var(--frost-4); }
+    .bg-state-working { background-color: var(--state-working); }
+    .text-state-working { color: var(--state-working); }
+    .bg-state-awaiting { background-color: var(--state-awaiting); }
+    .text-state-awaiting { color: var(--state-awaiting); }
+    .bg-state-error { background-color: var(--state-error); }
+    .text-state-error { color: var(--state-error); }
+
+    /* Animations */
+    @keyframes pulse-ring {
+      0% { transform: scale(1); opacity: 0.8; }
+      100% { transform: scale(2); opacity: 0; }
+    }
+
+    @keyframes fade-in {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes slide-up {
+      from { opacity: 0; transform: translateY(1rem); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes shimmer {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+
+    .animate-fade-in {
+      animation: fade-in 0.3s ease-out forwards;
+    }
+
+    .animate-slide-up {
+      animation: slide-up 0.4s ease-out forwards;
+    }
+
+    .animate-pulse-ring::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: pulse-ring 1.5s ease-out infinite;
+    }
+
+    .shimmer {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .shimmer::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      left: 0;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.1) 50%,
+        transparent 100%
+      );
+      animation: shimmer 1.5s infinite;
+    }
+
+    /* Swipe gesture hint */
+    @keyframes swipe-hint {
+      0%, 100% { transform: translateX(0); }
+      50% { transform: translateX(10px); }
+    }
+
+    .swipe-hint {
+      animation: swipe-hint 1.5s ease-in-out infinite;
+    }
+
+    /* Voice recording pulse */
+    @keyframes voice-pulse {
+      0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(208, 135, 112, 0.4); }
+      50% { transform: scale(1.05); box-shadow: 0 0 0 20px rgba(208, 135, 112, 0); }
+    }
+
+    .voice-recording {
+      animation: voice-pulse 1s ease-in-out infinite;
+    }
+
+    /* Mobile touch feedback */
+    .touch-active:active {
+      transform: scale(0.98);
+      opacity: 0.9;
+    }
+
+    /* Navigation bar */
+    .nav-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--surface-800);
+      border-top: 1px solid var(--surface-600);
+      padding: 0.5rem 1rem;
+      display: flex;
+      justify-content: space-around;
+      z-index: 50;
+    }
+
+    .nav-btn {
+      padding: 0.5rem 1rem;
+      border-radius: 0.5rem;
+      font-size: 0.75rem;
+      transition: all 0.2s;
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+    }
+
+    .nav-btn:hover {
+      background: var(--surface-700);
+      color: var(--text-primary);
+    }
+
+    .nav-btn.active {
+      background: var(--accent);
+      color: var(--surface-900);
+    }
+
+    /* Progress indicators */
+    .step-indicator {
+      display: flex;
+      gap: 0.5rem;
+      justify-content: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .step-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--surface-600);
+      transition: all 0.3s;
+    }
+
+    .step-dot.active {
+      background: var(--accent);
+      width: 24px;
+      border-radius: 4px;
+    }
+
+    .step-dot.completed {
+      background: var(--state-working);
+    }
+  </style>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+        },
+      },
+    };
+  </script>
+</head>
+<body class="font-mono">
+  <!-- Navigation between screens (for demo purposes) -->
+  <div class="nav-bar">
+    <button class="nav-btn active" onclick="showScreen('input')">1. Input</button>
+    <button class="nav-btn" onclick="showScreen('parsing')">2. Parse</button>
+    <button class="nav-btn" onclick="showScreen('review')">3. Review</button>
+    <button class="nav-btn" onclick="showScreen('routing')">4. Route</button>
+    <button class="nav-btn" onclick="showScreen('confirm')">5. Done</button>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       SCREEN 1: SMART TASK INPUT
+       ═══════════════════════════════════════════════════════════════════════ -->
+  <div id="screen-input" class="screen active">
+    <div class="max-w-xl mx-auto w-full flex-1 pb-20">
+      <!-- Header -->
+      <div class="flex items-center justify-between mb-6">
+        <h1 class="text-lg font-semibold text-theme-primary">Add Tasks</h1>
+        <button class="p-2 rounded-lg text-theme-muted hover:text-theme-primary hover:bg-surface-700 transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Step Indicator -->
+      <div class="step-indicator">
+        <div class="step-dot active"></div>
+        <div class="step-dot"></div>
+        <div class="step-dot"></div>
+        <div class="step-dot"></div>
+        <div class="step-dot"></div>
+      </div>
+
+      <!-- Voice Input Section -->
+      <div class="bg-surface-800 rounded-xl p-6 mb-4 border border-surface-600">
+        <div class="text-center mb-6">
+          <p class="text-theme-muted text-sm mb-4">Tap the mic to speak your tasks</p>
+
+          <!-- Microphone Button -->
+          <button id="mic-btn" onclick="toggleRecording()" class="relative w-20 h-20 rounded-full bg-accent flex items-center justify-center mx-auto touch-active transition-all hover:bg-accent/90">
+            <svg id="mic-icon" class="w-8 h-8 text-surface-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>
+            </svg>
+            <svg id="stop-icon" class="w-8 h-8 text-surface-900 hidden" fill="currentColor" viewBox="0 0 24 24">
+              <rect x="6" y="6" width="12" height="12" rx="2"/>
+            </svg>
+          </button>
+
+          <!-- Recording indicator -->
+          <div id="recording-indicator" class="hidden mt-4">
+            <div class="flex items-center justify-center gap-2 text-accent">
+              <span class="relative flex h-3 w-3">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-3 w-3 bg-accent"></span>
+              </span>
+              <span class="text-sm">Recording...</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Divider -->
+        <div class="flex items-center gap-4 my-6">
+          <div class="flex-1 h-px bg-surface-600"></div>
+          <span class="text-theme-dim text-xs">or type below</span>
+          <div class="flex-1 h-px bg-surface-600"></div>
+        </div>
+
+        <!-- Text Input -->
+        <div class="space-y-3">
+          <textarea
+            id="task-input"
+            placeholder="Type or paste multiple tasks here...&#10;&#10;e.g., 'Fix the auth bug, then add dark mode to settings, and improve API performance'"
+            class="w-full h-32 px-4 py-3 bg-surface-700 border border-surface-600 rounded-lg text-theme-primary placeholder:text-theme-dim text-sm resize-none focus:outline-none focus:border-accent transition-colors"
+          ></textarea>
+        </div>
+      </div>
+
+      <!-- Recent Voice Input Preview (shown after recording) -->
+      <div id="voice-preview" class="hidden bg-surface-800/50 rounded-xl p-4 mb-4 border border-surface-600">
+        <p class="text-theme-dim text-xs mb-2">Voice transcription:</p>
+        <p class="text-theme-secondary text-sm italic">"Fix the auth bug in the login flow, then add dark mode to settings, and also improve the API performance"</p>
+      </div>
+
+      <!-- Action Button -->
+      <button onclick="showScreen('parsing')" class="w-full py-3 bg-accent text-surface-900 rounded-lg font-semibold text-sm hover:bg-accent/90 transition-colors touch-active">
+        Parse Tasks with Claude
+      </button>
+
+      <!-- Help Text -->
+      <p class="text-center text-theme-dim text-xs mt-4">
+        Claude will parse your input into individual tasks
+      </p>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       SCREEN 2: PARSING STATE
+       ═══════════════════════════════════════════════════════════════════════ -->
+  <div id="screen-parsing" class="screen">
+    <div class="max-w-xl mx-auto w-full flex-1 flex flex-col justify-center pb-20">
+      <!-- Step Indicator -->
+      <div class="step-indicator">
+        <div class="step-dot completed"></div>
+        <div class="step-dot active"></div>
+        <div class="step-dot"></div>
+        <div class="step-dot"></div>
+        <div class="step-dot"></div>
+      </div>
+
+      <!-- Parsing Animation -->
+      <div class="bg-surface-800 rounded-xl p-8 border border-surface-600 text-center">
+        <!-- Animated Logo/Spinner -->
+        <div class="relative w-16 h-16 mx-auto mb-6">
+          <div class="absolute inset-0 rounded-full border-2 border-surface-600"></div>
+          <div class="absolute inset-0 rounded-full border-2 border-accent border-t-transparent animate-spin"></div>
+          <div class="absolute inset-2 rounded-full bg-surface-700 flex items-center justify-center">
+            <svg class="w-6 h-6 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+            </svg>
+          </div>
+        </div>
+
+        <h2 class="text-lg font-semibold text-theme-primary mb-2">Parsing with Claude...</h2>
+        <p class="text-theme-muted text-sm mb-6">Understanding your tasks and extracting details</p>
+
+        <!-- Input Preview -->
+        <div class="bg-surface-700 rounded-lg p-4 text-left mb-6">
+          <p class="text-theme-dim text-xs mb-2">Your input:</p>
+          <p class="text-theme-secondary text-sm">"Fix the auth bug in the login flow, then add dark mode to settings, and also improve the API performance"</p>
+        </div>
+
+        <!-- Progress Steps -->
+        <div class="space-y-3 text-left">
+          <div class="flex items-center gap-3">
+            <div class="w-5 h-5 rounded-full bg-state-working flex items-center justify-center">
+              <svg class="w-3 h-3 text-surface-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+              </svg>
+            </div>
+            <span class="text-theme-secondary text-sm">Identified 3 tasks</span>
+          </div>
+          <div class="flex items-center gap-3">
+            <div class="w-5 h-5 rounded-full bg-state-working flex items-center justify-center">
+              <svg class="w-3 h-3 text-surface-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+              </svg>
+            </div>
+            <span class="text-theme-secondary text-sm">Matched project: yojimbo-dev</span>
+          </div>
+          <div class="flex items-center gap-3 shimmer">
+            <div class="w-5 h-5 rounded-full border-2 border-accent border-t-transparent animate-spin"></div>
+            <span class="text-theme-muted text-sm">Analyzing task clarity...</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Auto-advance for demo -->
+      <p class="text-center text-theme-dim text-xs mt-6">
+        <button onclick="showScreen('review')" class="underline hover:text-accent">Skip to review →</button>
+      </p>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       SCREEN 3: PARSED TASKS REVIEW
+       ═══════════════════════════════════════════════════════════════════════ -->
+  <div id="screen-review" class="screen">
+    <div class="max-w-xl mx-auto w-full flex-1 pb-20">
+      <!-- Header -->
+      <div class="flex items-center justify-between mb-6">
+        <div>
+          <h1 class="text-lg font-semibold text-theme-primary">Review Parsed Tasks</h1>
+          <p class="text-theme-dim text-xs mt-1">3 tasks identified</p>
+        </div>
+        <button class="p-2 rounded-lg text-theme-muted hover:text-theme-primary hover:bg-surface-700 transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Step Indicator -->
+      <div class="step-indicator">
+        <div class="step-dot completed"></div>
+        <div class="step-dot completed"></div>
+        <div class="step-dot active"></div>
+        <div class="step-dot"></div>
+        <div class="step-dot"></div>
+      </div>
+
+      <!-- Task Cards -->
+      <div class="space-y-4">
+        <!-- Task 1: Clear -->
+        <div class="bg-surface-800 rounded-xl p-4 border border-surface-600 animate-slide-up" style="animation-delay: 0ms;">
+          <div class="flex items-start gap-3">
+            <div class="w-8 h-8 rounded-lg bg-surface-700 flex items-center justify-center text-theme-dim text-sm font-semibold shrink-0">
+              1
+            </div>
+            <div class="flex-1 min-w-0">
+              <h3 class="text-theme-primary font-medium mb-2">Fix auth bug in login flow</h3>
+              <div class="flex flex-wrap gap-2 mb-3">
+                <span class="px-2 py-0.5 bg-frost-4/20 text-frost-3 text-xs rounded">yojimbo-dev</span>
+                <span class="px-2 py-0.5 bg-state-error/20 text-state-error text-xs rounded">Bug fix</span>
+              </div>
+              <div class="flex items-center gap-2 text-state-working text-xs">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+                Clear - ready to route
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Task 2: Needs clarification -->
+        <div class="bg-surface-800 rounded-xl p-4 border border-state-awaiting/50 animate-slide-up" style="animation-delay: 100ms;">
+          <div class="flex items-start gap-3">
+            <div class="w-8 h-8 rounded-lg bg-surface-700 flex items-center justify-center text-theme-dim text-sm font-semibold shrink-0">
+              2
+            </div>
+            <div class="flex-1 min-w-0">
+              <h3 class="text-theme-primary font-medium mb-2">Add dark mode to settings</h3>
+              <div class="flex flex-wrap gap-2 mb-3">
+                <span class="px-2 py-0.5 bg-frost-4/20 text-frost-3 text-xs rounded">yojimbo-dev</span>
+                <span class="px-2 py-0.5 bg-frost-2/20 text-frost-2 text-xs rounded">Feature</span>
+              </div>
+              <div class="flex items-center gap-2 text-state-awaiting text-xs mb-3">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                </svg>
+                Needs clarification
+              </div>
+
+              <!-- Clarification Box -->
+              <div class="bg-surface-700 rounded-lg p-3 border border-surface-600">
+                <p class="text-theme-muted text-xs mb-2">Which settings? App settings or instance settings? Full theme or just dark mode toggle?</p>
+                <input
+                  type="text"
+                  value="App settings theme toggle"
+                  class="w-full px-3 py-2 bg-surface-800 border border-surface-600 rounded text-sm text-theme-primary placeholder:text-theme-dim focus:outline-none focus:border-accent"
+                >
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Task 3: Needs clarification -->
+        <div class="bg-surface-800 rounded-xl p-4 border border-state-awaiting/50 animate-slide-up" style="animation-delay: 200ms;">
+          <div class="flex items-start gap-3">
+            <div class="w-8 h-8 rounded-lg bg-surface-700 flex items-center justify-center text-theme-dim text-sm font-semibold shrink-0">
+              3
+            </div>
+            <div class="flex-1 min-w-0">
+              <h3 class="text-theme-primary font-medium mb-2">Improve API performance</h3>
+              <div class="flex flex-wrap gap-2 mb-3">
+                <span class="px-2 py-0.5 bg-surface-600 text-theme-dim text-xs rounded">Unknown project</span>
+                <span class="px-2 py-0.5 bg-frost-1/20 text-frost-1 text-xs rounded">Enhancement</span>
+              </div>
+              <div class="flex items-center gap-2 text-state-awaiting text-xs mb-3">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                </svg>
+                Needs clarification
+              </div>
+
+              <!-- Clarification Box -->
+              <div class="bg-surface-700 rounded-lg p-3 border border-surface-600">
+                <p class="text-theme-muted text-xs mb-2">Which API? What's slow? Any metrics?</p>
+                <input
+                  type="text"
+                  placeholder="Add details..."
+                  class="w-full px-3 py-2 bg-surface-800 border border-surface-600 rounded text-sm text-theme-primary placeholder:text-theme-dim focus:outline-none focus:border-accent"
+                >
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex gap-3 mt-6">
+        <button onclick="showScreen('input')" class="flex-1 py-3 bg-surface-700 text-theme-primary rounded-lg font-medium text-sm hover:bg-surface-600 transition-colors">
+          Edit Tasks
+        </button>
+        <button onclick="showScreen('routing')" class="flex-1 py-3 bg-accent text-surface-900 rounded-lg font-semibold text-sm hover:bg-accent/90 transition-colors touch-active">
+          Route Clear Tasks →
+        </button>
+      </div>
+
+      <!-- Help Text -->
+      <p class="text-center text-theme-dim text-xs mt-4">
+        Only clear tasks will proceed to routing
+      </p>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       SCREEN 4: ROUTING APPROVAL (SWIPE MODAL)
+       ═══════════════════════════════════════════════════════════════════════ -->
+  <div id="screen-routing" class="screen">
+    <div class="max-w-xl mx-auto w-full flex-1 pb-20">
+      <!-- Header -->
+      <div class="flex items-center justify-between mb-6">
+        <div>
+          <h1 class="text-lg font-semibold text-theme-primary">Route Task</h1>
+          <p class="text-theme-dim text-xs mt-1">1 of 3</p>
+        </div>
+        <button class="p-2 rounded-lg text-theme-muted hover:text-theme-primary hover:bg-surface-700 transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Step Indicator -->
+      <div class="step-indicator">
+        <div class="step-dot completed"></div>
+        <div class="step-dot completed"></div>
+        <div class="step-dot completed"></div>
+        <div class="step-dot active"></div>
+        <div class="step-dot"></div>
+      </div>
+
+      <!-- Task Card -->
+      <div class="bg-surface-800 rounded-xl p-6 border border-surface-600 mb-6">
+        <h2 class="text-xl font-semibold text-theme-primary mb-3">Fix auth bug in login flow</h2>
+        <div class="flex items-center gap-3">
+          <span class="px-2 py-1 bg-state-error/20 text-state-error text-xs rounded">Bug fix</span>
+          <span class="text-theme-dim text-xs">•</span>
+          <span class="text-frost-3 text-xs">yojimbo-dev</span>
+        </div>
+      </div>
+
+      <!-- Claude Suggestion Label -->
+      <p class="text-theme-muted text-sm mb-3">Claude suggests:</p>
+
+      <!-- Instance Options -->
+      <div class="space-y-3">
+        <!-- Recommended Instance -->
+        <button onclick="selectInstance(this)" class="w-full bg-surface-800 rounded-xl p-4 border-2 border-state-working text-left transition-all touch-active selected-instance">
+          <div class="flex items-start gap-3">
+            <div class="w-10 h-10 rounded-lg bg-state-working/20 flex items-center justify-center shrink-0">
+              <span class="text-lg">💻</span>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 mb-1">
+                <span class="text-state-working text-xs font-medium">BEST MATCH</span>
+              </div>
+              <h3 class="text-theme-primary font-medium">MacBook Pro - Instance #1</h3>
+              <p class="text-theme-dim text-xs mt-1">Working on: yojimbo-dev</p>
+              <p class="text-theme-dim text-xs">Status: Idle</p>
+              <div class="flex items-center gap-2 mt-2">
+                <div class="flex-1 h-1.5 bg-surface-600 rounded-full overflow-hidden">
+                  <div class="h-full bg-state-working rounded-full" style="width: 95%"></div>
+                </div>
+                <span class="text-state-working text-xs font-medium">95%</span>
+              </div>
+            </div>
+            <div class="shrink-0">
+              <svg class="w-6 h-6 text-state-working" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+              </svg>
+            </div>
+          </div>
+        </button>
+
+        <!-- Other Instance -->
+        <button onclick="selectInstance(this)" class="w-full bg-surface-800 rounded-xl p-4 border border-surface-600 text-left transition-all hover:border-surface-500 touch-active">
+          <div class="flex items-start gap-3">
+            <div class="w-10 h-10 rounded-lg bg-surface-700 flex items-center justify-center shrink-0">
+              <span class="text-lg">🖥️</span>
+            </div>
+            <div class="flex-1 min-w-0">
+              <h3 class="text-theme-primary font-medium">Mac Mini - Instance #2</h3>
+              <p class="text-theme-dim text-xs mt-1">Working on: social-tools</p>
+              <p class="text-state-awaiting text-xs">Status: Working</p>
+              <div class="flex items-center gap-2 mt-2">
+                <div class="flex-1 h-1.5 bg-surface-600 rounded-full overflow-hidden">
+                  <div class="h-full bg-surface-500 rounded-full" style="width: 20%"></div>
+                </div>
+                <span class="text-theme-dim text-xs font-medium">20%</span>
+              </div>
+            </div>
+            <div class="shrink-0 opacity-0">
+              <svg class="w-6 h-6 text-state-working" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+              </svg>
+            </div>
+          </div>
+        </button>
+
+        <!-- Create New Instance -->
+        <button onclick="selectInstance(this)" class="w-full bg-surface-800 rounded-xl p-4 border border-dashed border-surface-500 text-left transition-all hover:border-accent touch-active">
+          <div class="flex items-start gap-3">
+            <div class="w-10 h-10 rounded-lg bg-accent/20 flex items-center justify-center shrink-0">
+              <svg class="w-5 h-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+              </svg>
+            </div>
+            <div class="flex-1 min-w-0">
+              <h3 class="text-accent font-medium">Create New Instance</h3>
+              <p class="text-theme-dim text-xs mt-1">On: MacBook Pro</p>
+              <p class="text-theme-dim text-xs">Will open: ~/Desktop/yojimbo-dev</p>
+            </div>
+            <div class="shrink-0 opacity-0">
+              <svg class="w-6 h-6 text-state-working" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+              </svg>
+            </div>
+          </div>
+        </button>
+      </div>
+
+      <!-- Swipe Hint -->
+      <div class="mt-6 text-center">
+        <div class="inline-flex items-center gap-4 px-4 py-2 bg-surface-800 rounded-full border border-surface-600">
+          <span class="text-theme-dim text-xs">← Skip</span>
+          <div class="w-8 h-1 bg-surface-600 rounded-full"></div>
+          <span class="text-accent text-xs swipe-hint">Approve →</span>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex gap-3 mt-6">
+        <button onclick="showScreen('review')" class="flex-1 py-3 bg-surface-700 text-theme-primary rounded-lg font-medium text-sm hover:bg-surface-600 transition-colors">
+          Skip
+        </button>
+        <button onclick="showScreen('confirm')" class="flex-1 py-3 bg-accent text-surface-900 rounded-lg font-semibold text-sm hover:bg-accent/90 transition-colors touch-active">
+          Approve & Start →
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       SCREEN 5: EXECUTION CONFIRMATION
+       ═══════════════════════════════════════════════════════════════════════ -->
+  <div id="screen-confirm" class="screen">
+    <div class="max-w-xl mx-auto w-full flex-1 flex flex-col justify-center pb-20">
+      <!-- Step Indicator -->
+      <div class="step-indicator">
+        <div class="step-dot completed"></div>
+        <div class="step-dot completed"></div>
+        <div class="step-dot completed"></div>
+        <div class="step-dot completed"></div>
+        <div class="step-dot active"></div>
+      </div>
+
+      <!-- Success Animation -->
+      <div class="text-center mb-8 animate-fade-in">
+        <div class="w-20 h-20 rounded-full bg-state-working/20 flex items-center justify-center mx-auto mb-4">
+          <svg class="w-10 h-10 text-state-working" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+          </svg>
+        </div>
+        <h1 class="text-xl font-semibold text-theme-primary mb-2">Tasks Dispatched!</h1>
+        <p class="text-theme-muted text-sm">3 tasks routed successfully</p>
+      </div>
+
+      <!-- Dispatched Tasks List -->
+      <div class="bg-surface-800 rounded-xl border border-surface-600 overflow-hidden">
+        <!-- Task 1 -->
+        <div class="flex items-center gap-3 p-4 border-b border-surface-600 animate-slide-up" style="animation-delay: 0ms;">
+          <div class="w-6 h-6 rounded-full bg-state-working flex items-center justify-center shrink-0">
+            <svg class="w-3 h-3 text-surface-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+            </svg>
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="text-theme-primary text-sm truncate">Fix auth bug</p>
+            <p class="text-theme-dim text-xs">→ MacBook Pro #1</p>
+          </div>
+          <span class="px-2 py-0.5 bg-state-working/20 text-state-working text-xs rounded">Started</span>
+        </div>
+
+        <!-- Task 2 -->
+        <div class="flex items-center gap-3 p-4 border-b border-surface-600 animate-slide-up" style="animation-delay: 100ms;">
+          <div class="w-6 h-6 rounded-full bg-frost-3 flex items-center justify-center shrink-0">
+            <svg class="w-3 h-3 text-surface-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="text-theme-primary text-sm truncate">Add dark mode</p>
+            <p class="text-theme-dim text-xs">→ MacBook Pro #1</p>
+          </div>
+          <span class="px-2 py-0.5 bg-frost-3/20 text-frost-3 text-xs rounded">Queued</span>
+        </div>
+
+        <!-- Task 3 -->
+        <div class="flex items-center gap-3 p-4 animate-slide-up" style="animation-delay: 200ms;">
+          <div class="w-6 h-6 rounded-full border-2 border-accent border-t-transparent animate-spin shrink-0"></div>
+          <div class="flex-1 min-w-0">
+            <p class="text-theme-primary text-sm truncate">API performance</p>
+            <p class="text-theme-dim text-xs">→ Mac Mini #2 (new)</p>
+          </div>
+          <span class="px-2 py-0.5 bg-accent/20 text-accent text-xs rounded">Starting</span>
+        </div>
+      </div>
+
+      <!-- Notification Info -->
+      <div class="mt-6 flex items-center gap-3 p-4 bg-surface-800/50 rounded-xl border border-surface-600">
+        <div class="w-10 h-10 rounded-lg bg-frost-2/20 flex items-center justify-center shrink-0">
+          <svg class="w-5 h-5 text-frost-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+          </svg>
+        </div>
+        <div class="flex-1">
+          <p class="text-theme-secondary text-sm">Notifications enabled</p>
+          <p class="text-theme-dim text-xs">You'll be notified when tasks complete</p>
+        </div>
+      </div>
+
+      <!-- Done Button -->
+      <button onclick="showScreen('input')" class="w-full py-3 mt-6 bg-accent text-surface-900 rounded-lg font-semibold text-sm hover:bg-accent/90 transition-colors touch-active">
+        Done
+      </button>
+
+      <!-- View Instances Link -->
+      <p class="text-center mt-4">
+        <a href="#" class="text-frost-2 text-sm hover:underline">View running instances →</a>
+      </p>
+    </div>
+  </div>
+
+  <script>
+    // Screen navigation
+    function showScreen(screenId) {
+      // Hide all screens
+      document.querySelectorAll('.screen').forEach(screen => {
+        screen.classList.remove('active');
+      });
+
+      // Show selected screen
+      document.getElementById('screen-' + screenId).classList.add('active');
+
+      // Update nav buttons
+      document.querySelectorAll('.nav-btn').forEach((btn, index) => {
+        btn.classList.remove('active');
+        const screens = ['input', 'parsing', 'review', 'routing', 'confirm'];
+        if (screens[index] === screenId) {
+          btn.classList.add('active');
+        }
+      });
+
+      // Scroll to top
+      window.scrollTo(0, 0);
+    }
+
+    // Voice recording toggle
+    let isRecording = false;
+    function toggleRecording() {
+      isRecording = !isRecording;
+      const micBtn = document.getElementById('mic-btn');
+      const micIcon = document.getElementById('mic-icon');
+      const stopIcon = document.getElementById('stop-icon');
+      const indicator = document.getElementById('recording-indicator');
+      const preview = document.getElementById('voice-preview');
+
+      if (isRecording) {
+        micBtn.classList.add('voice-recording');
+        micIcon.classList.add('hidden');
+        stopIcon.classList.remove('hidden');
+        indicator.classList.remove('hidden');
+      } else {
+        micBtn.classList.remove('voice-recording');
+        micIcon.classList.remove('hidden');
+        stopIcon.classList.add('hidden');
+        indicator.classList.add('hidden');
+        preview.classList.remove('hidden');
+
+        // Fill the textarea with the "transcribed" text
+        document.getElementById('task-input').value = "Fix the auth bug in the login flow, then add dark mode to settings, and also improve the API performance";
+      }
+    }
+
+    // Instance selection
+    function selectInstance(button) {
+      // Remove selection from all
+      document.querySelectorAll('.selected-instance').forEach(el => {
+        el.classList.remove('selected-instance');
+        el.classList.remove('border-state-working', 'border-2');
+        el.classList.add('border-surface-600', 'border');
+        el.querySelector('.shrink-0:last-child').classList.add('opacity-0');
+      });
+
+      // Add selection to clicked
+      button.classList.add('selected-instance');
+      button.classList.remove('border-surface-600', 'border', 'border-dashed', 'border-surface-500');
+      button.classList.add('border-state-working', 'border-2');
+      button.querySelector('.shrink-0:last-child').classList.remove('opacity-0');
+    }
+
+    // Auto-advance parsing screen after 3 seconds
+    // (Uncomment for automatic demo flow)
+    // setTimeout(() => {
+    //   if (document.getElementById('screen-parsing').classList.contains('active')) {
+    //     showScreen('review');
+    //   }
+    // }, 3000);
+  </script>
+</body>
+</html>

@@ -32,11 +32,31 @@ describe('Releases Route', () => {
     prerelease: true,
   };
 
+  const mockCompareResponse = {
+    commits: [
+      {
+        sha: 'abc1234567890',
+        commit: {
+          message: 'feat: Add new feature',
+          author: { name: 'Test User', date: '2026-01-17T12:00:00Z' },
+        },
+        html_url: 'https://github.com/neonwatty/yojimbo/commit/abc1234567890',
+      },
+    ],
+    ahead_by: 1,
+  };
+
   describe('GET /api/releases', () => {
-    it('should fetch releases from GitHub and transform them', async () => {
+    it('should fetch releases from GitHub and include unreleased changes', async () => {
+      // First call: releases API
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve([mockGitHubRelease, mockGitHubReleasePrerelease]),
+      });
+      // Second call: compare API for unreleased changes
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockCompareResponse),
       });
 
       const { default: router } = await import('../routes/releases.js');
@@ -60,6 +80,12 @@ describe('Releases Route', () => {
         expect(mockRes.json).toHaveBeenCalledWith({
           success: true,
           data: [
+            // Unreleased changes should be first
+            expect.objectContaining({
+              version: 'Unreleased',
+              name: 'Unreleased Changes',
+              isPrerelease: true,
+            }),
             {
               version: 'v1.0.0',
               name: 'Release v1.0.0',
@@ -76,6 +102,47 @@ describe('Releases Route', () => {
               url: 'https://github.com/neonwatty/yojimbo/releases/tag/v1.1.0-beta',
               isPrerelease: true,
             },
+          ],
+        });
+      }
+    });
+
+    it('should return releases without unreleased when no new commits', async () => {
+      // First call: releases API
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve([mockGitHubRelease]),
+      });
+      // Second call: compare API with no commits
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ commits: [], ahead_by: 0 }),
+      });
+
+      const { default: router } = await import('../routes/releases.js');
+
+      const mockReq = {} as any;
+      const mockRes = {
+        json: vi.fn(),
+        status: vi.fn().mockReturnThis(),
+      } as any;
+      const mockNext = vi.fn();
+
+      const routes = (router as any).stack || [];
+      const routeHandler = routes.find(
+        (layer: any) => layer.route?.path === '/' && layer.route?.methods?.get
+      );
+
+      if (routeHandler) {
+        await routeHandler.route.stack[0].handle(mockReq, mockRes, mockNext);
+
+        // Should only have the regular release, no unreleased
+        expect(mockRes.json).toHaveBeenCalledWith({
+          success: true,
+          data: [
+            expect.objectContaining({
+              version: 'v1.0.0',
+            }),
           ],
         });
       }
@@ -113,6 +180,48 @@ describe('Releases Route', () => {
       }
     });
 
+    it('should handle compare API failures gracefully', async () => {
+      // First call: releases API succeeds
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve([mockGitHubRelease]),
+      });
+      // Second call: compare API fails
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        statusText: 'Internal Server Error',
+      });
+
+      const { default: router } = await import('../routes/releases.js');
+
+      const mockReq = {} as any;
+      const mockRes = {
+        json: vi.fn(),
+        status: vi.fn().mockReturnThis(),
+      } as any;
+      const mockNext = vi.fn();
+
+      const routes = (router as any).stack || [];
+      const routeHandler = routes.find(
+        (layer: any) => layer.route?.path === '/' && layer.route?.methods?.get
+      );
+
+      if (routeHandler) {
+        await routeHandler.route.stack[0].handle(mockReq, mockRes, mockNext);
+
+        // Should still return releases even if compare fails
+        expect(mockRes.json).toHaveBeenCalledWith({
+          success: true,
+          data: [
+            expect.objectContaining({
+              version: 'v1.0.0',
+            }),
+          ],
+        });
+      }
+    });
+
     it('should handle releases with missing name field', async () => {
       const releaseWithoutName = {
         tag_name: 'v2.0.0',
@@ -126,6 +235,10 @@ describe('Releases Route', () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve([releaseWithoutName]),
+      });
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ commits: [], ahead_by: 0 }),
       });
 
       const { default: router } = await import('../routes/releases.js');
@@ -171,6 +284,10 @@ describe('Releases Route', () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve([releaseWithoutBody]),
+      });
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ commits: [], ahead_by: 0 }),
       });
 
       const { default: router } = await import('../routes/releases.js');

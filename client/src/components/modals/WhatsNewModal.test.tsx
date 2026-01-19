@@ -33,6 +33,14 @@ describe('WhatsNewModal', () => {
     success: true,
     data: [
       {
+        version: 'Unreleased',
+        name: 'Unreleased Changes',
+        body: '## Unreleased Changes\n\n- feat: Add new feature',
+        publishedAt: '2026-01-17T12:00:00Z',
+        url: 'https://github.com/example/repo/compare/v1.0.0...main',
+        isPrerelease: true,
+      },
+      {
         version: 'v1.0.0',
         name: 'Release v1.0.0',
         body: '## Changes\n- Feature A',
@@ -99,7 +107,8 @@ describe('WhatsNewModal', () => {
     render(<WhatsNewModal isOpen={true} onClose={mockOnClose} />);
 
     await waitFor(() => {
-      // Use getAllByText since v1.0.0 appears in both header and list
+      // Use getAllByText since versions may appear in both header and list
+      expect(screen.getAllByText('Unreleased').length).toBeGreaterThanOrEqual(1);
       expect(screen.getAllByText('v1.0.0').length).toBeGreaterThanOrEqual(1);
       expect(screen.getByText('v0.9.0')).toBeInTheDocument();
       expect(screen.getByText('v1.1.0-beta')).toBeInTheDocument();
@@ -110,8 +119,8 @@ describe('WhatsNewModal', () => {
     render(<WhatsNewModal isOpen={true} onClose={mockOnClose} />);
 
     await waitFor(() => {
-      // The first release should be displayed in the details pane
-      expect(screen.getByText('Release v1.0.0')).toBeInTheDocument();
+      // The first release (Unreleased) should be displayed in the details pane
+      expect(screen.getByText('Unreleased Changes')).toBeInTheDocument();
     });
   });
 
@@ -119,7 +128,8 @@ describe('WhatsNewModal', () => {
     render(<WhatsNewModal isOpen={true} onClose={mockOnClose} />);
 
     await waitFor(() => {
-      expect(screen.getByText('pre')).toBeInTheDocument();
+      // There should be multiple prerelease badges (Unreleased and v1.1.0-beta)
+      expect(screen.getAllByText('pre').length).toBeGreaterThanOrEqual(2);
     });
   });
 
@@ -245,11 +255,23 @@ describe('WhatsNewModal', () => {
     await waitFor(() => {
       const link = screen.getByText('View on GitHub');
       expect(link).toBeInTheDocument();
+      // First release is Unreleased, so link should point to compare URL
       expect(link.closest('a')).toHaveAttribute(
         'href',
-        'https://github.com/example/repo/releases/tag/v1.0.0'
+        'https://github.com/example/repo/compare/v1.0.0...main'
       );
       expect(link.closest('a')).toHaveAttribute('target', '_blank');
+    });
+  });
+
+  it('shows Unreleased changes at the top of the list', async () => {
+    render(<WhatsNewModal isOpen={true} onClose={mockOnClose} />);
+
+    await waitFor(() => {
+      // Unreleased should be selected by default (first item)
+      expect(screen.getByText('Unreleased Changes')).toBeInTheDocument();
+      // It should show as a prerelease
+      expect(screen.getAllByText('pre').length).toBeGreaterThanOrEqual(1);
     });
   });
 });

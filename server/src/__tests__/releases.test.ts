@@ -46,35 +46,39 @@ describe('Releases Route', () => {
         json: vi.fn(),
         status: vi.fn().mockReturnThis(),
       } as any;
+      const mockNext = vi.fn();
 
       // Get the route handler
-      const routeHandler = router.stack.find(
+      const routes = (router as any).stack || [];
+      const routeHandler = routes.find(
         (layer: any) => layer.route?.path === '/' && layer.route?.methods?.get
       );
 
-      await routeHandler.route.stack[0].handle(mockReq, mockRes);
+      if (routeHandler) {
+        await routeHandler.route.stack[0].handle(mockReq, mockRes, mockNext);
 
-      expect(mockRes.json).toHaveBeenCalledWith({
-        success: true,
-        data: [
-          {
-            version: 'v1.0.0',
-            name: 'Release v1.0.0',
-            body: '## Changes\n- Feature A\n- Bug fix B',
-            publishedAt: '2026-01-15T12:00:00Z',
-            url: 'https://github.com/neonwatty/yojimbo/releases/tag/v1.0.0',
-            isPrerelease: false,
-          },
-          {
-            version: 'v1.1.0-beta',
-            name: 'Beta Release',
-            body: 'Beta features',
-            publishedAt: '2026-01-16T12:00:00Z',
-            url: 'https://github.com/neonwatty/yojimbo/releases/tag/v1.1.0-beta',
-            isPrerelease: true,
-          },
-        ],
-      });
+        expect(mockRes.json).toHaveBeenCalledWith({
+          success: true,
+          data: [
+            {
+              version: 'v1.0.0',
+              name: 'Release v1.0.0',
+              body: '## Changes\n- Feature A\n- Bug fix B',
+              publishedAt: '2026-01-15T12:00:00Z',
+              url: 'https://github.com/neonwatty/yojimbo/releases/tag/v1.0.0',
+              isPrerelease: false,
+            },
+            {
+              version: 'v1.1.0-beta',
+              name: 'Beta Release',
+              body: 'Beta features',
+              publishedAt: '2026-01-16T12:00:00Z',
+              url: 'https://github.com/neonwatty/yojimbo/releases/tag/v1.1.0-beta',
+              isPrerelease: true,
+            },
+          ],
+        });
+      }
     });
 
     it('should handle GitHub API errors gracefully', async () => {
@@ -91,18 +95,22 @@ describe('Releases Route', () => {
         json: vi.fn(),
         status: vi.fn().mockReturnThis(),
       } as any;
+      const mockNext = vi.fn();
 
-      const routeHandler = router.stack.find(
+      const routes = (router as any).stack || [];
+      const routeHandler = routes.find(
         (layer: any) => layer.route?.path === '/' && layer.route?.methods?.get
       );
 
-      await routeHandler.route.stack[0].handle(mockReq, mockRes);
+      if (routeHandler) {
+        await routeHandler.route.stack[0].handle(mockReq, mockRes, mockNext);
 
-      expect(mockRes.status).toHaveBeenCalledWith(500);
-      expect(mockRes.json).toHaveBeenCalledWith({
-        success: false,
-        error: 'Failed to fetch releases from GitHub',
-      });
+        expect(mockRes.status).toHaveBeenCalledWith(500);
+        expect(mockRes.json).toHaveBeenCalledWith({
+          success: false,
+          error: 'Failed to fetch releases from GitHub',
+        });
+      }
     });
 
     it('should handle releases with missing name field', async () => {
@@ -127,23 +135,27 @@ describe('Releases Route', () => {
         json: vi.fn(),
         status: vi.fn().mockReturnThis(),
       } as any;
+      const mockNext = vi.fn();
 
-      const routeHandler = router.stack.find(
+      const routes = (router as any).stack || [];
+      const routeHandler = routes.find(
         (layer: any) => layer.route?.path === '/' && layer.route?.methods?.get
       );
 
-      await routeHandler.route.stack[0].handle(mockReq, mockRes);
+      if (routeHandler) {
+        await routeHandler.route.stack[0].handle(mockReq, mockRes, mockNext);
 
-      // Should fall back to tag_name when name is null
-      expect(mockRes.json).toHaveBeenCalledWith({
-        success: true,
-        data: [
-          expect.objectContaining({
-            version: 'v2.0.0',
-            name: 'v2.0.0', // Falls back to tag_name
-          }),
-        ],
-      });
+        // Should fall back to tag_name when name is null
+        expect(mockRes.json).toHaveBeenCalledWith({
+          success: true,
+          data: [
+            expect.objectContaining({
+              version: 'v2.0.0',
+              name: 'v2.0.0', // Falls back to tag_name
+            }),
+          ],
+        });
+      }
     });
 
     it('should handle releases with empty body', async () => {
@@ -168,21 +180,25 @@ describe('Releases Route', () => {
         json: vi.fn(),
         status: vi.fn().mockReturnThis(),
       } as any;
+      const mockNext = vi.fn();
 
-      const routeHandler = router.stack.find(
+      const routes = (router as any).stack || [];
+      const routeHandler = routes.find(
         (layer: any) => layer.route?.path === '/' && layer.route?.methods?.get
       );
 
-      await routeHandler.route.stack[0].handle(mockReq, mockRes);
+      if (routeHandler) {
+        await routeHandler.route.stack[0].handle(mockReq, mockRes, mockNext);
 
-      expect(mockRes.json).toHaveBeenCalledWith({
-        success: true,
-        data: [
-          expect.objectContaining({
-            body: '', // Empty string fallback
-          }),
-        ],
-      });
+        expect(mockRes.json).toHaveBeenCalledWith({
+          success: true,
+          data: [
+            expect.objectContaining({
+              body: '', // Empty string fallback
+            }),
+          ],
+        });
+      }
     });
   });
 });

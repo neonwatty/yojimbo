@@ -1,8 +1,10 @@
+import { useState, useCallback } from 'react';
 import type { Instance } from '@cc-orchestrator/shared';
 import { StatusDot, StatusBadge } from '../common/Status';
 import { Icons } from '../common/Icons';
 import { formatRelativeTime } from '../../utils/strings';
 import { QueueCommandInput } from './QueueCommandInput';
+import { TerminalPreview } from './TerminalPreview';
 
 interface QueueCardProps {
   instance: Instance;
@@ -19,6 +21,12 @@ export function QueueCard({
   onExpand,
   isAnimating = false,
 }: QueueCardProps) {
+  const [hasRecentActivity, setHasRecentActivity] = useState(false);
+
+  const handleActivityChange = useCallback((isActive: boolean) => {
+    setHasRecentActivity(isActive);
+  }, []);
+
   return (
     <div
       className={`
@@ -30,12 +38,19 @@ export function QueueCard({
       {/* Header */}
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-2">
-          <StatusDot status={instance.status} size="md" />
+          <StatusDot status={hasRecentActivity ? 'working' : instance.status} size="md" />
           <h3 className="font-medium text-theme-primary truncate max-w-[200px]">
             {instance.name}
           </h3>
         </div>
-        <StatusBadge status={instance.status} />
+        <div className="flex items-center gap-2">
+          {hasRecentActivity && instance.status === 'idle' && (
+            <span className="text-[10px] px-1.5 py-0.5 bg-aurora-orange/20 text-aurora-orange rounded">
+              Possibly Active
+            </span>
+          )}
+          <StatusBadge status={instance.status} />
+        </div>
       </div>
 
       {/* Working Directory */}
@@ -71,11 +86,13 @@ export function QueueCard({
         </div>
       )}
 
-      {/* Terminal Preview Placeholder */}
-      <div className="bg-surface-900 rounded-lg p-3 mb-4 min-h-[80px] flex items-center justify-center">
-        <div className="text-theme-dim text-xs font-mono opacity-50">
-          Waiting for input...
-        </div>
+      {/* Terminal Preview */}
+      <div className="mb-4">
+        <TerminalPreview
+          instanceId={instance.id}
+          maxLines={5}
+          onActivityChange={handleActivityChange}
+        />
       </div>
 
       {/* Command Input */}

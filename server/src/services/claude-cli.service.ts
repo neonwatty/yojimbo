@@ -2,9 +2,28 @@ import { spawn } from 'child_process';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import type { ParsedTasksResponse } from '@cc-orchestrator/shared';
+import { broadcast } from '../websocket/server.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+/**
+ * Broadcast smart task progress to connected clients
+ */
+function broadcastProgress(
+  step: 'started' | 'parsing' | 'tool-call' | 'tool-result' | 'completed' | 'error',
+  message: string,
+  extra?: { toolName?: string; toolInput?: string; toolOutput?: string }
+): void {
+  broadcast({
+    type: 'smart-task:progress',
+    smartTaskProgress: {
+      step,
+      message,
+      ...extra,
+    },
+  });
+}
 
 /**
  * JSON Schema for ParsedTasksResponse
@@ -99,24 +118,75 @@ export async function parseTasks(
     const args = [
       '-p', fullPrompt,
       '--append-system-prompt-file', promptFilePath,
-      '--output-format', 'json',
+      '--output-format', 'stream-json',  // Use streaming for real-time progress
+      '--verbose',  // Required for stream-json
       '--json-schema', JSON.stringify(PARSED_TASKS_SCHEMA),
-      '--max-turns', '3',
+      '--max-turns', '6',  // Allow turns for GitHub repo lookups via Bash
+      '--allowedTools', 'Bash',  // Enable Bash for gh commands
       '--print',  // Non-interactive mode
     ];
 
-    console.log('🤖 Invoking Claude CLI for task parsing...');
+    console.log('🤖 Invoking Claude CLI for task parsing (with GitHub lookup enabled)...');
+    console.log('📋 Input:', userInput.substring(0, 100));
+    console.log('📋 Context prompt length:', contextPrompt.length, 'chars');
+    broadcastProgress('started', 'Starting task parsing...');
+
+    // After a short delay, show that Claude is working
+    setTimeout(() => {
+      broadcastProgress('parsing', 'Claude is analyzing your input...');
+    }, 500);
 
     const claude = spawn('claude', args, {
       env: { ...process.env },
       stdio: ['ignore', 'pipe', 'pipe'],  // stdin ignored, stdout/stderr piped
     });
 
-    let stdout = '';
+    let stdoutBuffer = '';
     let stderr = '';
+    let finalResult: ClaudeCliResponse | null = null;
 
     claude.stdout.on('data', (data) => {
-      stdout += data.toString();
+      stdoutBuffer += data.toString();
+
+      // Process complete lines (streaming JSON outputs one JSON object per line)
+      const lines = stdoutBuffer.split('\n');
+      stdoutBuffer = lines.pop() || ''; // Keep incomplete line in buffer
+
+      for (const line of lines) {
+        if (!line.trim()) continue;
+
+        try {
+          const event = JSON.parse(line);
+
+          // Handle different event types
+          if (event.type === 'assistant' && event.message?.content) {
+            // Check for tool_use in assistant message
+            for (const content of event.message.content) {
+              if (content.type === 'tool_use') {
+                const toolName = content.name || 'Unknown';
+                const input = content.input?.command || content.input?.description || '';
+
+                // Check for GitHub commands
+                if (input.includes('gh search repos')) {
+                  broadcastProgress('tool-call', 'Searching GitHub for repository...', { toolName, toolInput: input });
+                } else if (input.includes('gh repo list')) {
+                  broadcastProgress('tool-call', 'Fetching recent GitHub repositories...', { toolName, toolInput: input });
+                } else {
+                  broadcastProgress('tool-call', `Running ${toolName}...`, { toolName, toolInput: input });
+                }
+              }
+            }
+          } else if (event.type === 'user' && event.tool_use_result) {
+            // Tool result received
+            broadcastProgress('tool-result', 'Processing tool response...');
+          } else if (event.type === 'result') {
+            // Final result
+            finalResult = event as ClaudeCliResponse;
+          }
+        } catch {
+          // Not valid JSON, ignore
+        }
+      }
     });
 
     claude.stderr.on('data', (data) => {
@@ -132,12 +202,45 @@ export async function parseTasks(
     });
 
     claude.on('close', (code) => {
+      console.log(`Claude CLI exited with code ${code}`);
+
       if (code === 0) {
         try {
-          const response: ClaudeCliResponse = JSON.parse(stdout);
+          // Process any remaining buffer
+          if (stdoutBuffer.trim()) {
+            try {
+              const event = JSON.parse(stdoutBuffer);
+              if (event.type === 'result') {
+                finalResult = event as ClaudeCliResponse;
+              }
+            } catch {
+              // Ignore parse errors
+            }
+          }
+
+          if (!finalResult) {
+            console.error('No final result received from Claude CLI');
+            broadcastProgress('error', 'No response received');
+            resolve({
+              success: false,
+              error: 'No response received from Claude CLI',
+            });
+            return;
+          }
+
+          const response = finalResult;
+          console.log('Response turns:', response.num_turns);
 
           if (response.structured_output) {
-            console.log(`✅ Task parsing complete. ${response.structured_output.tasks.length} tasks parsed. Cost: $${response.total_cost_usd.toFixed(4)}`);
+            const taskCount = response.structured_output.tasks.length;
+            const turnsUsed = response.num_turns;
+            console.log(`✅ Task parsing complete. ${taskCount} tasks parsed in ${turnsUsed} turn(s). Cost: $${response.total_cost_usd.toFixed(4)}`);
+
+            broadcastProgress(
+              'completed',
+              `Parsed ${taskCount} task${taskCount !== 1 ? 's' : ''}${turnsUsed > 1 ? ` (used ${turnsUsed} turns with tool calls)` : ''}`
+            );
+
             resolve({
               success: true,
               data: response.structured_output,
@@ -146,22 +249,24 @@ export async function parseTasks(
             });
           } else {
             console.error('❌ No structured output in Claude response');
+            broadcastProgress('error', 'No structured output received');
             resolve({
               success: false,
               error: 'Claude did not return structured output. Response: ' + response.result.substring(0, 200),
             });
           }
         } catch (parseError) {
-          console.error('❌ Failed to parse Claude response:', parseError);
-          console.error('Raw stdout:', stdout.substring(0, 500));
+          console.error('Failed to process Claude response:', parseError);
+          broadcastProgress('error', 'Failed to process response');
           resolve({
             success: false,
-            error: `Failed to parse Claude response: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`,
+            error: `Failed to process Claude response: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`,
           });
         }
       } else {
         console.error(`❌ Claude CLI exited with code ${code}`);
         console.error('stderr:', stderr);
+        broadcastProgress('error', `CLI exited with code ${code}`);
         resolve({
           success: false,
           error: `Claude CLI exited with code ${code}: ${stderr || 'No error message'}`,
@@ -169,15 +274,15 @@ export async function parseTasks(
       }
     });
 
-    // Set a timeout for the CLI call
+    // Set a timeout for the CLI call (90s to allow for GitHub lookups)
     const timeout = setTimeout(() => {
       console.error('❌ Claude CLI timed out');
       claude.kill();
       resolve({
         success: false,
-        error: 'Claude CLI timed out after 60 seconds',
+        error: 'Claude CLI timed out after 90 seconds',
       });
-    }, 60000);
+    }, 90000);
 
     claude.on('close', () => {
       clearTimeout(timeout);
@@ -202,11 +307,12 @@ export async function clarifyTasks(
       '-p', `User clarification: ${clarification}\n\nPlease update the task parsing based on this clarification and return the complete updated ParsedTasksResponse.`,
       '--output-format', 'json',
       '--json-schema', JSON.stringify(PARSED_TASKS_SCHEMA),
-      '--max-turns', '3',
+      '--max-turns', '6',  // Allow turns for GitHub repo lookups via Bash
+      '--allowedTools', 'Bash',  // Enable Bash for gh commands
       '--print',
     ];
 
-    console.log('🤖 Continuing Claude CLI session for clarification...');
+    console.log('🤖 Continuing Claude CLI session for clarification (with GitHub lookup enabled)...');
 
     const claude = spawn('claude', args, {
       env: { ...process.env },
@@ -264,14 +370,14 @@ export async function clarifyTasks(
       }
     });
 
-    // Set a timeout
+    // Set a timeout (90s to allow for GitHub lookups)
     const timeout = setTimeout(() => {
       claude.kill();
       resolve({
         success: false,
-        error: 'Claude CLI timed out after 60 seconds',
+        error: 'Claude CLI timed out after 90 seconds',
       });
-    }, 60000);
+    }, 90000);
 
     claude.on('close', () => {
       clearTimeout(timeout);

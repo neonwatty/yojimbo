@@ -291,6 +291,7 @@ export type WSServerMessageType =
   | 'task:deleted'
   | 'log:status'
   | 'keychain:unlock-failed'
+  | 'smart-task:progress'
   | 'error';
 
 export interface FileChangeEvent {
@@ -343,6 +344,14 @@ export interface WSServerMessage {
   thresholdMs?: number;
   fileCheckResult?: 'working' | 'idle';
   action?: 'reset' | 'extend' | 'skip';
+  // Smart task progress fields
+  smartTaskProgress?: {
+    step: 'started' | 'parsing' | 'tool-call' | 'tool-result' | 'completed' | 'error';
+    message: string;
+    toolName?: string;
+    toolInput?: string;
+    toolOutput?: string;
+  };
 }
 
 // API response types

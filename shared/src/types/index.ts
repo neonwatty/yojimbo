@@ -291,6 +291,8 @@ export type WSServerMessageType =
   | 'task:deleted'
   | 'log:status'
   | 'keychain:unlock-failed'
+  | 'smart-task:progress'
+  | 'setup:progress'
   | 'error';
 
 export interface FileChangeEvent {
@@ -343,6 +345,16 @@ export interface WSServerMessage {
   thresholdMs?: number;
   fileCheckResult?: 'working' | 'idle';
   action?: 'reset' | 'extend' | 'skip';
+  // Smart task progress fields
+  smartTaskProgress?: {
+    step: 'started' | 'parsing' | 'tool-call' | 'tool-result' | 'completed' | 'error';
+    message: string;
+    toolName?: string;
+    toolInput?: string;
+    toolOutput?: string;
+  };
+  // Setup progress fields (for setup:progress messages)
+  setupProgress?: SetupProgressEvent;
 }
 
 // API response types
@@ -507,4 +519,136 @@ export interface Release {
   publishedAt: string;
   url: string;
   isPrerelease: boolean;
+}
+
+// Project Registry types
+export interface Project {
+  id: string;
+  name: string;
+  path: string;
+  gitRemote: string | null;
+  repoName: string | null;
+  lastActivityAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateProjectRequest {
+  name: string;
+  path: string;
+  gitRemote?: string;
+  repoName?: string;
+}
+
+export interface UpdateProjectRequest {
+  name?: string;
+  gitRemote?: string;
+  repoName?: string;
+}
+
+// Smart Task Parsing types
+export type ParsedTaskType = 'bug' | 'feature' | 'enhancement' | 'refactor' | 'docs' | 'other';
+export type TaskClarity = 'clear' | 'ambiguous' | 'unknown_project';
+
+export interface ProjectMatch {
+  projectId: string;
+  confidence: number;
+  reason?: string;  // Why this project matched (optional, for UI tooltip)
+}
+
+export interface ParsedTask {
+  id: string;
+  originalText: string;
+  title: string;
+  type: ParsedTaskType;
+  // Primary selection (backwards compatible)
+  projectId: string | null;
+  projectConfidence: number;
+  // Top matches (up to 3) for user selection
+  projectMatches?: ProjectMatch[];
+  clarity: TaskClarity;
+  clarificationNeeded?: {
+    question: string;
+  };
+}
+
+export interface ParsedTasksResponse {
+  tasks: ParsedTask[];
+  suggestedOrder: string[];
+}
+
+export interface ParseTasksRequest {
+  input: string;
+}
+
+export interface ClarifyTaskRequest {
+  sessionId: string;
+  clarification: string;
+}
+
+// Context types for task parsing
+export interface InstanceContext {
+  id: string;
+  name: string;
+  dir: string;
+  status: 'working' | 'idle';
+  projectId?: string;
+}
+
+export interface GitStateContext {
+  branch: string;
+  commits: Array<{ hash: string; msg: string; age: string }>;
+  dirty: boolean;
+  ahead?: number;
+  behind?: number;
+}
+
+export interface ProjectContext {
+  id: string;
+  name: string;
+  path: string;
+  repoName: string | null;
+  gitState?: GitStateContext;
+}
+
+// Smart Tasks: Clone and Setup types
+export type SetupProjectAction = 'clone-and-create' | 'associate-existing';
+
+export interface SetupProjectRequest {
+  sessionId: string;
+  taskId?: string;
+  action: SetupProjectAction;
+  gitRepoUrl: string;           // e.g., "git@github.com:owner/repo.git"
+  targetPath: string;           // e.g., "~/Desktop/repo-name"
+  instanceName?: string;        // e.g., "repo-dev" (defaults to repo name)
+}
+
+export interface SetupProjectResponse {
+  success: boolean;
+  instanceId?: string;
+  instanceName?: string;
+  projectId?: string;
+  projectPath?: string;
+  error?: string;
+  step?: 'cloning' | 'creating-instance' | 'registering-project' | 'complete' | 'failed';
+}
+
+export interface ValidatePathRequest {
+  path: string;
+}
+
+export interface ValidatePathResponse {
+  valid: boolean;
+  exists: boolean;
+  parentExists: boolean;
+  expandedPath: string;
+  error?: string;
+}
+
+// WebSocket setup progress events
+export interface SetupProgressEvent {
+  step: 'cloning' | 'clone-complete' | 'creating-instance' | 'instance-created' | 'registering-project' | 'complete' | 'error';
+  message: string;
+  sessionId?: string;
+  error?: string;
 }

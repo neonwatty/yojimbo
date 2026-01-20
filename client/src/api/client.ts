@@ -34,6 +34,12 @@ import type {
   DispatchTaskRequest,
   ReorderTasksRequest,
   Release,
+  Project,
+  CreateProjectRequest,
+  ParsedTasksResponse,
+  SetupProjectRequest,
+  SetupProjectResponse,
+  ValidatePathResponse,
 } from '@cc-orchestrator/shared';
 import { toast } from '../store/toastStore';
 
@@ -478,4 +484,112 @@ export const htmlFilesApi = {
 // Releases API
 export const releasesApi = {
   list: () => request<ApiResponse<Release[]>>('/releases'),
+};
+
+// Projects API
+export const projectsApi = {
+  list: () => request<ApiResponse<Project[]>>('/projects'),
+
+  get: (id: string) => request<ApiResponse<Project>>(`/projects/${id}`),
+
+  create: (data: CreateProjectRequest) =>
+    request<ApiResponse<Project>>('/projects', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  ensure: (path: string, name?: string) =>
+    request<ApiResponse<Project>>('/projects/ensure', {
+      method: 'POST',
+      body: JSON.stringify({ path, name }),
+    }),
+
+  delete: (id: string) =>
+    request<ApiResponse<void>>(`/projects/${id}`, {
+      method: 'DELETE',
+    }),
+};
+
+// Smart Tasks API response types
+export interface SmartTasksStatusResponse {
+  available: boolean;
+  message: string;
+}
+
+export interface SmartTasksParseResponse extends ParsedTasksResponse {
+  sessionId: string;
+  needsClarification: boolean;
+  summary: {
+    totalTasks: number;
+    routableCount: number;
+    needsClarificationCount: number;
+    estimatedCost: string;
+  };
+}
+
+export interface SmartTasksSessionResponse {
+  sessionId: string;
+  input: string;
+  tasks: ParsedTasksResponse;
+  clarificationRound: number;
+  createdAt: string;
+  summary: {
+    totalTasks: number;
+    routableCount: number;
+    needsClarificationCount: number;
+  };
+}
+
+// Smart Tasks API
+export const smartTasksApi = {
+  status: () =>
+    request<ApiResponse<SmartTasksStatusResponse>>('/smart-tasks/status'),
+
+  parse: (input: string) =>
+    request<ApiResponse<SmartTasksParseResponse>>('/smart-tasks/parse', {
+      method: 'POST',
+      body: JSON.stringify({ input }),
+    }),
+
+  clarify: (sessionId: string, clarification: string) =>
+    request<ApiResponse<SmartTasksParseResponse>>('/smart-tasks/clarify', {
+      method: 'POST',
+      body: JSON.stringify({ sessionId, clarification }),
+    }),
+
+  getSession: (sessionId: string) =>
+    request<ApiResponse<SmartTasksSessionResponse>>(`/smart-tasks/session/${sessionId}`),
+
+  clearSession: (sessionId: string) =>
+    request<ApiResponse<void>>(`/smart-tasks/session/${sessionId}`, {
+      method: 'DELETE',
+    }),
+
+  validate: (tasks: ParsedTasksResponse) =>
+    request<ApiResponse<{
+      valid: boolean;
+      issues: string[];
+      routableTasks: ParsedTasksResponse['tasks'];
+    }>>('/smart-tasks/validate', {
+      method: 'POST',
+      body: JSON.stringify({ tasks }),
+    }),
+
+  validatePath: (path: string) =>
+    request<ApiResponse<ValidatePathResponse>>('/smart-tasks/validate-path', {
+      method: 'POST',
+      body: JSON.stringify({ path }),
+    }),
+
+  expandPath: (path: string) =>
+    request<ApiResponse<{ expandedPath: string }>>('/smart-tasks/expand-path', {
+      method: 'POST',
+      body: JSON.stringify({ path }),
+    }),
+
+  setupProject: (data: SetupProjectRequest) =>
+    request<ApiResponse<SetupProjectResponse>>('/smart-tasks/setup-project', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
 };

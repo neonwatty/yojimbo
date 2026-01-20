@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Yojimbo - Connection Health Mockup</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* Nord-inspired color system */
+    :root {
+      --surface-900: #2e3440;
+      --surface-800: #3b4252;
+      --surface-700: #434c5e;
+      --surface-600: #4c566a;
+      --surface-500: #5e6779;
+      --text-primary: #eceff4;
+      --text-secondary: #e5e9f0;
+      --text-muted: #d8dee9;
+      --text-dim: #7b88a1;
+      --accent: #d08770;
+      --accent-bright: #ebcb8b;
+      --frost-1: #8fbcbb;
+      --frost-2: #88c0d0;
+      --frost-3: #81a1c1;
+      --frost-4: #5e81ac;
+      --state-working: #a3be8c;
+      --state-awaiting: #ebcb8b;
+      --state-idle: #7b88a1;
+      --state-error: #bf616a;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'JetBrains Mono', monospace;
+      background: var(--surface-900);
+      color: var(--text-primary);
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+    }
+
+    .screen {
+      display: none;
+      min-height: 100vh;
+      padding: 1rem;
+    }
+
+    .screen.active {
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Custom colors for Tailwind */
+    .bg-surface-900 { background-color: var(--surface-900); }
+    .bg-surface-800 { background-color: var(--surface-800); }
+    .bg-surface-700 { background-color: var(--surface-700); }
+    .bg-surface-600 { background-color: var(--surface-600); }
+    .text-theme-primary { color: var(--text-primary); }
+    .text-theme-secondary { color: var(--text-secondary); }
+    .text-theme-muted { color: var(--text-muted); }
+    .text-theme-dim { color: var(--text-dim); }
+    .bg-accent { background-color: var(--accent); }
+    .text-accent { color: var(--accent); }
+    .border-surface-600 { border-color: var(--surface-600); }
+    .border-surface-500 { border-color: var(--surface-500); }
+    .bg-frost-2 { background-color: var(--frost-2); }
+    .text-frost-2 { color: var(--frost-2); }
+    .bg-frost-3 { background-color: var(--frost-3); }
+    .text-frost-3 { color: var(--frost-3); }
+    .bg-frost-4 { background-color: var(--frost-4); }
+    .text-frost-4 { color: var(--frost-4); }
+    .bg-state-working { background-color: var(--state-working); }
+    .text-state-working { color: var(--state-working); }
+    .bg-state-awaiting { background-color: var(--state-awaiting); }
+    .text-state-awaiting { color: var(--state-awaiting); }
+    .bg-state-error { background-color: var(--state-error); }
+    .text-state-error { color: var(--state-error); }
+
+    /* Animations */
+    @keyframes pulse-glow {
+      0%, 100% { opacity: 1; box-shadow: 0 0 0 0 currentColor; }
+      50% { opacity: 0.7; box-shadow: 0 0 8px 2px currentColor; }
+    }
+
+    @keyframes fade-in {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes slide-up {
+      from { opacity: 0; transform: translateY(1rem); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes check-bounce {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.2); }
+    }
+
+    @keyframes progress {
+      from { width: 0%; }
+      to { width: 100%; }
+    }
+
+    .animate-fade-in {
+      animation: fade-in 0.3s ease-out forwards;
+    }
+
+    .animate-slide-up {
+      animation: slide-up 0.4s ease-out forwards;
+    }
+
+    .animate-check {
+      animation: check-bounce 0.3s ease-out;
+    }
+
+    .animate-progress {
+      animation: progress 2s ease-out forwards;
+    }
+
+    .pulse-dot {
+      animation: pulse-glow 2s ease-in-out infinite;
+    }
+
+    /* Mobile touch feedback */
+    .touch-active:active {
+      transform: scale(0.98);
+      opacity: 0.9;
+    }
+
+    /* Navigation bar */
+    .nav-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--surface-800);
+      border-top: 1px solid var(--surface-600);
+      padding: 0.5rem 1rem;
+      display: flex;
+      justify-content: space-around;
+      z-index: 50;
+    }
+
+    .nav-btn {
+      padding: 0.5rem 1rem;
+      border-radius: 0.5rem;
+      font-size: 0.75rem;
+      transition: all 0.2s;
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+    }
+
+    .nav-btn:hover {
+      background: var(--surface-700);
+      color: var(--text-primary);
+    }
+
+    .nav-btn.active {
+      background: var(--accent);
+      color: var(--surface-900);
+    }
+
+    /* Status indicator styles */
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .status-dot.connected {
+      background: var(--state-working);
+      box-shadow: 0 0 6px var(--state-working);
+    }
+
+    .status-dot.warning {
+      background: var(--state-awaiting);
+    }
+
+    .status-dot.error {
+      background: var(--state-error);
+    }
+
+    .status-dot.pending {
+      background: var(--surface-500);
+    }
+  </style>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+        },
+      },
+    };
+  </script>
+</head>
+<body class="font-mono">
+  <!-- Navigation between screens (for demo purposes) -->
+  <div class="nav-bar">
+    <button class="nav-btn active" onclick="showScreen('overview')">Overview</button>
+    <button class="nav-btn" onclick="showScreen('testing')">Testing</button>
+    <button class="nav-btn" onclick="showScreen('success')">All Good</button>
+    <button class="nav-btn" onclick="showScreen('issues')">Issues</button>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       SCREEN 1: CONNECTION HEALTH OVERVIEW
+       ═══════════════════════════════════════════════════════════════════════ -->
+  <div id="screen-overview" class="screen active">
+    <div class="max-w-xl mx-auto w-full flex-1 pb-20">
+      <!-- Header -->
+      <div class="flex items-center justify-between mb-6">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-lg bg-frost-2/20 flex items-center justify-center">
+            <svg class="w-5 h-5 text-frost-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+            </svg>
+          </div>
+          <div>
+            <h1 class="text-lg font-semibold text-theme-primary">Connection Health</h1>
+            <p class="text-theme-dim text-xs">2 machines configured</p>
+          </div>
+        </div>
+        <button class="p-2 rounded-lg text-theme-muted hover:text-theme-primary hover:bg-surface-700 transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Overall Status Banner -->
+      <div class="bg-state-awaiting/20 border border-state-awaiting/50 rounded-xl p-4 mb-6 flex items-center gap-3">
+        <div class="w-10 h-10 rounded-full bg-state-awaiting/30 flex items-center justify-center shrink-0">
+          <svg class="w-5 h-5 text-state-awaiting" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+          </svg>
+        </div>
+        <div class="flex-1">
+          <p class="text-state-awaiting font-medium text-sm">Action required</p>
+          <p class="text-theme-muted text-xs">1 machine needs hooks installed</p>
+        </div>
+      </div>
+
+      <!-- Machine Cards -->
+      <div class="space-y-4">
+        <!-- MacBook Pro (Local) - All Good -->
+        <div class="bg-surface-800 rounded-xl border border-surface-600 overflow-hidden animate-slide-up" style="animation-delay: 0ms;">
+          <!-- Machine Header -->
+          <div class="p-4 border-b border-surface-600">
+            <div class="flex items-center gap-3">
+              <div class="w-12 h-12 rounded-xl bg-surface-700 flex items-center justify-center text-2xl">
+                💻
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2">
+                  <h2 class="text-theme-primary font-semibold truncate">MacBook Pro</h2>
+                  <span class="px-2 py-0.5 bg-frost-2/20 text-frost-2 text-xs rounded">Local</span>
+                </div>
+                <p class="text-theme-dim text-xs">192.168.1.10</p>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="status-dot connected pulse-dot"></span>
+                <span class="text-state-working text-xs font-medium">Healthy</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Health Checks -->
+          <div class="p-4 space-y-3">
+            <!-- Server Connection -->
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <div class="w-6 h-6 rounded-full bg-state-working/20 flex items-center justify-center">
+                  <svg class="w-3.5 h-3.5 text-state-working" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                  </svg>
+                </div>
+                <span class="text-theme-secondary text-sm">Server connection</span>
+              </div>
+              <span class="text-state-working text-xs">Connected</span>
+            </div>
+
+            <!-- Hooks Installed -->
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <div class="w-6 h-6 rounded-full bg-state-working/20 flex items-center justify-center">
+                  <svg class="w-3.5 h-3.5 text-state-working" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                  </svg>
+                </div>
+                <span class="text-theme-secondary text-sm">Hooks installed</span>
+              </div>
+              <span class="text-frost-3 text-xs">v0.3.0</span>
+            </div>
+
+            <!-- Status Updates -->
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <div class="w-6 h-6 rounded-full bg-state-working/20 flex items-center justify-center">
+                  <svg class="w-3.5 h-3.5 text-state-working" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                  </svg>
+                </div>
+                <span class="text-theme-secondary text-sm">Status updates</span>
+              </div>
+              <span class="text-state-working text-xs">Real-time</span>
+            </div>
+
+            <!-- Last Heartbeat -->
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <div class="w-6 h-6 rounded-full bg-state-working/20 flex items-center justify-center">
+                  <svg class="w-3.5 h-3.5 text-state-working" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                  </svg>
+                </div>
+                <span class="text-theme-secondary text-sm">Last heartbeat</span>
+              </div>
+              <span class="text-theme-dim text-xs">2 seconds ago</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Mac Mini (Remote) - Needs Hooks -->
+        <div class="bg-surface-800 rounded-xl border border-state-awaiting/50 overflow-hidden animate-slide-up" style="animation-delay: 100ms;">
+          <!-- Machine Header -->
+          <div class="p-4 border-b border-surface-600">
+            <div class="flex items-center gap-3">
+              <div class="w-12 h-12 rounded-xl bg-surface-700 flex items-center justify-center text-2xl">
+                🖥️
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2">
+                  <h2 class="text-theme-primary font-semibold truncate">Mac Mini</h2>
+                  <span class="px-2 py-0.5 bg-frost-4/20 text-frost-4 text-xs rounded">Tailscale</span>
+                </div>
+                <p class="text-theme-dim text-xs">100.64.0.5</p>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="status-dot warning"></span>
+                <span class="text-state-awaiting text-xs font-medium">Setup</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Health Checks -->
+          <div class="p-4 space-y-3">
+            <!-- Server Connection -->
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <div class="w-6 h-6 rounded-full bg-state-working/20 flex items-center justify-center">
+                  <svg class="w-3.5 h-3.5 text-state-working" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                  </svg>
+                </div>
+                <span class="text-theme-secondary text-sm">Server connection</span>
+              </div>
+              <span class="text-state-working text-xs">Connected</span>
+            </div>
+
+            <!-- Hooks NOT Installed -->
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <div class="w-6 h-6 rounded-full bg-state-awaiting/20 flex items-center justify-center">
+                  <svg class="w-3.5 h-3.5 text-state-awaiting" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                  </svg>
+                </div>
+                <span class="text-theme-secondary text-sm">Hooks installed</span>
+              </div>
+              <span class="text-state-awaiting text-xs">Not found</span>
+            </div>
+
+            <!-- Install Hooks Button -->
+            <button id="install-hooks-btn" onclick="installHooks()" class="w-full py-2.5 bg-accent text-surface-900 rounded-lg font-medium text-sm hover:bg-accent/90 transition-colors touch-active flex items-center justify-center gap-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+              </svg>
+              Install Hooks
+            </button>
+
+            <!-- Status Updates -->
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <div class="w-6 h-6 rounded-full bg-surface-600 flex items-center justify-center">
+                  <svg class="w-3.5 h-3.5 text-theme-dim" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                  </svg>
+                </div>
+                <span class="text-theme-muted text-sm">Status updates</span>
+              </div>
+              <span class="text-theme-dim text-xs">Pending hook setup</span>
+            </div>
+
+            <!-- Last Heartbeat -->
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <div class="w-6 h-6 rounded-full bg-state-working/20 flex items-center justify-center">
+                  <svg class="w-3.5 h-3.5 text-state-working" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                  </svg>
+                </div>
+                <span class="text-theme-secondary text-sm">Last heartbeat</span>
+              </div>
+              <span class="text-theme-dim text-xs">5 seconds ago</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex gap-3 mt-6">
+        <button onclick="showScreen('testing')" class="flex-1 py-3 bg-surface-700 text-theme-primary rounded-lg font-medium text-sm hover:bg-surface-600 transition-colors flex items-center justify-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+          </svg>
+          Run Full Test
+        </button>
+        <button class="flex-1 py-3 bg-surface-700 text-theme-primary rounded-lg font-medium text-sm hover:bg-surface-600 transition-colors flex items-center justify-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+          </svg>
+          Refresh Status
+        </button>
+      </div>
+
+      <!-- Help Link -->
+      <p class="text-center mt-6">
+        <a href="#" class="text-frost-2 text-sm hover:underline">Having trouble? View setup guide →</a>
+      </p>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       SCREEN 2: RUNNING CONNECTION TEST
+       ═══════════════════════════════════════════════════════════════════════ -->
+  <div id="screen-testing" class="screen">
+    <div class="max-w-xl mx-auto w-full flex-1 flex flex-col justify-center pb-20">
+      <!-- Header -->
+      <div class="text-center mb-8">
+        <div class="w-16 h-16 rounded-full bg-frost-2/20 flex items-center justify-center mx-auto mb-4">
+          <div class="w-10 h-10 rounded-full border-2 border-frost-2 border-t-transparent animate-spin"></div>
+        </div>
+        <h1 class="text-xl font-semibold text-theme-primary mb-2">Running Connection Test</h1>
+        <p class="text-theme-muted text-sm">Testing all machines...</p>
+      </div>
+
+      <!-- Test Progress -->
+      <div class="bg-surface-800 rounded-xl border border-surface-600 overflow-hidden">
+        <!-- MacBook Pro Tests -->
+        <div class="p-4 border-b border-surface-600">
+          <div class="flex items-center gap-3 mb-3">
+            <span class="text-lg">💻</span>
+            <span class="text-theme-primary font-medium">MacBook Pro</span>
+          </div>
+          <div class="space-y-2">
+            <div class="flex items-center gap-3 animate-slide-up" style="animation-delay: 0ms;">
+              <div class="w-5 h-5 rounded-full bg-state-working flex items-center justify-center animate-check">
+                <svg class="w-3 h-3 text-surface-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+                </svg>
+              </div>
+              <span class="text-theme-secondary text-sm">Server ping</span>
+              <span class="text-state-working text-xs ml-auto">12ms</span>
+            </div>
+            <div class="flex items-center gap-3 animate-slide-up" style="animation-delay: 100ms;">
+              <div class="w-5 h-5 rounded-full bg-state-working flex items-center justify-center animate-check">
+                <svg class="w-3 h-3 text-surface-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+                </svg>
+              </div>
+              <span class="text-theme-secondary text-sm">WebSocket connection</span>
+              <span class="text-state-working text-xs ml-auto">OK</span>
+            </div>
+            <div class="flex items-center gap-3 animate-slide-up" style="animation-delay: 200ms;">
+              <div class="w-5 h-5 rounded-full bg-state-working flex items-center justify-center animate-check">
+                <svg class="w-3 h-3 text-surface-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+                </svg>
+              </div>
+              <span class="text-theme-secondary text-sm">Hooks verification</span>
+              <span class="text-frost-3 text-xs ml-auto">v0.3.0</span>
+            </div>
+            <div class="flex items-center gap-3 animate-slide-up" style="animation-delay: 300ms;">
+              <div class="w-5 h-5 rounded-full bg-state-working flex items-center justify-center animate-check">
+                <svg class="w-3 h-3 text-surface-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+                </svg>
+              </div>
+              <span class="text-theme-secondary text-sm">Task dispatch test</span>
+              <span class="text-state-working text-xs ml-auto">OK</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Mac Mini Tests -->
+        <div class="p-4">
+          <div class="flex items-center gap-3 mb-3">
+            <span class="text-lg">🖥️</span>
+            <span class="text-theme-primary font-medium">Mac Mini</span>
+          </div>
+          <div class="space-y-2">
+            <div class="flex items-center gap-3 animate-slide-up" style="animation-delay: 400ms;">
+              <div class="w-5 h-5 rounded-full bg-state-working flex items-center justify-center animate-check">
+                <svg class="w-3 h-3 text-surface-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+                </svg>
+              </div>
+              <span class="text-theme-secondary text-sm">Server ping</span>
+              <span class="text-state-working text-xs ml-auto">45ms</span>
+            </div>
+            <div class="flex items-center gap-3 animate-slide-up" style="animation-delay: 500ms;">
+              <div class="w-5 h-5 rounded-full bg-state-working flex items-center justify-center animate-check">
+                <svg class="w-3 h-3 text-surface-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+                </svg>
+              </div>
+              <span class="text-theme-secondary text-sm">WebSocket connection</span>
+              <span class="text-state-working text-xs ml-auto">OK</span>
+            </div>
+            <div class="flex items-center gap-3 animate-slide-up" style="animation-delay: 600ms;">
+              <div class="w-5 h-5 rounded-full border-2 border-accent border-t-transparent animate-spin"></div>
+              <span class="text-theme-muted text-sm">Hooks verification</span>
+              <span class="text-theme-dim text-xs ml-auto">Testing...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Skip Button -->
+      <p class="text-center mt-6">
+        <button onclick="showScreen('success')" class="text-frost-2 text-sm hover:underline">Skip to results →</button>
+      </p>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       SCREEN 3: ALL HEALTHY
+       ═══════════════════════════════════════════════════════════════════════ -->
+  <div id="screen-success" class="screen">
+    <div class="max-w-xl mx-auto w-full flex-1 pb-20">
+      <!-- Header -->
+      <div class="flex items-center justify-between mb-6">
+        <h1 class="text-lg font-semibold text-theme-primary">Connection Health</h1>
+        <button class="p-2 rounded-lg text-theme-muted hover:text-theme-primary hover:bg-surface-700 transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Success Banner -->
+      <div class="bg-state-working/20 border border-state-working/50 rounded-xl p-6 mb-6 text-center animate-fade-in">
+        <div class="w-16 h-16 rounded-full bg-state-working/30 flex items-center justify-center mx-auto mb-4">
+          <svg class="w-8 h-8 text-state-working" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+          </svg>
+        </div>
+        <h2 class="text-xl font-semibold text-state-working mb-2">All Systems Healthy</h2>
+        <p class="text-theme-muted text-sm">All 2 machines are connected and ready</p>
+      </div>
+
+      <!-- Machine Summary Cards -->
+      <div class="space-y-3">
+        <!-- MacBook Pro -->
+        <div class="bg-surface-800 rounded-xl p-4 border border-surface-600 flex items-center gap-4 animate-slide-up" style="animation-delay: 0ms;">
+          <div class="w-12 h-12 rounded-xl bg-state-working/20 flex items-center justify-center text-2xl shrink-0">
+            💻
+          </div>
+          <div class="flex-1 min-w-0">
+            <h3 class="text-theme-primary font-medium">MacBook Pro</h3>
+            <p class="text-theme-dim text-xs">Local • 12ms latency</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="status-dot connected pulse-dot"></span>
+            <svg class="w-5 h-5 text-state-working" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+            </svg>
+          </div>
+        </div>
+
+        <!-- Mac Mini -->
+        <div class="bg-surface-800 rounded-xl p-4 border border-surface-600 flex items-center gap-4 animate-slide-up" style="animation-delay: 100ms;">
+          <div class="w-12 h-12 rounded-xl bg-state-working/20 flex items-center justify-center text-2xl shrink-0">
+            🖥️
+          </div>
+          <div class="flex-1 min-w-0">
+            <h3 class="text-theme-primary font-medium">Mac Mini</h3>
+            <p class="text-theme-dim text-xs">Tailscale • 45ms latency</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="status-dot connected pulse-dot"></span>
+            <svg class="w-5 h-5 text-state-working" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- Test Details -->
+      <div class="mt-6 bg-surface-800/50 rounded-xl p-4 border border-surface-600">
+        <h3 class="text-theme-secondary font-medium text-sm mb-3">Test Results</h3>
+        <div class="grid grid-cols-2 gap-4 text-sm">
+          <div>
+            <p class="text-theme-dim text-xs">Tests passed</p>
+            <p class="text-state-working font-semibold">8 / 8</p>
+          </div>
+          <div>
+            <p class="text-theme-dim text-xs">Average latency</p>
+            <p class="text-frost-2 font-semibold">28ms</p>
+          </div>
+          <div>
+            <p class="text-theme-dim text-xs">Last tested</p>
+            <p class="text-theme-secondary">Just now</p>
+          </div>
+          <div>
+            <p class="text-theme-dim text-xs">Hooks version</p>
+            <p class="text-theme-secondary">v0.3.0</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Button -->
+      <button onclick="showScreen('overview')" class="w-full py-3 mt-6 bg-accent text-surface-900 rounded-lg font-semibold text-sm hover:bg-accent/90 transition-colors touch-active">
+        Done
+      </button>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       SCREEN 4: CONNECTION ISSUES
+       ═══════════════════════════════════════════════════════════════════════ -->
+  <div id="screen-issues" class="screen">
+    <div class="max-w-xl mx-auto w-full flex-1 pb-20">
+      <!-- Header -->
+      <div class="flex items-center justify-between mb-6">
+        <h1 class="text-lg font-semibold text-theme-primary">Connection Health</h1>
+        <button class="p-2 rounded-lg text-theme-muted hover:text-theme-primary hover:bg-surface-700 transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Error Banner -->
+      <div class="bg-state-error/20 border border-state-error/50 rounded-xl p-4 mb-6 flex items-start gap-3 animate-fade-in">
+        <div class="w-10 h-10 rounded-full bg-state-error/30 flex items-center justify-center shrink-0">
+          <svg class="w-5 h-5 text-state-error" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+        </div>
+        <div class="flex-1">
+          <p class="text-state-error font-medium text-sm">Connection issues detected</p>
+          <p class="text-theme-muted text-xs mt-1">1 machine is unreachable</p>
+        </div>
+      </div>
+
+      <!-- Machine Cards -->
+      <div class="space-y-4">
+        <!-- MacBook Pro - OK -->
+        <div class="bg-surface-800 rounded-xl p-4 border border-surface-600 flex items-center gap-4">
+          <div class="w-12 h-12 rounded-xl bg-state-working/20 flex items-center justify-center text-2xl shrink-0">
+            💻
+          </div>
+          <div class="flex-1 min-w-0">
+            <h3 class="text-theme-primary font-medium">MacBook Pro</h3>
+            <p class="text-state-working text-xs">Connected • Local</p>
+          </div>
+          <span class="status-dot connected pulse-dot"></span>
+        </div>
+
+        <!-- Mac Mini - Disconnected -->
+        <div class="bg-surface-800 rounded-xl border border-state-error/50 overflow-hidden">
+          <div class="p-4 border-b border-surface-600">
+            <div class="flex items-center gap-4">
+              <div class="w-12 h-12 rounded-xl bg-state-error/20 flex items-center justify-center text-2xl shrink-0">
+                🖥️
+              </div>
+              <div class="flex-1 min-w-0">
+                <h3 class="text-theme-primary font-medium">Mac Mini</h3>
+                <p class="text-state-error text-xs">Disconnected</p>
+              </div>
+              <span class="status-dot error"></span>
+            </div>
+          </div>
+
+          <!-- Error Details -->
+          <div class="p-4 bg-surface-700/50">
+            <h4 class="text-state-error font-medium text-sm mb-2">Connection failed</h4>
+            <p class="text-theme-muted text-xs mb-3">Unable to reach server at 100.64.0.5:3847. The machine may be offline or Tailscale may not be connected.</p>
+
+            <!-- Troubleshooting Steps -->
+            <div class="space-y-2 mb-4">
+              <p class="text-theme-dim text-xs font-medium">Try these steps:</p>
+              <div class="flex items-start gap-2">
+                <span class="text-theme-dim text-xs">1.</span>
+                <span class="text-theme-muted text-xs">Check if Tailscale is connected on both machines</span>
+              </div>
+              <div class="flex items-start gap-2">
+                <span class="text-theme-dim text-xs">2.</span>
+                <span class="text-theme-muted text-xs">Verify the Yojimbo server is running on Mac Mini</span>
+              </div>
+              <div class="flex items-start gap-2">
+                <span class="text-theme-dim text-xs">3.</span>
+                <span class="text-theme-muted text-xs">Check firewall settings for port 3847</span>
+              </div>
+            </div>
+
+            <!-- Retry Button -->
+            <button class="w-full py-2.5 bg-surface-600 text-theme-primary rounded-lg font-medium text-sm hover:bg-surface-500 transition-colors flex items-center justify-center gap-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+              </svg>
+              Retry Connection
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Help Section -->
+      <div class="mt-6 p-4 bg-frost-4/10 rounded-xl border border-frost-4/30">
+        <div class="flex items-start gap-3">
+          <svg class="w-5 h-5 text-frost-3 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          <div>
+            <p class="text-frost-3 font-medium text-sm mb-1">Need help?</p>
+            <p class="text-theme-muted text-xs">Check the <a href="#" class="text-frost-2 hover:underline">connection troubleshooting guide</a> or <a href="#" class="text-frost-2 hover:underline">view server logs</a>.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex gap-3 mt-6">
+        <button onclick="showScreen('overview')" class="flex-1 py-3 bg-surface-700 text-theme-primary rounded-lg font-medium text-sm hover:bg-surface-600 transition-colors">
+          Back
+        </button>
+        <button class="flex-1 py-3 bg-accent text-surface-900 rounded-lg font-semibold text-sm hover:bg-accent/90 transition-colors">
+          Test All Again
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Screen navigation
+    function showScreen(screenId) {
+      // Hide all screens
+      document.querySelectorAll('.screen').forEach(screen => {
+        screen.classList.remove('active');
+      });
+
+      // Show selected screen
+      document.getElementById('screen-' + screenId).classList.add('active');
+
+      // Update nav buttons
+      document.querySelectorAll('.nav-btn').forEach((btn, index) => {
+        btn.classList.remove('active');
+        const screens = ['overview', 'testing', 'success', 'issues'];
+        if (screens[index] === screenId) {
+          btn.classList.add('active');
+        }
+      });
+
+      // Scroll to top
+      window.scrollTo(0, 0);
+    }
+
+    // Install hooks simulation
+    function installHooks() {
+      const btn = document.getElementById('install-hooks-btn');
+      btn.innerHTML = `
+        <svg class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+        </svg>
+        Installing...
+      `;
+      btn.disabled = true;
+      btn.classList.add('opacity-75');
+
+      // Simulate installation
+      setTimeout(() => {
+        btn.innerHTML = `
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+          </svg>
+          Hooks Installed
+        `;
+        btn.classList.remove('bg-accent');
+        btn.classList.add('bg-state-working');
+
+        // Update the parent card
+        setTimeout(() => {
+          showScreen('success');
+        }, 1000);
+      }, 2000);
+    }
+  </script>
+</body>
+</html>

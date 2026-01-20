@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-type ViewType = 'home' | 'instances' | 'history';
+type ViewType = 'home' | 'instances' | 'history' | 'queue';
 type LayoutType = 'cards' | 'list';
 
 // Default values for all persisted UI state

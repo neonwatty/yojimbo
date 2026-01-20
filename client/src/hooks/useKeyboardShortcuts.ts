@@ -7,7 +7,7 @@ interface UseKeyboardShortcutsOptions {
   onOpenTasks?: () => void;
   onSwitchInstance?: (index: number) => void;
   onCycleInstance?: (direction: 'prev' | 'next') => void;
-  onNavigation?: (page: 'home' | 'instances' | 'history') => void;
+  onNavigation?: (page: 'home' | 'instances' | 'history' | 'queue') => void;
   onCloseInstance?: () => void;
   onTogglePin?: () => void;
   onRenameInstance?: () => void;
@@ -58,6 +58,9 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions) {
           case 's':
             options.onNavigation?.('history');
             break;
+          case 'q':
+            options.onNavigation?.('queue');
+            break;
         }
         return;
       }
@@ -68,6 +71,13 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions) {
         setPendingKeySequence('g');
         // Auto-clear after 1 second
         timeoutRef.current = setTimeout(clearKeySequence, 1000);
+        return;
+      }
+
+      // Q key for queue mode (only when not in terminal/input)
+      if (!isMod && e.key.toLowerCase() === 'q' && !isInput && !isTerminal) {
+        e.preventDefault();
+        options.onNavigation?.('queue');
         return;
       }
 

@@ -12,6 +12,7 @@ import HomePage from './pages/HomePage';
 import InstancesPage from './pages/InstancesPage';
 import HistoryPage from './pages/HistoryPage';
 import ActivityPage from './pages/ActivityPage';
+import QueuePage from './pages/QueuePage';
 import { ShortcutsModal, SettingsModal, NewInstanceModal } from './components/modals';
 import { LocalKeychainUnlockModal } from './components/modals/LocalKeychainUnlockModal';
 import { CommandPalette } from './components/common/CommandPalette';
@@ -85,6 +86,7 @@ function App() {
         case 'home': navigate('/'); break;
         case 'instances': navigate('/instances'); break;
         case 'history': navigate('/history'); break;
+        case 'queue': navigate('/queue'); break;
       }
     },
   });
@@ -241,6 +243,7 @@ function App() {
             <Route path="/instances/:id" element={<InstancesPage />} />
             <Route path="/history" element={<HistoryPage />} />
             <Route path="/activity" element={<ActivityPage />} />
+            <Route path="/queue" element={<QueuePage />} />
             {/* Catch-all: redirect unknown routes to home */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

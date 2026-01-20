@@ -111,3 +111,27 @@ jobs:
           name: test-screenshots-${{ matrix.shard }}
           path: client/e2e/screenshots/
           retention-days: 7
+
+  # Optional Claude CLI integration tests
+  # Only runs when explicitly requested via workflow_dispatch
+  # or on nightly schedule (if configured)
+  claude-cli-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Only run when manually triggered or on specific branches
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && contains(github.event.head_commit.message, '[test-claude]'))
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run build --workspace=shared
+      - name: Install Claude CLI
+        run: npm install -g @anthropic-ai/claude-code
+      - name: Run Claude CLI integration tests
+        run: npm run test:claude-cli
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          ENABLE_CLAUDE_CLI_TESTS: 'true'

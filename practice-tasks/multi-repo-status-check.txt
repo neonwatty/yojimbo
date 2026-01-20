@@ -1,0 +1,3 @@
+Let's do the following:
+1. Check for any open PRs on BugDrop
+2. Check the current status of any issues in the Yojimbo repo

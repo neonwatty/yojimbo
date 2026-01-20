@@ -5,6 +5,7 @@ import { useTasksStore } from '../../store/tasksStore';
 import { useInstancesStore } from '../../store/instancesStore';
 import { tasksApi } from '../../api/client';
 import { toast } from '../../store/toastStore';
+import { SmartTasksModal } from './smart';
 import type { GlobalTask, Instance } from '@cc-orchestrator/shared';
 
 interface GlobalTasksPanelProps {
@@ -21,6 +22,7 @@ export function GlobalTasksPanel({ isOpen, onClose, onOpenNewInstance }: GlobalT
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
   const [dragOverTaskId, setDragOverTaskId] = useState<string | null>(null);
   const [animatingTaskIds, setAnimatingTaskIds] = useState<Set<string>>(new Set());
+  const [isSmartTasksOpen, setIsSmartTasksOpen] = useState(false);
   const prevTaskIdsRef = useRef<Set<string>>(new Set());
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -236,6 +238,15 @@ export function GlobalTasksPanel({ isOpen, onClose, onOpenNewInstance }: GlobalT
             >
               Add
             </button>
+            <button
+              type="button"
+              onClick={() => setIsSmartTasksOpen(true)}
+              className="px-3 py-2 bg-surface-600 text-theme-primary rounded-lg text-sm hover:bg-surface-500 transition-colors flex items-center gap-2"
+              title="Smart task input with AI parsing"
+            >
+              <Icons.sparkles />
+              Smart
+            </button>
           </div>
         </form>
 
@@ -296,6 +307,16 @@ export function GlobalTasksPanel({ isOpen, onClose, onOpenNewInstance }: GlobalT
           </span>
         </div>
       </div>
+
+      {/* Smart Tasks Modal */}
+      <SmartTasksModal
+        isOpen={isSmartTasksOpen}
+        onClose={() => {
+          setIsSmartTasksOpen(false);
+          // Refetch tasks in case new ones were created
+          fetchTasks();
+        }}
+      />
     </div>
   );
 }

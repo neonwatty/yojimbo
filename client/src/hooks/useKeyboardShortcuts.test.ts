@@ -135,6 +135,36 @@ describe('useKeyboardShortcuts', () => {
     });
   });
 
+  describe('Q shortcut (queue mode)', () => {
+    it('navigates to queue on Q key press', () => {
+      const onNavigation = vi.fn();
+      renderHook(() => useKeyboardShortcuts({ onNavigation }));
+
+      dispatchKeyDown('q');
+
+      expect(onNavigation).toHaveBeenCalledWith('queue');
+    });
+
+    it('does not navigate to queue when in input field', () => {
+      const onNavigation = vi.fn();
+      renderHook(() => useKeyboardShortcuts({ onNavigation }));
+
+      const input = document.createElement('input');
+      document.body.appendChild(input);
+
+      const event = new KeyboardEvent('keydown', {
+        key: 'q',
+        bubbles: true,
+        cancelable: true,
+      });
+      input.dispatchEvent(event);
+
+      expect(onNavigation).not.toHaveBeenCalled();
+
+      document.body.removeChild(input);
+    });
+  });
+
   describe('key sequences (g → x)', () => {
     it('navigates to home on g → h', async () => {
       const onNavigation = vi.fn();
@@ -188,6 +218,21 @@ describe('useKeyboardShortcuts', () => {
       });
 
       expect(onNavigation).toHaveBeenCalledWith('history');
+    });
+
+    it('navigates to queue on g → q', () => {
+      const onNavigation = vi.fn();
+      const { rerender } = renderHook(() => useKeyboardShortcuts({ onNavigation }));
+
+      act(() => {
+        dispatchKeyDown('g');
+      });
+      rerender();
+      act(() => {
+        dispatchKeyDown('q');
+      });
+
+      expect(onNavigation).toHaveBeenCalledWith('queue');
     });
 
     it('clears pending sequence when completing navigation', () => {

@@ -246,7 +246,7 @@ export function QueueModeOverlay({
     );
   }
 
-  // Active state - Desktop
+  // Active state - Desktop (no Exit button - use sidebar or Q key to exit)
   return (
     <div className="bg-accent/10 border-b border-accent/30 px-4 py-2 flex-shrink-0 animate-in slide-in-from-top duration-300">
       <div className="flex items-center justify-between max-w-6xl mx-auto">
@@ -277,14 +277,9 @@ export function QueueModeOverlay({
             <span>→</span>
           </button>
           <span className="text-surface-600 mx-1">│</span>
-          <button
-            onClick={onExit}
-            className="flex items-center gap-1.5 px-3 py-1 text-theme-dim hover:text-theme-primary text-xs rounded transition-colors"
-            title="Exit queue mode (Escape)"
-          >
-            <span>Exit</span>
-            <span className="text-[10px] opacity-60">Esc</span>
-          </button>
+          <span className="text-theme-dim text-xs">
+            Press <kbd className="px-1 py-0.5 bg-surface-700 rounded text-[10px]">Q</kbd> to exit
+          </span>
         </div>
       </div>
     </div>

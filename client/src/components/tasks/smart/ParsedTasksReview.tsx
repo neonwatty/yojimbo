@@ -43,7 +43,7 @@ export function ParsedTasksReview({ onBack, onComplete }: ParsedTasksReviewProps
         // Look for GitHub repo patterns in the question
         // Patterns like "github.com/owner/repo", "neonwatty/bugdrop", "owner/repo"
         const patterns = [
-          /github\.com[\/:]([a-zA-Z0-9_-]+\/[a-zA-Z0-9_.-]+)/,
+          /github\.com[/:]([a-zA-Z0-9_-]+\/[a-zA-Z0-9_.-]+)/,
           /['"](git@github\.com:[a-zA-Z0-9_-]+\/[a-zA-Z0-9_.-]+(?:\.git)?)['"]/,
           /['"]https:\/\/github\.com\/([a-zA-Z0-9_-]+\/[a-zA-Z0-9_.-]+)['"]/,
           // Look for repo name mentions like "found 'bugdrop'" or "repo 'owner/repo'"

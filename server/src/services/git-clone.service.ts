@@ -27,7 +27,7 @@ export function expandPath(targetPath: string): string {
 export function extractRepoName(repoUrl: string): string {
   // Handle SSH URLs like git@github.com:owner/repo.git
   // Handle HTTPS URLs like https://github.com/owner/repo.git
-  const match = repoUrl.match(/[\/:]([^\/]+\/[^\/]+?)(\.git)?$/);
+  const match = repoUrl.match(/[/:]([^/]+\/[^/]+?)(\.git)?$/);
   if (match) {
     return match[1]; // owner/repo
   }

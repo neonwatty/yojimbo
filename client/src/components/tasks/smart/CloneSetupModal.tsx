@@ -19,7 +19,7 @@ type SetupStep = 'input' | 'cloning' | 'creating-instance' | 'registering-projec
 function extractRepoNameFromUrl(url: string): string {
   // Handle SSH URLs like git@github.com:owner/repo.git
   // Handle HTTPS URLs like https://github.com/owner/repo.git
-  const match = url.match(/[\/:]([^\/]+\/[^\/]+?)(\.git)?$/);
+  const match = url.match(/[/:]([^/]+\/[^/]+?)(\.git)?$/);
   if (match) {
     return match[1].replace(/\.git$/, '');
   }

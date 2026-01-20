@@ -1,66 +1,48 @@
 /**
  * Terminal Activity Service
  *
- * Tracks terminal activity via WebSocket to detect when instances are actively
- * receiving output. This is more accurate than file polling because it only
- * tracks activity from Yojimbo-managed terminals (not external Claude sessions).
+ * Tracks terminal activity via WebSocket for UI display purposes.
+ * This service does NOT change instance status - it only tracks activity
+ * timestamps so the UI can show "Possibly Active" indicators.
  *
- * Flow:
- * 1. WebSocket server calls recordActivity() when terminal output is received
- * 2. This service updates the instance status to 'working' if it was 'idle'
- * 3. A timeout resets the status back to 'idle' after a period of inactivity
+ * Status changes are handled by:
+ * 1. Hooks (highest priority) - Claude Code sends status/notification/stop hooks
+ * 2. File polling (fallback) - checks .jsonl file modification times
+ *
+ * This service provides:
+ * - Activity timestamps for UI display
+ * - "hasRecentActivity" check for showing activity indicators
  */
-
-import { getDatabase } from '../db/connection.js';
-import { broadcast } from '../websocket/server.js';
-import { hookPriorityService } from './hook-priority.service.js';
-import type { InstanceStatus } from '@cc-orchestrator/shared';
 
 interface ActivityRecord {
   lastActivityAt: number;
-  timeoutHandle: NodeJS.Timeout | null;
 }
 
 class TerminalActivityService {
   // Map of instanceId -> activity record
   private activityMap = new Map<string, ActivityRecord>();
 
-  // How long to wait before resetting to idle (ms)
-  private readonly IDLE_TIMEOUT_MS = 30000; // 30 seconds
-
-  // Minimum interval between status updates to avoid thrashing (ms)
-  private readonly DEBOUNCE_MS = 1000; // 1 second
+  // How long before we consider terminal "inactive" for UI purposes (ms)
+  private readonly ACTIVITY_THRESHOLD_MS = 30000; // 30 seconds
 
   /**
    * Record terminal activity for an instance.
    * Called by WebSocket server when terminal output is received.
+   * NOTE: This only updates the activity timestamp for UI display,
+   * it does NOT change the instance status.
    */
   recordActivity(instanceId: string): void {
     const now = Date.now();
-    const existing = this.activityMap.get(instanceId);
-
-    // Debounce: don't update if we just updated
-    if (existing && now - existing.lastActivityAt < this.DEBOUNCE_MS) {
-      // Still reset the timeout
-      this.resetIdleTimeout(instanceId);
-      return;
-    }
 
     // Update activity timestamp
+    const existing = this.activityMap.get(instanceId);
     if (existing) {
       existing.lastActivityAt = now;
     } else {
       this.activityMap.set(instanceId, {
         lastActivityAt: now,
-        timeoutHandle: null,
       });
     }
-
-    // Update status to working if currently idle
-    this.updateStatusToWorking(instanceId);
-
-    // Reset the idle timeout
-    this.resetIdleTimeout(instanceId);
   }
 
   /**
@@ -71,9 +53,9 @@ class TerminalActivityService {
   }
 
   /**
-   * Check if an instance has recent activity
+   * Check if an instance has recent activity (for UI display)
    */
-  hasRecentActivity(instanceId: string, thresholdMs: number = this.IDLE_TIMEOUT_MS): boolean {
+  hasRecentActivity(instanceId: string, thresholdMs: number = this.ACTIVITY_THRESHOLD_MS): boolean {
     const record = this.activityMap.get(instanceId);
     if (!record) return false;
     return Date.now() - record.lastActivityAt < thresholdMs;
@@ -83,108 +65,7 @@ class TerminalActivityService {
    * Clear activity tracking for an instance (e.g., when closed)
    */
   clearInstance(instanceId: string): void {
-    const record = this.activityMap.get(instanceId);
-    if (record?.timeoutHandle) {
-      clearTimeout(record.timeoutHandle);
-    }
     this.activityMap.delete(instanceId);
-  }
-
-  /**
-   * Update instance status to 'working' if it's currently 'idle'
-   */
-  private updateStatusToWorking(instanceId: string): void {
-    // Check if hooks should take priority
-    if (hookPriorityService.shouldDeferToHook(instanceId)) {
-      return;
-    }
-
-    const db = getDatabase();
-
-    // Get current status
-    const row = db.prepare(`
-      SELECT status FROM instances
-      WHERE id = ? AND closed_at IS NULL
-    `).get(instanceId) as { status: InstanceStatus } | undefined;
-
-    if (!row) return;
-
-    // Only update if currently idle
-    if (row.status === 'idle') {
-      db.prepare(`
-        UPDATE instances
-        SET status = 'working', updated_at = datetime('now')
-        WHERE id = ?
-      `).run(instanceId);
-
-      // Broadcast status change
-      broadcast({
-        type: 'status:changed',
-        instanceId,
-        status: 'working',
-      });
-
-      console.log(`📊 Terminal activity: ${instanceId.slice(0, 8)} idle → working`);
-    }
-  }
-
-  /**
-   * Reset the idle timeout for an instance
-   */
-  private resetIdleTimeout(instanceId: string): void {
-    const record = this.activityMap.get(instanceId);
-    if (!record) return;
-
-    // Clear existing timeout
-    if (record.timeoutHandle) {
-      clearTimeout(record.timeoutHandle);
-    }
-
-    // Set new timeout to reset to idle
-    record.timeoutHandle = setTimeout(() => {
-      this.resetToIdle(instanceId);
-    }, this.IDLE_TIMEOUT_MS);
-  }
-
-  /**
-   * Reset instance status to 'idle' after timeout
-   */
-  private resetToIdle(instanceId: string): void {
-    // Check if hooks should take priority
-    if (hookPriorityService.shouldDeferToHook(instanceId)) {
-      return;
-    }
-
-    const db = getDatabase();
-
-    // Get current status
-    const row = db.prepare(`
-      SELECT status FROM instances
-      WHERE id = ? AND closed_at IS NULL
-    `).get(instanceId) as { status: InstanceStatus } | undefined;
-
-    if (!row) {
-      this.activityMap.delete(instanceId);
-      return;
-    }
-
-    // Only reset if currently working
-    if (row.status === 'working') {
-      db.prepare(`
-        UPDATE instances
-        SET status = 'idle', updated_at = datetime('now')
-        WHERE id = ?
-      `).run(instanceId);
-
-      // Broadcast status change
-      broadcast({
-        type: 'status:changed',
-        instanceId,
-        status: 'idle',
-      });
-
-      console.log(`📊 Terminal activity timeout: ${instanceId.slice(0, 8)} working → idle`);
-    }
   }
 }
 

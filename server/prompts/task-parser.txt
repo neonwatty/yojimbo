@@ -47,6 +47,38 @@ Set confidence scores:
 - 0.5-0.69: Weak contextual match (could be multiple projects)
 - 0.0-0.49: Guessing or no match
 
+### Project Matching (Multiple Candidates)
+
+When matching tasks to projects:
+1. Identify ALL projects that could reasonably match the task
+2. Return up to 3 matches in the `projectMatches` array, sorted by confidence (highest first)
+3. The first match should be your best guess (highest confidence)
+4. Still set `projectId` and `projectConfidence` to the first match's values for backwards compatibility
+5. Include a brief `reason` for each match explaining why it was selected
+
+Multiple matches are especially useful when:
+- Multiple worktrees of the same repo exist
+- Several projects have similar names or purposes
+- The input is ambiguous about which specific project/instance
+
+Example output with multiple matches:
+```json
+{
+  "id": "uuid-1",
+  "title": "Fix auth bug",
+  "projectId": "proj-yojimbo-main",
+  "projectConfidence": 0.85,
+  "projectMatches": [
+    { "projectId": "proj-yojimbo-main", "confidence": 0.85, "reason": "main branch, most active" },
+    { "projectId": "proj-yojimbo-feature", "confidence": 0.75, "reason": "feature branch worktree" },
+    { "projectId": "proj-auth-service", "confidence": 0.6, "reason": "handles auth logic" }
+  ],
+  "clarity": "clear"
+}
+```
+
+**IMPORTANT:** Always populate `projectMatches` when there are multiple plausible projects, even if one has high confidence. This lets users easily switch if the AI's first guess was wrong.
+
 ### GitHub Repository Lookup (Fallback)
 
 If a task mentions a project/repo that doesn't match any locally registered project, you have access to the Bash tool to look up the user's GitHub repositories. Use these commands:
@@ -116,6 +148,7 @@ Each task must have:
 - `type`: The task type category
 - `projectId`: Matched project ID or null
 - `projectConfidence`: Confidence score 0-1
+- `projectMatches`: (optional) Array of up to 3 project matches, each with `projectId`, `confidence`, and optional `reason`
 - `clarity`: 'clear', 'ambiguous', or 'unknown_project'
 - `clarificationNeeded`: (optional) Object with `question` field if clarification needed
 
@@ -135,6 +168,9 @@ Output:
       "type": "bug",
       "projectId": "proj-yojimbo",
       "projectConfidence": 0.95,
+      "projectMatches": [
+        { "projectId": "proj-yojimbo", "confidence": 0.95, "reason": "explicitly mentioned" }
+      ],
       "clarity": "clear"
     },
     {
@@ -144,6 +180,10 @@ Output:
       "type": "feature",
       "projectId": "proj-yojimbo",
       "projectConfidence": 0.85,
+      "projectMatches": [
+        { "projectId": "proj-yojimbo", "confidence": 0.85, "reason": "context from previous task" },
+        { "projectId": "proj-yojimbo-ui", "confidence": 0.6, "reason": "UI-related project" }
+      ],
       "clarity": "clear"
     }
   ],

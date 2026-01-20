@@ -1,4 +1,4 @@
-.PHONY: dev start stop build lint lint-fix knip test test-unit test-e2e test-local clean db-reset db-migrate install hooks-install hooks-uninstall help pm2-start pm2-stop pm2-restart pm2-reload pm2-logs pm2-status pm2-setup pm2-delete
+.PHONY: dev start stop build lint lint-fix knip test test-unit test-e2e test-local clean db-reset db-migrate install hooks-install hooks-uninstall help pm2-start pm2-stop pm2-restart pm2-reload pm2-logs pm2-status pm2-setup pm2-delete smart-cleanup smart-test smart-prompt
 
 # Default target
 .DEFAULT_GOAL := help
@@ -274,6 +274,51 @@ status:
 ## health: Check server health
 health:
 	@curl -s http://localhost:3456/api/health | jq . 2>/dev/null || echo "Server not running"
+
+#===============================================================================
+# Smart Tasks Testing
+#===============================================================================
+
+## smart-cleanup: Clean up test data (cloned repos, test instances/projects)
+smart-cleanup:
+	@echo "$(CYAN)Cleaning up Smart Tasks test data...$(NC)"
+	@./practice-tasks/cleanup-test-data.sh
+	@echo "$(GREEN)Cleanup complete$(NC)"
+
+## smart-test: Run the full Smart Tasks test flow (cleanup + show instructions)
+smart-test: smart-cleanup
+	@echo ""
+	@echo "$(CYAN)Smart Tasks Test Flow$(NC)"
+	@echo "======================"
+	@echo ""
+	@echo "1. Make sure dev server is running: $(GREEN)make dev$(NC)"
+	@echo "2. Open the app: $(GREEN)http://localhost:5173$(NC)"
+	@echo "3. Click '$(YELLOW)Tasks$(NC)' in the nav bar"
+	@echo "4. Click '$(YELLOW)Smart$(NC)' to open Smart Task Input"
+	@echo "5. Enter the test prompt below and click '$(YELLOW)Parse Tasks$(NC)'"
+	@echo ""
+	@echo "$(CYAN)Test Prompt:$(NC)"
+	@echo "$(YELLOW)Let's do the following: 1. Check for any open PRs on BugDrop 2. Check the current status of any issues in the Yojimbo repo$(NC)"
+	@echo ""
+	@echo "$(CYAN)Expected Results:$(NC)"
+	@echo "  - BugDrop task: $(YELLOW)Unknown project$(NC) badge (yellow)"
+	@echo "  - Yojimbo task: $(GREEN)Ready$(NC) badge (green)"
+	@echo "  - '$(YELLOW)Clone & Create$(NC)' button visible in footer"
+	@echo ""
+	@echo "$(CYAN)Clone Flow Test:$(NC)"
+	@echo "  - Click 'Clone & Create'"
+	@echo "  - URL should auto-fill from GitHub lookup"
+	@echo "  - Click 'Clone & Create Instance'"
+	@echo ""
+	@echo "To repeat this test, run: $(GREEN)make smart-cleanup$(NC)"
+
+## smart-prompt: Copy the Smart Tasks test prompt to clipboard (macOS)
+smart-prompt:
+	@echo "Let's do the following: 1. Check for any open PRs on BugDrop 2. Check the current status of any issues in the Yojimbo repo" | pbcopy
+	@echo "$(GREEN)Test prompt copied to clipboard!$(NC)"
+	@echo ""
+	@echo "$(CYAN)Prompt:$(NC)"
+	@cat practice-tasks/multi-repo-status-check.txt
 
 #===============================================================================
 # Help

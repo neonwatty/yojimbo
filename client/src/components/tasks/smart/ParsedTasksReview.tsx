@@ -1,9 +1,10 @@
 import { useState, useMemo } from 'react';
 import { Icons } from '../../common/Icons';
-import { useSmartTasksStore, selectTasksNeedingClarification, selectRoutableTasks } from '../../../store/smartTasksStore';
+import { useSmartTasksStore, selectTasksNeedingClarification, selectRoutableTasks, getEffectiveClarity } from '../../../store/smartTasksStore';
 import { smartTasksApi, tasksApi } from '../../../api/client';
 import { toast } from '../../../store/toastStore';
 import { CloneSetupModal } from './CloneSetupModal';
+import { ProjectSelector } from './ProjectSelector';
 import type { ParsedTask } from '@cc-orchestrator/shared';
 
 interface ParsedTasksReviewProps {
@@ -20,6 +21,7 @@ export function ParsedTasksReview({ onBack, onComplete }: ParsedTasksReviewProps
     projects,
     needsClarification,
     removeTask,
+    selectProjectForTask,
     startClarifying,
     setParsedResult,
     setError,
@@ -73,8 +75,9 @@ export function ParsedTasksReview({ onBack, onComplete }: ParsedTasksReviewProps
     return null;
   }, [parsedTasks]);
 
-  // Check if any tasks have unknown_project clarity (candidates for clone setup)
-  const hasUnknownProjectTasks = parsedTasks.some(t => t.clarity === 'unknown_project');
+  // Check if any tasks have unknown project (candidates for clone setup)
+  // Use getEffectiveClarity to derive this, don't trust parser's clarity field
+  const hasUnknownProjectTasks = parsedTasks.some(t => getEffectiveClarity(t) === 'unknown_project');
 
   // Sort tasks by suggested order
   const orderedTasks = [...parsedTasks].sort((a, b) => {
@@ -182,7 +185,10 @@ export function ParsedTasksReview({ onBack, onComplete }: ParsedTasksReviewProps
   };
 
   const getClarityBadge = (task: ParsedTask) => {
-    if (task.clarity === 'clear') {
+    // Use derived clarity, not the parser's value directly
+    const effectiveClarity = getEffectiveClarity(task);
+
+    if (effectiveClarity === 'clear') {
       return (
         <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-500/20 text-green-400 rounded-full text-xs">
           <Icons.check className="w-3 h-3" />
@@ -190,7 +196,7 @@ export function ParsedTasksReview({ onBack, onComplete }: ParsedTasksReviewProps
         </span>
       );
     }
-    if (task.clarity === 'unknown_project') {
+    if (effectiveClarity === 'unknown_project') {
       return (
         <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-yellow-500/20 text-yellow-400 rounded-full text-xs">
           <Icons.alertCircle />
@@ -246,7 +252,7 @@ export function ParsedTasksReview({ onBack, onComplete }: ParsedTasksReviewProps
             <div
               key={task.id}
               className={`p-4 bg-surface-800 rounded-lg border transition-colors ${
-                task.clarity === 'clear'
+                getEffectiveClarity(task) === 'clear'
                   ? 'border-surface-600'
                   : 'border-yellow-500/30'
               }`}
@@ -263,14 +269,11 @@ export function ParsedTasksReview({ onBack, onComplete }: ParsedTasksReviewProps
                   <div className="flex flex-wrap items-center gap-2 mt-2">
                     {getTypeBadge(task.type)}
                     {getClarityBadge(task)}
-                    <span className="text-xs text-theme-muted">
-                      Project: {getProjectName(task.projectId)}
-                      {task.projectConfidence < 1 && task.projectId && (
-                        <span className="ml-1 opacity-60">
-                          ({Math.round(task.projectConfidence * 100)}%)
-                        </span>
-                      )}
-                    </span>
+                    <ProjectSelector
+                      task={task}
+                      projects={projects}
+                      onSelect={(projectId) => selectProjectForTask(task.id, projectId)}
+                    />
                   </div>
                 </div>
 
@@ -322,6 +325,25 @@ export function ParsedTasksReview({ onBack, onComplete }: ParsedTasksReviewProps
                     placeholder="Your answer..."
                     className="w-full px-3 py-2 bg-surface-800 border border-surface-600 rounded text-sm text-theme-primary placeholder:text-theme-muted focus:outline-none focus:border-accent"
                   />
+                </div>
+              )}
+
+              {/* Unknown project prompt - show when no explicit clarification but project is unknown */}
+              {!task.clarificationNeeded && getEffectiveClarity(task) === 'unknown_project' && (
+                <div className="mt-3 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+                  <p className="text-sm text-yellow-400 mb-2">
+                    This task mentions a project that isn't registered locally.
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleOpenCloneModal()}
+                      className="px-3 py-1.5 bg-surface-700 text-theme-primary border border-surface-600 rounded text-xs hover:bg-surface-600 transition-colors flex items-center gap-1.5"
+                    >
+                      <Icons.github />
+                      Clone & Create Instance
+                    </button>
+                    <span className="text-xs text-theme-muted">or remove this task</span>
+                  </div>
                 </div>
               )}
             </div>

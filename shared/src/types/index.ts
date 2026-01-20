@@ -550,13 +550,22 @@ export interface UpdateProjectRequest {
 export type ParsedTaskType = 'bug' | 'feature' | 'enhancement' | 'refactor' | 'docs' | 'other';
 export type TaskClarity = 'clear' | 'ambiguous' | 'unknown_project';
 
+export interface ProjectMatch {
+  projectId: string;
+  confidence: number;
+  reason?: string;  // Why this project matched (optional, for UI tooltip)
+}
+
 export interface ParsedTask {
   id: string;
   originalText: string;
   title: string;
   type: ParsedTaskType;
+  // Primary selection (backwards compatible)
   projectId: string | null;
   projectConfidence: number;
+  // Top matches (up to 3) for user selection
+  projectMatches?: ProjectMatch[];
   clarity: TaskClarity;
   clarificationNeeded?: {
     question: string;

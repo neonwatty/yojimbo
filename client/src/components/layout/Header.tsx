@@ -199,6 +199,8 @@ export default function Header() {
 
   const isHistoryView = location.pathname === '/history';
   const isActivityView = location.pathname === '/activity';
+  const isQueueView = location.pathname === '/queue';
+  const idleCount = instances.filter((i) => i.status === 'idle').length;
 
   return (
     <header className="h-10 flex items-center justify-between px-3 bg-surface-800 border-b border-surface-600">
@@ -291,6 +293,24 @@ export default function Header() {
             {pendingTaskCount > 0 && (
               <span className="absolute -top-0.5 -right-0.5 min-w-[14px] h-[14px] flex items-center justify-center text-[10px] font-bold bg-accent text-surface-900 rounded-full">
                 {pendingTaskCount > 99 ? '99+' : pendingTaskCount}
+              </span>
+            )}
+          </button>
+        </Tooltip>
+
+        {/* Queue Button */}
+        <Tooltip text={isQueueView ? 'Exit queue mode' : 'Review idle instances (Q)'} position="bottom">
+          <button
+            onClick={() => navigate(isQueueView ? '/instances' : '/queue')}
+            className={`relative px-2 py-1 rounded text-xs transition-colors
+              ${isQueueView
+                ? 'bg-frost-4/30 text-frost-2 border border-frost-4/50'
+                : 'text-theme-dim hover:text-theme-primary hover:bg-surface-700'}`}
+          >
+            Queue
+            {idleCount > 0 && !isQueueView && (
+              <span className="absolute -top-0.5 -right-0.5 min-w-[14px] h-[14px] flex items-center justify-center text-[10px] font-bold bg-state-awaiting text-surface-900 rounded-full">
+                {idleCount > 99 ? '99+' : idleCount}
               </span>
             )}
           </button>

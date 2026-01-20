@@ -341,9 +341,20 @@ export function LeftSidebar() {
 
       {/* Footer stats */}
       <div className="px-3 py-2 border-t border-surface-600 text-xs text-theme-muted">
-        <div className="flex justify-between mb-1">
+        <div className="flex justify-between items-center mb-1">
           <span>{instances.filter((i) => i.status === 'working').length} working</span>
-          <span>{instances.filter((i) => i.status === 'idle').length} idle</span>
+          {instances.filter((i) => i.status === 'idle').length > 0 ? (
+            <button
+              onClick={() => navigate('/queue')}
+              className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-frost-4/20 text-frost-3 hover:bg-frost-4/30 transition-colors"
+              title="Review idle instances (Q)"
+            >
+              <span>{instances.filter((i) => i.status === 'idle').length} idle</span>
+              <Icons.chevronRight />
+            </button>
+          ) : (
+            <span>{instances.filter((i) => i.status === 'idle').length} idle</span>
+          )}
         </div>
         <div className="flex items-center gap-2 pt-1 border-t border-surface-700">
           <span className="text-theme-dim">v{__APP_VERSION__}</span>

@@ -4,10 +4,12 @@ import { useInstancesStore } from '../store/instancesStore';
 import { useUIStore } from '../store/uiStore';
 import { useSettingsStore } from '../store/settingsStore';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
+import { useQueueMode } from '../hooks/useQueueMode';
 import { Terminal, type TerminalRef } from '../components/terminal';
 import { CardLayout } from '../components/instances/CardLayout';
 import { ListLayout } from '../components/instances/ListLayout';
 import { InstanceSkeletons } from '../components/instances/InstanceSkeleton';
+import { QueueModeOverlay } from '../components/queue/QueueModeOverlay';
 // Plans and Mockups hidden - uncomment to restore
 // import { PlansPanel } from '../components/plans';
 // import { MockupsPanel } from '../components/mockups/MockupsPanel';
@@ -38,9 +40,20 @@ export default function InstancesPage() {
     portsPanelOpen, togglePortsPanel, setPortsPanelOpen, portsPanelWidth, setPortsPanelWidth,
     htmlFilesPanelOpen, toggleHtmlFilesPanel, setHtmlFilesPanelOpen, htmlFilesPanelWidth, setHtmlFilesPanelWidth,
     panelWidth,
-    setShowNewInstanceModal
+    setShowNewInstanceModal,
+    queueModeActive,
+    setQueueModeActive
   } = useUIStore();
   const { theme } = useSettingsStore();
+
+  // Queue mode navigation
+  const {
+    currentInstance: queueCurrentInstance,
+    currentIndex: queueCurrentIndex,
+    totalCount: queueTotalCount,
+    skip: queueSkip,
+    reset: queueReset,
+  } = useQueueMode();
 
   // Track previous instance ID to detect navigation between different instances
   const prevInstanceIdRef = useRef<string | undefined>(undefined);
@@ -292,6 +305,39 @@ export default function InstancesPage() {
     }
   }, [updateInstance]);
 
+  // Queue mode handlers
+  const handleQueueSkip = useCallback(() => {
+    queueSkip();
+    // Navigate to next instance if there is one
+    if (queueCurrentInstance) {
+      navigate(`/instances/${queueCurrentInstance.id}`);
+    } else {
+      // No more instances, go back to queue view for completion message
+      navigate('/queue');
+    }
+  }, [queueSkip, queueCurrentInstance, navigate]);
+
+  const handleQueueNext = useCallback(() => {
+    // "Next" means we're done with this one, move to next
+    queueSkip();
+    if (queueCurrentInstance) {
+      navigate(`/instances/${queueCurrentInstance.id}`);
+    } else {
+      navigate('/queue');
+    }
+  }, [queueSkip, queueCurrentInstance, navigate]);
+
+  const handleQueueExit = useCallback(() => {
+    setQueueModeActive(false);
+  }, [setQueueModeActive]);
+
+  const handleQueueReset = useCallback(() => {
+    queueReset();
+  }, [queueReset]);
+
+  // Check if queue is complete (no current instance but had instances)
+  const queueIsComplete = queueModeActive && !queueCurrentInstance && queueTotalCount > 0;
+
   // Expanded view for a specific instance
   if (id) {
     const instance = instances.find((i) => i.id === id);
@@ -324,6 +370,19 @@ export default function InstancesPage() {
 
     return (
       <div className="flex-1 flex flex-col bg-surface-900 overflow-hidden">
+        {/* Queue Mode Overlay */}
+        {queueModeActive && (
+          <QueueModeOverlay
+            current={queueCurrentIndex + 1}
+            total={queueTotalCount}
+            isComplete={queueIsComplete}
+            onSkip={handleQueueSkip}
+            onNext={handleQueueNext}
+            onExit={handleQueueExit}
+            onReset={handleQueueReset}
+          />
+        )}
+
         {/* Header */}
         <div className="flex items-center justify-between px-3 h-10 bg-surface-800 border-b border-surface-600 flex-shrink-0">
           <div className="flex items-center gap-2">

@@ -1,0 +1,1677 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Queue Mode - Design Mockups</title>
+  <style>
+    /* Nord-inspired color palette */
+    :root {
+      /* Polar Night (dark surfaces) */
+      --surface-900: #2e3440;
+      --surface-800: #3b4252;
+      --surface-700: #434c5e;
+      --surface-600: #4c566a;
+      --surface-500: #5e6779;
+
+      /* Snow Storm (light text) */
+      --text-primary: #eceff4;
+      --text-secondary: #d8dee9;
+      --text-dim: #7b88a1;
+
+      /* Accent (warm orange) */
+      --accent: #d08770;
+      --accent-bright: #ebcb8b;
+
+      /* Frost (blues/cyans) */
+      --frost-1: #8fbcbb;
+      --frost-2: #88c0d0;
+      --frost-3: #81a1c1;
+      --frost-4: #5e81ac;
+
+      /* Status colors */
+      --status-working: #a3be8c;
+      --status-idle: #7b88a1;
+      --status-error: #bf616a;
+      --status-awaiting: #ebcb8b;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', Consolas, monospace;
+      font-size: 13px;
+      background: #1a1d23;
+      color: var(--text-primary);
+      line-height: 1.5;
+    }
+
+    /* Page Layout */
+    .mockup-page {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 40px 20px;
+    }
+
+    .mockup-title {
+      font-size: 24px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: var(--accent);
+    }
+
+    .mockup-subtitle {
+      color: var(--text-dim);
+      margin-bottom: 40px;
+    }
+
+    .mockup-section {
+      margin-bottom: 60px;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .section-number {
+      background: var(--accent);
+      color: var(--surface-900);
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .section-title {
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .section-description {
+      color: var(--text-dim);
+      margin-bottom: 20px;
+      font-size: 12px;
+    }
+
+    /* Device Frames */
+    .device-frame {
+      background: var(--surface-900);
+      border: 1px solid var(--surface-600);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .device-frame.desktop {
+      max-width: 1000px;
+    }
+
+    .device-frame.mobile {
+      max-width: 375px;
+    }
+
+    /* App Header */
+    .app-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      background: var(--surface-800);
+      border-bottom: 1px solid var(--surface-600);
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 600;
+    }
+
+    .logo-icon {
+      width: 20px;
+      height: 20px;
+      background: var(--accent);
+      border-radius: 4px;
+    }
+
+    .view-toggles {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      background: var(--surface-700);
+      padding: 2px;
+      border-radius: 4px;
+    }
+
+    .view-btn {
+      padding: 4px 8px;
+      border-radius: 3px;
+      color: var(--text-dim);
+      cursor: pointer;
+      transition: all 0.15s;
+      font-size: 12px;
+    }
+
+    .view-btn:hover {
+      color: var(--text-primary);
+      background: var(--surface-600);
+    }
+
+    .view-btn.active {
+      background: var(--accent);
+      color: var(--surface-900);
+    }
+
+    .view-btn.queue-btn {
+      background: transparent;
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      margin-left: 8px;
+    }
+
+    .view-btn.queue-btn:hover {
+      background: var(--accent);
+      color: var(--surface-900);
+    }
+
+    .view-btn.queue-btn.active {
+      background: var(--accent);
+      color: var(--surface-900);
+      border-color: var(--accent);
+    }
+
+    .icon-btn {
+      padding: 6px;
+      border-radius: 4px;
+      color: var(--text-dim);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .icon-btn:hover {
+      color: var(--text-primary);
+      background: var(--surface-700);
+    }
+
+    /* Instance Cards (for context) */
+    .instances-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      padding: 16px;
+    }
+
+    .instance-card {
+      background: var(--surface-700);
+      border: 1px solid var(--surface-600);
+      border-radius: 6px;
+      padding: 12px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .instance-card:hover {
+      background: var(--surface-600);
+    }
+
+    .instance-card.idle {
+      border-left: 3px solid var(--status-idle);
+    }
+
+    .instance-card.working {
+      border-left: 3px solid var(--status-working);
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .card-name {
+      font-weight: 600;
+      font-size: 13px;
+    }
+
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 6px;
+      border-radius: 10px;
+      font-size: 10px;
+      text-transform: uppercase;
+    }
+
+    .status-badge.idle {
+      background: rgba(123, 136, 161, 0.2);
+      color: var(--status-idle);
+    }
+
+    .status-badge.working {
+      background: rgba(163, 190, 140, 0.2);
+      color: var(--status-working);
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    .status-dot.working {
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .card-path {
+      color: var(--text-dim);
+      font-size: 11px;
+      margin-bottom: 8px;
+    }
+
+    .card-preview {
+      background: var(--surface-800);
+      border-radius: 4px;
+      padding: 8px;
+      font-size: 10px;
+      color: var(--text-secondary);
+      height: 48px;
+      overflow: hidden;
+    }
+
+    /* Queue Mode View */
+    .queue-mode-container {
+      display: flex;
+      flex-direction: column;
+      height: 600px;
+    }
+
+    .queue-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      background: var(--surface-800);
+      border-bottom: 1px solid var(--surface-600);
+    }
+
+    .queue-progress {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .queue-counter {
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .queue-counter span {
+      color: var(--accent);
+    }
+
+    .queue-thumbnails {
+      display: flex;
+      gap: 6px;
+    }
+
+    .queue-thumb {
+      width: 32px;
+      height: 24px;
+      background: var(--surface-700);
+      border: 1px solid var(--surface-600);
+      border-radius: 3px;
+      cursor: pointer;
+      transition: all 0.15s;
+      position: relative;
+    }
+
+    .queue-thumb:hover {
+      border-color: var(--frost-3);
+    }
+
+    .queue-thumb.current {
+      border-color: var(--accent);
+      border-width: 2px;
+    }
+
+    .queue-thumb::after {
+      content: '';
+      position: absolute;
+      bottom: 2px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: var(--status-idle);
+    }
+
+    .queue-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .queue-nav-btn {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 6px 10px;
+      background: var(--surface-700);
+      border: 1px solid var(--surface-600);
+      border-radius: 4px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      font-size: 11px;
+      transition: all 0.15s;
+    }
+
+    .queue-nav-btn:hover {
+      background: var(--surface-600);
+      color: var(--text-primary);
+    }
+
+    .kbd {
+      background: var(--surface-800);
+      padding: 1px 4px;
+      border-radius: 2px;
+      font-size: 10px;
+      color: var(--text-dim);
+    }
+
+    /* Queue Main Content */
+    .queue-main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 16px;
+      overflow: hidden;
+    }
+
+    .instance-info {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .instance-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .instance-name {
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .instance-path {
+      color: var(--text-dim);
+      font-size: 12px;
+    }
+
+    .instance-actions {
+      display: flex;
+      gap: 6px;
+    }
+
+    .action-btn {
+      padding: 6px 10px;
+      border-radius: 4px;
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .action-btn.danger {
+      color: var(--status-error);
+      background: rgba(191, 97, 106, 0.1);
+      border: 1px solid rgba(191, 97, 106, 0.3);
+    }
+
+    .action-btn.danger:hover {
+      background: rgba(191, 97, 106, 0.2);
+    }
+
+    .action-btn.secondary {
+      color: var(--text-secondary);
+      background: var(--surface-700);
+      border: 1px solid var(--surface-600);
+    }
+
+    .action-btn.secondary:hover {
+      background: var(--surface-600);
+    }
+
+    /* Terminal Output */
+    .output-area {
+      flex: 1;
+      background: var(--surface-800);
+      border: 1px solid var(--surface-600);
+      border-radius: 6px;
+      padding: 12px;
+      overflow-y: auto;
+      margin-bottom: 12px;
+    }
+
+    .output-exchange {
+      margin-bottom: 16px;
+    }
+
+    .output-exchange:last-child {
+      margin-bottom: 0;
+    }
+
+    .output-user {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .output-claude {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
+    .avatar {
+      width: 20px;
+      height: 20px;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+
+    .avatar.user {
+      background: var(--frost-3);
+      color: var(--surface-900);
+    }
+
+    .avatar.claude {
+      background: var(--accent);
+      color: var(--surface-900);
+    }
+
+    .output-text {
+      color: var(--text-secondary);
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    .output-text code {
+      background: var(--surface-700);
+      padding: 1px 4px;
+      border-radius: 3px;
+      color: var(--frost-1);
+    }
+
+    .output-text .success {
+      color: var(--status-working);
+    }
+
+    /* Input Area */
+    .input-area {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .quick-actions {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .quick-action {
+      padding: 4px 10px;
+      background: var(--surface-700);
+      border: 1px solid var(--surface-600);
+      border-radius: 4px;
+      color: var(--text-secondary);
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .quick-action:hover {
+      background: var(--surface-600);
+      color: var(--text-primary);
+      border-color: var(--frost-3);
+    }
+
+    .quick-action.add {
+      border-style: dashed;
+      color: var(--text-dim);
+    }
+
+    .input-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .command-input {
+      flex: 1;
+      background: var(--surface-800);
+      border: 1px solid var(--surface-600);
+      border-radius: 4px;
+      padding: 10px 12px;
+      color: var(--text-primary);
+      font-family: inherit;
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    .command-input:focus {
+      border-color: var(--accent);
+    }
+
+    .command-input::placeholder {
+      color: var(--text-dim);
+    }
+
+    .send-btn {
+      padding: 10px 16px;
+      background: var(--accent);
+      color: var(--surface-900);
+      border: none;
+      border-radius: 4px;
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .send-btn:hover {
+      background: var(--accent-bright);
+    }
+
+    /* All Caught Up State */
+    .caught-up-state {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px;
+      text-align: center;
+    }
+
+    .caught-up-icon {
+      width: 64px;
+      height: 64px;
+      background: rgba(163, 190, 140, 0.2);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 16px;
+    }
+
+    .caught-up-icon svg {
+      width: 32px;
+      height: 32px;
+      color: var(--status-working);
+    }
+
+    .caught-up-title {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .caught-up-subtitle {
+      color: var(--text-dim);
+      font-size: 13px;
+      margin-bottom: 24px;
+    }
+
+    .exit-queue-btn {
+      padding: 10px 20px;
+      background: var(--surface-700);
+      border: 1px solid var(--surface-600);
+      border-radius: 4px;
+      color: var(--text-secondary);
+      font-family: inherit;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .exit-queue-btn:hover {
+      background: var(--surface-600);
+      color: var(--text-primary);
+    }
+
+    /* Settings Panel */
+    .settings-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .settings-panel {
+      background: var(--surface-800);
+      border: 1px solid var(--surface-600);
+      border-radius: 8px;
+      width: 400px;
+      max-height: 80%;
+      overflow: hidden;
+    }
+
+    .settings-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--surface-600);
+    }
+
+    .settings-title {
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .close-btn {
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+      color: var(--text-dim);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .close-btn:hover {
+      background: var(--surface-700);
+      color: var(--text-primary);
+    }
+
+    .settings-content {
+      padding: 16px;
+    }
+
+    .setting-group {
+      margin-bottom: 20px;
+    }
+
+    .setting-group:last-child {
+      margin-bottom: 0;
+    }
+
+    .setting-label {
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .setting-description {
+      font-size: 11px;
+      color: var(--text-dim);
+      margin-bottom: 8px;
+    }
+
+    .setting-options {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .setting-option {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      background: var(--surface-700);
+      border: 1px solid var(--surface-600);
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .setting-option:hover {
+      background: var(--surface-600);
+    }
+
+    .setting-option.selected {
+      border-color: var(--accent);
+      background: rgba(208, 135, 112, 0.1);
+    }
+
+    .radio-dot {
+      width: 14px;
+      height: 14px;
+      border: 2px solid var(--surface-500);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .setting-option.selected .radio-dot {
+      border-color: var(--accent);
+    }
+
+    .setting-option.selected .radio-dot::after {
+      content: '';
+      width: 6px;
+      height: 6px;
+      background: var(--accent);
+      border-radius: 50%;
+    }
+
+    .checkbox-box {
+      width: 14px;
+      height: 14px;
+      border: 2px solid var(--surface-500);
+      border-radius: 3px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .setting-option.selected .checkbox-box {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .option-text {
+      font-size: 12px;
+    }
+
+    /* Quick Actions Editor */
+    .quick-actions-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .quick-action-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      background: var(--surface-700);
+      border: 1px solid var(--surface-600);
+      border-radius: 4px;
+    }
+
+    .drag-handle {
+      color: var(--text-dim);
+      cursor: grab;
+    }
+
+    .quick-action-text {
+      flex: 1;
+      font-size: 12px;
+    }
+
+    .remove-btn {
+      color: var(--text-dim);
+      cursor: pointer;
+      padding: 2px;
+    }
+
+    .remove-btn:hover {
+      color: var(--status-error);
+    }
+
+    .add-action-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 8px;
+      background: transparent;
+      border: 1px dashed var(--surface-600);
+      border-radius: 4px;
+      color: var(--text-dim);
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .add-action-btn:hover {
+      border-color: var(--frost-3);
+      color: var(--frost-3);
+    }
+
+    /* Mobile View */
+    .mobile-queue {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    .mobile-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      background: var(--surface-800);
+      border-bottom: 1px solid var(--surface-600);
+    }
+
+    .mobile-counter {
+      font-size: 12px;
+      color: var(--text-dim);
+    }
+
+    .mobile-counter span {
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .mobile-swipe-area {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .mobile-card {
+      position: absolute;
+      inset: 16px;
+      background: var(--surface-700);
+      border: 1px solid var(--surface-600);
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .mobile-card.next {
+      transform: translateX(calc(100% + 32px));
+      opacity: 0.5;
+    }
+
+    .mobile-card.prev {
+      transform: translateX(calc(-100% - 32px));
+      opacity: 0.5;
+    }
+
+    .mobile-card-header {
+      padding: 12px;
+      border-bottom: 1px solid var(--surface-600);
+    }
+
+    .mobile-card-body {
+      flex: 1;
+      padding: 12px;
+      overflow-y: auto;
+    }
+
+    .mobile-card-footer {
+      padding: 12px;
+      border-top: 1px solid var(--surface-600);
+      background: var(--surface-800);
+    }
+
+    .swipe-hint {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 8px;
+      color: var(--text-dim);
+      font-size: 11px;
+    }
+
+    .swipe-arrow {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: var(--surface-700);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Toast Notification */
+    .toast {
+      position: absolute;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--surface-700);
+      border: 1px solid var(--surface-600);
+      border-radius: 6px;
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    .toast-icon {
+      color: var(--status-awaiting);
+    }
+
+    /* Utility */
+    .flex-row { display: flex; align-items: center; }
+    .gap-8 { gap: 8px; }
+    .gap-4 { gap: 4px; }
+    .mt-8 { margin-top: 8px; }
+    .mb-4 { margin-bottom: 4px; }
+
+    /* Annotation Callouts */
+    .annotation {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--frost-4);
+      color: var(--text-primary);
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 600;
+      margin: 8px 0;
+    }
+
+    .flow-diagram {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 20px;
+      background: var(--surface-800);
+      border-radius: 8px;
+      margin-bottom: 20px;
+      overflow-x: auto;
+    }
+
+    .flow-step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      min-width: 100px;
+    }
+
+    .flow-icon {
+      width: 48px;
+      height: 48px;
+      background: var(--surface-700);
+      border: 2px solid var(--surface-600);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+    }
+
+    .flow-icon.active {
+      border-color: var(--accent);
+      background: rgba(208, 135, 112, 0.1);
+    }
+
+    .flow-label {
+      font-size: 11px;
+      color: var(--text-dim);
+      text-align: center;
+    }
+
+    .flow-arrow {
+      color: var(--surface-500);
+      font-size: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="mockup-page">
+    <h1 class="mockup-title">Queue Mode</h1>
+    <p class="mockup-subtitle">A focused triage mode for cycling through idle Claude Code instances</p>
+
+    <!-- Section 1: Entry Point -->
+    <section class="mockup-section">
+      <div class="section-header">
+        <div class="section-number">1</div>
+        <h2 class="section-title">Entry Point - Header Button & Keyboard Shortcut</h2>
+      </div>
+      <p class="section-description">
+        Queue mode is accessible via a dedicated button in the header (alongside cards/list toggles)
+        and via keyboard shortcut (Cmd+Q). The button shows a badge count of idle instances.
+      </p>
+
+      <div class="device-frame desktop">
+        <div class="app-header">
+          <div class="header-left">
+            <div class="logo">
+              <div class="logo-icon"></div>
+              <span>Yojimbo</span>
+            </div>
+            <div class="view-toggles">
+              <div class="view-btn active">Cards</div>
+              <div class="view-btn">List</div>
+            </div>
+            <div class="view-btn queue-btn" style="position: relative;">
+              Queue
+              <span style="position: absolute; top: -6px; right: -6px; background: var(--accent); color: var(--surface-900); width: 16px; height: 16px; border-radius: 50%; font-size: 10px; display: flex; align-items: center; justify-content: center; font-weight: 600;">4</span>
+            </div>
+          </div>
+          <div class="header-right">
+            <span style="color: var(--text-dim); font-size: 11px;">Cmd+Q</span>
+            <div class="icon-btn">+</div>
+            <div class="icon-btn">⚙</div>
+          </div>
+        </div>
+        <div class="instances-grid">
+          <div class="instance-card idle">
+            <div class="card-header">
+              <span class="card-name">api-refactor</span>
+              <span class="status-badge idle"><span class="status-dot"></span> Idle</span>
+            </div>
+            <div class="card-path">~/projects/myapp</div>
+            <div class="card-preview">Done! I've updated the API endpoints...</div>
+          </div>
+          <div class="instance-card working">
+            <div class="card-header">
+              <span class="card-name">frontend-fix</span>
+              <span class="status-badge working"><span class="status-dot working"></span> Working</span>
+            </div>
+            <div class="card-path">~/projects/webapp</div>
+            <div class="card-preview">Running tests...</div>
+          </div>
+          <div class="instance-card idle">
+            <div class="card-header">
+              <span class="card-name">docs-update</span>
+              <span class="status-badge idle"><span class="status-dot"></span> Idle</span>
+            </div>
+            <div class="card-path">~/projects/docs</div>
+            <div class="card-preview">Updated README with new instructions...</div>
+          </div>
+          <div class="instance-card idle">
+            <div class="card-header">
+              <span class="card-name">test-suite</span>
+              <span class="status-badge idle"><span class="status-dot"></span> Idle</span>
+            </div>
+            <div class="card-path">~/projects/tests</div>
+            <div class="card-preview">All 47 tests passing. Ready for next task.</div>
+          </div>
+          <div class="instance-card idle">
+            <div class="card-header">
+              <span class="card-name">database-migration</span>
+              <span class="status-badge idle"><span class="status-dot"></span> Idle</span>
+            </div>
+            <div class="card-path">~/projects/db</div>
+            <div class="card-preview">Migration complete. 3 tables updated.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 2: Queue Mode Main View -->
+    <section class="mockup-section">
+      <div class="section-header">
+        <div class="section-number">2</div>
+        <h2 class="section-title">Queue Mode - Main View</h2>
+      </div>
+      <p class="section-description">
+        The primary queue view shows one instance at a time with: instance info, scrollable recent output,
+        quick action buttons, and command input. Thumbnails at top show queue position and other idle instances.
+      </p>
+
+      <div class="device-frame desktop">
+        <div class="app-header">
+          <div class="header-left">
+            <div class="logo">
+              <div class="logo-icon"></div>
+              <span>Yojimbo</span>
+            </div>
+            <div class="view-toggles">
+              <div class="view-btn">Cards</div>
+              <div class="view-btn">List</div>
+            </div>
+            <div class="view-btn queue-btn active">Queue</div>
+          </div>
+          <div class="header-right">
+            <div class="icon-btn">⚙</div>
+            <div class="icon-btn">✕</div>
+          </div>
+        </div>
+
+        <div class="queue-mode-container">
+          <div class="queue-header">
+            <div class="queue-progress">
+              <div class="queue-counter"><span>1</span> of 4 idle</div>
+              <div class="queue-thumbnails">
+                <div class="queue-thumb current"></div>
+                <div class="queue-thumb"></div>
+                <div class="queue-thumb"></div>
+                <div class="queue-thumb"></div>
+              </div>
+            </div>
+            <div class="queue-controls">
+              <div class="queue-nav-btn">
+                ← Prev <kbd class="kbd">K</kbd>
+              </div>
+              <div class="queue-nav-btn">
+                Next → <kbd class="kbd">J</kbd>
+              </div>
+              <div class="queue-nav-btn">
+                Skip <kbd class="kbd">S</kbd>
+              </div>
+            </div>
+          </div>
+
+          <div class="queue-main">
+            <div class="instance-info">
+              <div class="instance-title">
+                <span class="status-badge idle"><span class="status-dot"></span> Idle</span>
+                <span class="instance-name">api-refactor</span>
+                <span class="instance-path">~/projects/myapp</span>
+              </div>
+              <div class="instance-actions">
+                <button class="action-btn secondary">Open Full View</button>
+                <button class="action-btn danger">Close Instance</button>
+              </div>
+            </div>
+
+            <div class="output-area">
+              <div class="output-exchange">
+                <div class="output-user">
+                  <div class="avatar user">U</div>
+                  <div class="output-text">Refactor the authentication middleware to use JWT tokens instead of sessions</div>
+                </div>
+                <div class="output-claude">
+                  <div class="avatar claude">C</div>
+                  <div class="output-text">
+                    I'll refactor the authentication middleware to use JWT tokens. Here's what I've done:<br><br>
+                    <span class="success">✓</span> Updated <code>middleware/auth.ts</code> to use JWT verification<br>
+                    <span class="success">✓</span> Added <code>utils/jwt.ts</code> for token generation and validation<br>
+                    <span class="success">✓</span> Modified <code>routes/auth.ts</code> to return tokens on login<br>
+                    <span class="success">✓</span> Updated 12 protected routes to use new middleware<br><br>
+                    The tests are all passing. Would you like me to also update the frontend to use the new token-based auth?
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="input-area">
+              <div class="quick-actions">
+                <button class="quick-action">Continue</button>
+                <button class="quick-action">Run tests</button>
+                <button class="quick-action">Commit changes</button>
+                <button class="quick-action">Show diff</button>
+                <button class="quick-action add">+ Add action</button>
+              </div>
+              <div class="input-row">
+                <input type="text" class="command-input" placeholder="Type a command for this instance...">
+                <button class="send-btn">Send</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 3: After Sending Command -->
+    <section class="mockup-section">
+      <div class="section-header">
+        <div class="section-number">3</div>
+        <h2 class="section-title">After Sending Command - Instance Working</h2>
+      </div>
+      <p class="section-description">
+        After sending a command, the instance transitions to "working" state. By default,
+        user stays on the instance to watch progress. A toast appears offering to skip to next idle instance.
+      </p>
+
+      <div class="device-frame desktop">
+        <div class="app-header">
+          <div class="header-left">
+            <div class="logo">
+              <div class="logo-icon"></div>
+              <span>Yojimbo</span>
+            </div>
+            <div class="view-toggles">
+              <div class="view-btn">Cards</div>
+              <div class="view-btn">List</div>
+            </div>
+            <div class="view-btn queue-btn active">Queue</div>
+          </div>
+        </div>
+
+        <div class="queue-mode-container" style="position: relative;">
+          <div class="queue-header">
+            <div class="queue-progress">
+              <div class="queue-counter" style="color: var(--status-working);">Working...</div>
+              <div class="queue-thumbnails">
+                <div class="queue-thumb current" style="border-color: var(--status-working);"></div>
+                <div class="queue-thumb"></div>
+                <div class="queue-thumb"></div>
+                <div class="queue-thumb"></div>
+              </div>
+            </div>
+            <div class="queue-controls">
+              <div class="queue-nav-btn" style="background: var(--accent); color: var(--surface-900); border-color: var(--accent);">
+                Skip to next idle →
+              </div>
+            </div>
+          </div>
+
+          <div class="queue-main">
+            <div class="instance-info">
+              <div class="instance-title">
+                <span class="status-badge working"><span class="status-dot working"></span> Working</span>
+                <span class="instance-name">api-refactor</span>
+              </div>
+            </div>
+
+            <div class="output-area">
+              <div class="output-exchange">
+                <div class="output-user">
+                  <div class="avatar user">U</div>
+                  <div class="output-text">Yes, update the frontend to use the new token-based auth</div>
+                </div>
+                <div class="output-claude">
+                  <div class="avatar claude">C</div>
+                  <div class="output-text" style="color: var(--text-dim);">
+                    Updating frontend authentication...<br>
+                    <span style="animation: pulse 1s infinite;">●</span> Modifying <code>src/api/client.ts</code>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="input-area" style="opacity: 0.5; pointer-events: none;">
+              <div class="input-row">
+                <input type="text" class="command-input" placeholder="Waiting for Claude to finish..." disabled>
+                <button class="send-btn" disabled>Send</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="toast">
+            <span class="toast-icon">⏭</span>
+            Instance is working. Press <kbd class="kbd">J</kbd> to skip to next idle.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 4: All Caught Up -->
+    <section class="mockup-section">
+      <div class="section-header">
+        <div class="section-number">4</div>
+        <h2 class="section-title">All Caught Up State</h2>
+      </div>
+      <p class="section-description">
+        When all idle instances have been addressed, show a satisfying "all caught up" state
+        with option to exit queue mode or wait for instances to become idle again.
+      </p>
+
+      <div class="device-frame desktop">
+        <div class="app-header">
+          <div class="header-left">
+            <div class="logo">
+              <div class="logo-icon"></div>
+              <span>Yojimbo</span>
+            </div>
+            <div class="view-toggles">
+              <div class="view-btn">Cards</div>
+              <div class="view-btn">List</div>
+            </div>
+            <div class="view-btn queue-btn active">Queue</div>
+          </div>
+        </div>
+
+        <div class="queue-mode-container">
+          <div class="queue-header">
+            <div class="queue-progress">
+              <div class="queue-counter" style="color: var(--status-working);"><span>0</span> idle instances</div>
+            </div>
+            <div class="queue-controls">
+              <span style="color: var(--text-dim); font-size: 11px;">3 instances working</span>
+            </div>
+          </div>
+
+          <div class="caught-up-state">
+            <div class="caught-up-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+            </div>
+            <h3 class="caught-up-title">All caught up!</h3>
+            <p class="caught-up-subtitle">
+              No idle instances need attention right now.<br>
+              You'll see new items here as instances finish their tasks.
+            </p>
+            <button class="exit-queue-btn">Exit Queue Mode</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 5: Settings Panel -->
+    <section class="mockup-section">
+      <div class="section-header">
+        <div class="section-number">5</div>
+        <h2 class="section-title">Queue Mode Settings</h2>
+      </div>
+      <p class="section-description">
+        Settings panel accessible from queue mode header. Configure post-dispatch behavior,
+        status filters, and manage quick action favorites inline.
+      </p>
+
+      <div class="device-frame desktop" style="position: relative; height: 600px;">
+        <div class="app-header">
+          <div class="header-left">
+            <div class="logo">
+              <div class="logo-icon"></div>
+              <span>Yojimbo</span>
+            </div>
+            <div class="view-btn queue-btn active">Queue</div>
+          </div>
+          <div class="header-right">
+            <div class="icon-btn" style="background: var(--surface-700);">⚙</div>
+          </div>
+        </div>
+
+        <div class="settings-overlay">
+          <div class="settings-panel">
+            <div class="settings-header">
+              <span class="settings-title">Queue Mode Settings</span>
+              <div class="close-btn">✕</div>
+            </div>
+            <div class="settings-content">
+              <div class="setting-group">
+                <div class="setting-label">After sending a command</div>
+                <div class="setting-description">What happens when you dispatch a command to an instance</div>
+                <div class="setting-options">
+                  <div class="setting-option selected">
+                    <div class="radio-dot"></div>
+                    <span class="option-text">Stay on instance (watch progress)</span>
+                  </div>
+                  <div class="setting-option">
+                    <div class="radio-dot"></div>
+                    <span class="option-text">Auto-skip to next idle instance</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="setting-group">
+                <div class="setting-label">Include in queue</div>
+                <div class="setting-description">Which instance statuses to show in queue mode</div>
+                <div class="setting-options">
+                  <div class="setting-option selected">
+                    <div class="checkbox-box"></div>
+                    <span class="option-text">Idle instances</span>
+                  </div>
+                  <div class="setting-option">
+                    <div class="checkbox-box"></div>
+                    <span class="option-text">Error instances</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="setting-group">
+                <div class="setting-label">Quick Actions</div>
+                <div class="setting-description">Commands available as one-click buttons</div>
+                <div class="quick-actions-list">
+                  <div class="quick-action-item">
+                    <span class="drag-handle">⋮⋮</span>
+                    <span class="quick-action-text">Continue</span>
+                    <span class="remove-btn">✕</span>
+                  </div>
+                  <div class="quick-action-item">
+                    <span class="drag-handle">⋮⋮</span>
+                    <span class="quick-action-text">Run tests</span>
+                    <span class="remove-btn">✕</span>
+                  </div>
+                  <div class="quick-action-item">
+                    <span class="drag-handle">⋮⋮</span>
+                    <span class="quick-action-text">Commit changes</span>
+                    <span class="remove-btn">✕</span>
+                  </div>
+                  <div class="quick-action-item">
+                    <span class="drag-handle">⋮⋮</span>
+                    <span class="quick-action-text">Show diff</span>
+                    <span class="remove-btn">✕</span>
+                  </div>
+                  <button class="add-action-btn">+ Add quick action</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 6: Mobile View -->
+    <section class="mockup-section">
+      <div class="section-header">
+        <div class="section-number">6</div>
+        <h2 class="section-title">Mobile View - Swipe-Primary</h2>
+      </div>
+      <p class="section-description">
+        On mobile, queue mode uses swipe gestures as the primary navigation method.
+        Cards can be swiped left/right to navigate, with visual hints showing direction.
+      </p>
+
+      <div style="display: flex; gap: 24px; flex-wrap: wrap;">
+        <div class="device-frame mobile" style="height: 700px;">
+          <div class="mobile-queue">
+            <div class="mobile-header">
+              <div class="flex-row gap-8">
+                <span style="font-weight: 600;">Queue</span>
+                <span class="mobile-counter"><span>1</span> of 4</span>
+              </div>
+              <div class="flex-row gap-4">
+                <div class="icon-btn">⚙</div>
+                <div class="icon-btn">✕</div>
+              </div>
+            </div>
+
+            <div class="mobile-swipe-area">
+              <div class="mobile-card">
+                <div class="mobile-card-header">
+                  <div class="flex-row gap-8 mb-4">
+                    <span class="status-badge idle"><span class="status-dot"></span> Idle</span>
+                    <span class="instance-name">api-refactor</span>
+                  </div>
+                  <div class="instance-path">~/projects/myapp</div>
+                </div>
+                <div class="mobile-card-body">
+                  <div class="output-exchange">
+                    <div class="output-claude">
+                      <div class="avatar claude">C</div>
+                      <div class="output-text">
+                        Done! I've updated the API endpoints with JWT authentication.<br><br>
+                        <span class="success">✓</span> 12 routes updated<br>
+                        <span class="success">✓</span> All tests passing<br><br>
+                        Ready for next task.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="mobile-card-footer">
+                  <div class="quick-actions" style="margin-bottom: 8px;">
+                    <button class="quick-action">Continue</button>
+                    <button class="quick-action">Run tests</button>
+                  </div>
+                  <div class="input-row">
+                    <input type="text" class="command-input" placeholder="Command...">
+                    <button class="send-btn">→</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="swipe-hint">
+              <div class="swipe-arrow">←</div>
+              <span>Swipe to navigate</span>
+              <div class="swipe-arrow">→</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="device-frame mobile" style="height: 700px;">
+          <div class="mobile-queue">
+            <div class="mobile-header">
+              <div class="flex-row gap-8">
+                <span style="font-weight: 600;">Queue</span>
+                <span class="mobile-counter"><span>0</span> idle</span>
+              </div>
+            </div>
+
+            <div class="caught-up-state" style="padding: 32px;">
+              <div class="caught-up-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+              </div>
+              <h3 class="caught-up-title">All caught up!</h3>
+              <p class="caught-up-subtitle" style="font-size: 12px;">
+                No idle instances need attention.<br>
+                Pull down to refresh.
+              </p>
+              <button class="exit-queue-btn">Exit Queue</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 7: User Flow Diagram -->
+    <section class="mockup-section">
+      <div class="section-header">
+        <div class="section-number">7</div>
+        <h2 class="section-title">User Flow Summary</h2>
+      </div>
+      <p class="section-description">
+        The complete user journey through queue mode, from entry to completion.
+      </p>
+
+      <div class="flow-diagram">
+        <div class="flow-step">
+          <div class="flow-icon">📋</div>
+          <span class="flow-label">Cards/List View</span>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">
+          <div class="flow-icon active">⌘Q</div>
+          <span class="flow-label">Enter Queue</span>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">
+          <div class="flow-icon active">👁</div>
+          <span class="flow-label">Review Instance</span>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">
+          <div class="flow-icon active">⌨</div>
+          <span class="flow-label">Send Command</span>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">
+          <div class="flow-icon">⏭</div>
+          <span class="flow-label">Next/Skip</span>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">
+          <div class="flow-icon">✓</div>
+          <span class="flow-label">All Caught Up</span>
+        </div>
+      </div>
+
+      <div style="background: var(--surface-800); border-radius: 8px; padding: 20px;">
+        <h4 style="margin-bottom: 12px; font-size: 13px;">Keyboard Shortcuts</h4>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px;">
+          <div class="flex-row gap-8">
+            <kbd class="kbd" style="min-width: 60px; text-align: center;">Cmd+Q</kbd>
+            <span style="color: var(--text-dim); font-size: 12px;">Toggle queue mode</span>
+          </div>
+          <div class="flex-row gap-8">
+            <kbd class="kbd" style="min-width: 60px; text-align: center;">J / →</kbd>
+            <span style="color: var(--text-dim); font-size: 12px;">Next instance</span>
+          </div>
+          <div class="flex-row gap-8">
+            <kbd class="kbd" style="min-width: 60px; text-align: center;">K / ←</kbd>
+            <span style="color: var(--text-dim); font-size: 12px;">Previous instance</span>
+          </div>
+          <div class="flex-row gap-8">
+            <kbd class="kbd" style="min-width: 60px; text-align: center;">S</kbd>
+            <span style="color: var(--text-dim); font-size: 12px;">Skip (move to end)</span>
+          </div>
+          <div class="flex-row gap-8">
+            <kbd class="kbd" style="min-width: 60px; text-align: center;">Enter</kbd>
+            <span style="color: var(--text-dim); font-size: 12px;">Focus input</span>
+          </div>
+          <div class="flex-row gap-8">
+            <kbd class="kbd" style="min-width: 60px; text-align: center;">Esc</kbd>
+            <span style="color: var(--text-dim); font-size: 12px;">Exit queue mode</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 8: Toast Notification for External Close -->
+    <section class="mockup-section">
+      <div class="section-header">
+        <div class="section-number">8</div>
+        <h2 class="section-title">Edge Case - Instance Closed Externally</h2>
+      </div>
+      <p class="section-description">
+        When an instance is closed externally (terminal killed, etc.), show a brief toast
+        notification explaining what happened, then auto-advance to the next instance.
+      </p>
+
+      <div class="device-frame desktop" style="max-width: 600px; position: relative;">
+        <div class="app-header">
+          <div class="header-left">
+            <div class="view-btn queue-btn active">Queue</div>
+          </div>
+        </div>
+        <div style="height: 200px; display: flex; align-items: center; justify-content: center; position: relative;">
+          <div class="toast" style="position: static; transform: none;">
+            <span style="color: var(--status-awaiting);">⚠</span>
+            <span>"api-refactor" was closed. Moving to next instance...</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</body>
+</html>

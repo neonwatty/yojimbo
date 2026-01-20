@@ -146,7 +146,7 @@ describe('QueueModeView', () => {
       });
 
       expect(mockSetQueueModeActive).toHaveBeenCalledWith(true);
-      expect(mockNavigate).toHaveBeenCalledWith('/instances/test-instance-id');
+      expect(mockNavigate).toHaveBeenCalledWith('/instances/test-instance-id', { replace: true });
     });
   });
 

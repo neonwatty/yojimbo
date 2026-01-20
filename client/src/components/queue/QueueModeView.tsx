@@ -20,6 +20,7 @@ export function QueueModeView() {
   } = useQueueMode();
 
   const setCurrentView = useUIStore((state) => state.setCurrentView);
+  const queueModeActive = useUIStore((state) => state.queueModeActive);
   const setQueueModeActive = useUIStore((state) => state.setQueueModeActive);
 
   const handleExit = useCallback(() => {
@@ -32,13 +33,15 @@ export function QueueModeView() {
     reset();
   }, [reset]);
 
-  // When we have an instance to show, activate queue mode and navigate to it
+  // When we have an instance to show and queue mode isn't already active,
+  // activate it and navigate to the instance. This only happens when
+  // entering from the /queue route, not when already viewing an instance.
   useEffect(() => {
-    if (currentInstance) {
+    if (currentInstance && !queueModeActive) {
       setQueueModeActive(true);
       navigate(`/instances/${currentInstance.id}`);
     }
-  }, [currentInstance, setQueueModeActive, navigate]);
+  }, [currentInstance, queueModeActive, setQueueModeActive, navigate]);
 
   // Empty state - no idle instances
   if (isEmpty) {

@@ -70,17 +70,59 @@ export default function InstancesPage() {
       setPortsPanelOpen(false);
       setHtmlFilesPanelOpen(false);
       setTerminalPanelOpen(true);
-
-      // Auto-focus terminal after instance switch
-      requestAnimationFrame(() => {
-        const terminalRef = terminalRefs.current.get(id);
-        if (terminalRef) {
-          terminalRef.focus();
-        }
-      });
     }
     prevInstanceIdRef.current = id;
   }, [id, setEditorPanelOpen, setMockupsPanelOpen, setPortsPanelOpen, setHtmlFilesPanelOpen, setTerminalPanelOpen]);
+
+  // Refit, refresh, and focus terminal whenever we navigate TO an instance view
+  // This handles coming back from list view, queue mode, or switching instances
+  // refresh() forces xterm.js to re-render all visible lines, fixing display corruption
+  // We use multiple refresh calls with delays to ensure the terminal renders correctly
+  // after visibility changes (CSS visibility: hidden/visible)
+  useEffect(() => {
+    if (id) {
+      const terminalRef = terminalRefs.current.get(id);
+      if (!terminalRef) return;
+
+      // First refresh immediately
+      terminalRef.fit();
+      terminalRef.refresh();
+
+      // Second refresh after a short delay to catch any late rendering
+      const timer1 = setTimeout(() => {
+        terminalRef.fit();
+        terminalRef.refresh();
+      }, 50);
+
+      // Third refresh after visibility transition completes
+      const timer2 = setTimeout(() => {
+        terminalRef.fit();
+        terminalRef.refresh();
+        terminalRef.focus();
+      }, 150);
+
+      return () => {
+        clearTimeout(timer1);
+        clearTimeout(timer2);
+      };
+    }
+  }, [id]);
+
+  // Also refresh when exiting queue mode while viewing an instance
+  // This ensures terminal renders correctly after queue mode overlay is removed
+  useEffect(() => {
+    if (id && !queueModeActive) {
+      const terminalRef = terminalRefs.current.get(id);
+      if (terminalRef) {
+        // Delay refresh to let queue mode UI transition complete
+        const timer = setTimeout(() => {
+          terminalRef.fit();
+          terminalRef.refresh();
+        }, 100);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [id, queueModeActive]);
 
   // Auto-close panels when window is too narrow to maintain 300px minimum terminal width
   useEffect(() => {

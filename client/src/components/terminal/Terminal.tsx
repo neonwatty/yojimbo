@@ -7,6 +7,7 @@ import '@xterm/xterm/css/xterm.css';
 export interface TerminalRef {
   focus: () => void;
   fit: () => void;
+  refresh: () => void;
 }
 
 interface TerminalProps {
@@ -43,17 +44,18 @@ export const Terminal = forwardRef<TerminalRef, TerminalProps>(
       [instanceId, send]
     );
 
-    const { initTerminal, write, fit, focus } = useTerminal({
+    const { initTerminal, write, fit, focus, refresh } = useTerminal({
       onData: handleData,
       onResize: handleResize,
       theme,
     });
 
-    // Expose focus and fit methods to parent via ref
+    // Expose focus, fit, and refresh methods to parent via ref
     useImperativeHandle(ref, () => ({
       focus,
       fit,
-    }), [focus, fit]);
+      refresh,
+    }), [focus, fit, refresh]);
 
   // Initialize terminal when container is ready
   useEffect(() => {

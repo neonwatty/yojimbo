@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueueMode } from '../../hooks/useQueueMode';
 import { useUIStore } from '../../store/uiStore';
@@ -20,8 +20,10 @@ export function QueueModeView() {
   } = useQueueMode();
 
   const setCurrentView = useUIStore((state) => state.setCurrentView);
-  const queueModeActive = useUIStore((state) => state.queueModeActive);
   const setQueueModeActive = useUIStore((state) => state.setQueueModeActive);
+
+  // Track if we've already initiated navigation to prevent double-navigation
+  const hasNavigated = useRef(false);
 
   const handleExit = useCallback(() => {
     setQueueModeActive(false);
@@ -33,15 +35,15 @@ export function QueueModeView() {
     reset();
   }, [reset]);
 
-  // When we have an instance to show and queue mode isn't already active,
-  // activate it and navigate to the instance. This only happens when
-  // entering from the /queue route, not when already viewing an instance.
+  // When we have an instance to show, activate queue mode and navigate immediately.
+  // Use a ref to prevent double-navigation on re-renders.
   useEffect(() => {
-    if (currentInstance && !queueModeActive) {
+    if (currentInstance && !hasNavigated.current) {
+      hasNavigated.current = true;
       setQueueModeActive(true);
-      navigate(`/instances/${currentInstance.id}`);
+      navigate(`/instances/${currentInstance.id}`, { replace: true });
     }
-  }, [currentInstance, queueModeActive, setQueueModeActive, navigate]);
+  }, [currentInstance, setQueueModeActive, navigate]);
 
   // Empty state - no idle instances
   if (isEmpty) {

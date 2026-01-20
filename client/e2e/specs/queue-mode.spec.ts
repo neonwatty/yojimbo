@@ -562,4 +562,88 @@ test.describe('Queue Mode', () => {
       await expect(footerHints.locator('text=Send command')).toBeVisible();
     });
   });
+
+  test.describe('Terminal Rendering After Queue Mode Toggle', () => {
+    test('terminal is visible after toggling queue mode on and off', async ({ page }) => {
+      await setupInstancesMock(page, mockInstancesWithIdle);
+
+      // Start at an instance view
+      await page.goto('/instances/instance-1');
+      await page.waitForTimeout(500);
+
+      // Terminal should be visible (use :visible to get only the displayed terminal)
+      const terminal = page.locator('.xterm-screen:visible').first();
+      await expect(terminal).toBeVisible({ timeout: 5000 });
+
+      // Click Queue to enter queue mode
+      await page.locator('button:has-text("Queue")').click();
+      await page.waitForTimeout(300);
+
+      // Click Queue again to exit queue mode
+      await page.locator('button:has-text("Queue")').click();
+      await page.waitForTimeout(300);
+
+      // Navigate back to the instance
+      await page.goto('/instances/instance-1');
+      await page.waitForTimeout(500);
+
+      // Terminal should still be visible after queue mode toggle
+      const terminalAfter = page.locator('.xterm-screen:visible').first();
+      await expect(terminalAfter).toBeVisible({ timeout: 5000 });
+    });
+
+    test('terminal xterm-screen element exists after returning from queue mode', async ({ page }) => {
+      await setupInstancesMock(page, mockInstancesWithIdle);
+
+      // Navigate directly to an instance
+      await page.goto('/instances/instance-1');
+      await page.waitForTimeout(1000);
+
+      // Verify xterm terminal element exists (use first() for strict mode)
+      const xtermScreen = page.locator('.xterm-screen').first();
+      await expect(xtermScreen).toBeAttached({ timeout: 5000 });
+
+      // Toggle queue mode
+      await page.locator('button:has-text("Queue")').click();
+      await page.waitForTimeout(500);
+      await page.locator('button:has-text("Queue")').click();
+      await page.waitForTimeout(500);
+
+      // Go back to instance view
+      await page.goto('/instances/instance-1');
+      await page.waitForTimeout(1000);
+
+      // Terminal element should still be attached and functional
+      const xtermScreenAfter = page.locator('.xterm-screen').first();
+      await expect(xtermScreenAfter).toBeAttached({ timeout: 5000 });
+    });
+
+    test('terminal container has correct visibility after exiting queue mode overlay', async ({ page }) => {
+      await setupInstancesMock(page, mockInstancesWithIdle);
+
+      // Start at instance view
+      await page.goto('/instances/instance-1');
+      await page.waitForTimeout(1000);
+
+      // Get the terminal container (use :visible for displayed terminal)
+      const terminalContainer = page.locator('.xterm-screen:visible').first();
+
+      // Verify it's visible
+      await expect(terminalContainer).toBeVisible({ timeout: 5000 });
+
+      // Enter queue mode by clicking Queue button
+      await page.locator('button:has-text("Queue")').click();
+      await page.waitForTimeout(500);
+
+      // The queue mode activates and shows overlay on instance view
+      // Exit by pressing Escape or clicking Queue button again
+      await page.keyboard.press('Escape');
+      await page.waitForTimeout(500);
+
+      // Verify terminal is visible (not hidden by CSS)
+      // The fix ensures refresh() is called to re-render the terminal
+      const terminalAfter = page.locator('.xterm-screen:visible').first();
+      await expect(terminalAfter).toBeVisible({ timeout: 5000 });
+    });
+  });
 });

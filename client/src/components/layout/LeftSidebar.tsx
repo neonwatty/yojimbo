@@ -350,6 +350,7 @@ export function LeftSidebar() {
               onClick={() => {
                 if (queueModeActive) {
                   setQueueModeActive(false);
+                  navigate('/instances');
                 } else {
                   navigate('/queue');
                 }

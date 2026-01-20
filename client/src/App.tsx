@@ -92,7 +92,10 @@ function App() {
           // Toggle queue mode on/off
           if (queueModeActive) {
             setQueueModeActive(false);
-            // Stay on current page, just exit queue mode
+            // If on /queue page, navigate to instances; otherwise stay on current page
+            if (location.pathname === '/queue') {
+              navigate('/instances');
+            }
           } else {
             navigate('/queue');
           }
@@ -192,6 +195,10 @@ function App() {
         // Exit queue mode if active
         if (queueModeActive) {
           setQueueModeActive(false);
+          // If on /queue page, navigate to instances
+          if (window.location.pathname === '/queue') {
+            navigate('/instances');
+          }
           return;
         }
         // Navigate back to instances list

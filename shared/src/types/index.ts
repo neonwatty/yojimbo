@@ -292,6 +292,7 @@ export type WSServerMessageType =
   | 'log:status'
   | 'keychain:unlock-failed'
   | 'smart-task:progress'
+  | 'setup:progress'
   | 'error';
 
 export interface FileChangeEvent {
@@ -352,6 +353,8 @@ export interface WSServerMessage {
     toolInput?: string;
     toolOutput?: string;
   };
+  // Setup progress fields (for setup:progress messages)
+  setupProgress?: SetupProgressEvent;
 }
 
 // API response types
@@ -597,4 +600,46 @@ export interface ProjectContext {
   path: string;
   repoName: string | null;
   gitState?: GitStateContext;
+}
+
+// Smart Tasks: Clone and Setup types
+export type SetupProjectAction = 'clone-and-create' | 'associate-existing';
+
+export interface SetupProjectRequest {
+  sessionId: string;
+  taskId?: string;
+  action: SetupProjectAction;
+  gitRepoUrl: string;           // e.g., "git@github.com:owner/repo.git"
+  targetPath: string;           // e.g., "~/Desktop/repo-name"
+  instanceName?: string;        // e.g., "repo-dev" (defaults to repo name)
+}
+
+export interface SetupProjectResponse {
+  success: boolean;
+  instanceId?: string;
+  instanceName?: string;
+  projectId?: string;
+  projectPath?: string;
+  error?: string;
+  step?: 'cloning' | 'creating-instance' | 'registering-project' | 'complete' | 'failed';
+}
+
+export interface ValidatePathRequest {
+  path: string;
+}
+
+export interface ValidatePathResponse {
+  valid: boolean;
+  exists: boolean;
+  parentExists: boolean;
+  expandedPath: string;
+  error?: string;
+}
+
+// WebSocket setup progress events
+export interface SetupProgressEvent {
+  step: 'cloning' | 'clone-complete' | 'creating-instance' | 'instance-created' | 'registering-project' | 'complete' | 'error';
+  message: string;
+  sessionId?: string;
+  error?: string;
 }

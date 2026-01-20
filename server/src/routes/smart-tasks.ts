@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
-import type { ParsedTasksResponse } from '@cc-orchestrator/shared';
+import { v4 as uuidv4 } from 'uuid';
+import type { ParsedTasksResponse, SetupProjectRequest } from '@cc-orchestrator/shared';
 import {
   parseTaskInput,
   provideTaskClarification,
@@ -8,8 +9,14 @@ import {
   getRoutableTasks,
   getTasksNeedingClarification,
   validateTasksForRouting,
+  validatePath,
+  setupProject,
+  getExpandedPath,
 } from '../services/smart-tasks.service.js';
 import { checkClaudeCliAvailable } from '../services/claude-cli.service.js';
+import { getDatabase } from '../db/connection.js';
+import { terminalManager } from '../services/terminal-manager.service.js';
+import { broadcast } from '../websocket/server.js';
 
 const router = Router();
 
@@ -227,6 +234,194 @@ router.post('/validate', (req: Request, res: Response) => {
   } catch (error) {
     console.error('Failed to validate tasks:', error);
     res.status(500).json({ success: false, error: 'Failed to validate tasks' });
+  }
+});
+
+/**
+ * POST /api/smart-tasks/validate-path
+ * Validate a filesystem path for cloning
+ */
+router.post('/validate-path', (req: Request, res: Response) => {
+  try {
+    const { path } = req.body as { path: string };
+
+    if (!path || typeof path !== 'string') {
+      return res.status(400).json({
+        success: false,
+        error: 'path is required',
+      });
+    }
+
+    const validation = validatePath(path);
+
+    res.json({
+      success: true,
+      data: validation,
+    });
+  } catch (error) {
+    console.error('Failed to validate path:', error);
+    res.status(500).json({ success: false, error: 'Failed to validate path' });
+  }
+});
+
+/**
+ * POST /api/smart-tasks/expand-path
+ * Expand a path (e.g., ~ to home directory) for display
+ */
+router.post('/expand-path', (req: Request, res: Response) => {
+  try {
+    const { path } = req.body as { path: string };
+
+    if (!path || typeof path !== 'string') {
+      return res.status(400).json({
+        success: false,
+        error: 'path is required',
+      });
+    }
+
+    const expandedPath = getExpandedPath(path);
+
+    res.json({
+      success: true,
+      data: { expandedPath },
+    });
+  } catch (error) {
+    console.error('Failed to expand path:', error);
+    res.status(500).json({ success: false, error: 'Failed to expand path' });
+  }
+});
+
+/**
+ * Helper function to create an instance (used by setupProject)
+ * This mirrors the logic from instances.ts but returns just what we need
+ */
+async function createInstanceHelper(
+  name: string,
+  workingDir: string
+): Promise<{ id: string; name: string }> {
+  const db = getDatabase();
+  const id = uuidv4();
+
+  // Get max display order
+  interface MaxOrderRow {
+    max: number | null;
+  }
+  const maxOrder = db.prepare('SELECT MAX(display_order) as max FROM instances WHERE closed_at IS NULL').get() as MaxOrderRow | undefined;
+  const displayOrder = (maxOrder?.max || 0) + 1;
+
+  // Spawn terminal backend
+  await terminalManager.spawn(id, {
+    type: 'local',
+    workingDir,
+  });
+
+  // Get PID
+  const pid = terminalManager.getPid(id);
+
+  // Insert into database
+  db.prepare(`
+    INSERT INTO instances (id, name, working_dir, status, display_order, pid, machine_type, machine_id)
+    VALUES (?, ?, ?, 'idle', ?, ?, 'local', NULL)
+  `).run(id, name, workingDir, displayOrder, pid);
+
+  // Get the full instance row for broadcasting
+  interface InstanceRow {
+    id: string;
+    name: string;
+    working_dir: string;
+    status: string;
+    is_pinned: number;
+    display_order: number;
+    pid: number | null;
+    machine_type: string;
+    machine_id: string | null;
+    created_at: string;
+    updated_at: string;
+    closed_at: string | null;
+  }
+  const row = db.prepare('SELECT * FROM instances WHERE id = ?').get(id) as InstanceRow;
+
+  // Broadcast creation
+  broadcast({
+    type: 'instance:created',
+    instance: {
+      id: row.id,
+      name: row.name,
+      workingDir: row.working_dir,
+      status: row.status as 'idle' | 'working' | 'error' | 'disconnected',
+      isPinned: Boolean(row.is_pinned),
+      displayOrder: row.display_order,
+      pid: row.pid,
+      machineType: row.machine_type as 'local' | 'remote',
+      machineId: row.machine_id,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+      closedAt: row.closed_at,
+    },
+  });
+
+  return { id, name };
+}
+
+/**
+ * POST /api/smart-tasks/setup-project
+ * Clone a repository and create an instance for it
+ */
+router.post('/setup-project', async (req: Request, res: Response) => {
+  try {
+    const { sessionId, taskId, action, gitRepoUrl, targetPath, instanceName } = req.body as SetupProjectRequest;
+
+    // Validate required fields
+    if (!sessionId || typeof sessionId !== 'string') {
+      return res.status(400).json({
+        success: false,
+        error: 'sessionId is required',
+      });
+    }
+
+    if (!gitRepoUrl || typeof gitRepoUrl !== 'string') {
+      return res.status(400).json({
+        success: false,
+        error: 'gitRepoUrl is required',
+      });
+    }
+
+    if (!targetPath || typeof targetPath !== 'string') {
+      return res.status(400).json({
+        success: false,
+        error: 'targetPath is required',
+      });
+    }
+
+    if (action !== 'clone-and-create') {
+      return res.status(400).json({
+        success: false,
+        error: 'Only "clone-and-create" action is currently supported',
+      });
+    }
+
+    console.log(`🚀 Setting up project from ${gitRepoUrl} to ${targetPath}`);
+
+    const result = await setupProject(
+      { sessionId, taskId, action, gitRepoUrl, targetPath, instanceName },
+      createInstanceHelper
+    );
+
+    if (!result.success) {
+      return res.status(400).json({
+        success: false,
+        error: result.error,
+        data: result,
+      });
+    }
+
+    res.json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    console.error('Failed to setup project:', error);
+    res.status(500).json({ success: false, error: 'Failed to setup project' });
   }
 });
 

@@ -37,6 +37,9 @@ import type {
   Project,
   CreateProjectRequest,
   ParsedTasksResponse,
+  SetupProjectRequest,
+  SetupProjectResponse,
+  ValidatePathResponse,
 } from '@cc-orchestrator/shared';
 import { toast } from '../store/toastStore';
 
@@ -570,5 +573,23 @@ export const smartTasksApi = {
     }>>('/smart-tasks/validate', {
       method: 'POST',
       body: JSON.stringify({ tasks }),
+    }),
+
+  validatePath: (path: string) =>
+    request<ApiResponse<ValidatePathResponse>>('/smart-tasks/validate-path', {
+      method: 'POST',
+      body: JSON.stringify({ path }),
+    }),
+
+  expandPath: (path: string) =>
+    request<ApiResponse<{ expandedPath: string }>>('/smart-tasks/expand-path', {
+      method: 'POST',
+      body: JSON.stringify({ path }),
+    }),
+
+  setupProject: (data: SetupProjectRequest) =>
+    request<ApiResponse<SetupProjectResponse>>('/smart-tasks/setup-project', {
+      method: 'POST',
+      body: JSON.stringify(data),
     }),
 };

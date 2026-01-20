@@ -20,6 +20,7 @@
     "test": "npm run test --workspaces --if-present",
     "test:unit": "npm run test:unit --workspaces --if-present",
     "test:e2e": "npm run test:e2e --workspace=client",
+    "test:claude-cli": "ENABLE_CLAUDE_CLI_TESTS=true npm run test:unit --workspace=server -- --testNamePattern='Claude CLI'",
     "db:migrate": "npm run db:migrate --workspace=server",
     "db:reset": "npm run db:reset --workspace=server",
     "clean": "rm -rf node_modules client/node_modules server/node_modules shared/node_modules client/dist server/dist",

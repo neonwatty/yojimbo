@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Icons } from '../../common/Icons';
 import { useSmartTasksStore, selectTasksNeedingClarification, selectRoutableTasks } from '../../../store/smartTasksStore';
 import { smartTasksApi, tasksApi } from '../../../api/client';
 import { toast } from '../../../store/toastStore';
+import { CloneSetupModal } from './CloneSetupModal';
 import type { ParsedTask } from '@cc-orchestrator/shared';
 
 interface ParsedTasksReviewProps {
@@ -28,9 +29,52 @@ export function ParsedTasksReview({ onBack, onComplete }: ParsedTasksReviewProps
   const [isSubmittingClarification, setIsSubmittingClarification] = useState(false);
   const [isCreatingTasks, setIsCreatingTasks] = useState(false);
   const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
+  const [showCloneModal, setShowCloneModal] = useState(false);
+  const [cloneRepoInfo, setCloneRepoInfo] = useState<{ url: string; name: string } | null>(null);
 
   const tasksNeedingClarification = selectTasksNeedingClarification(useSmartTasksStore.getState());
   const routableTasks = selectRoutableTasks(useSmartTasksStore.getState());
+
+  // Detect GitHub repos mentioned in clarification questions
+  const detectedGitHubRepo = useMemo(() => {
+    for (const task of parsedTasks) {
+      if (task.clarificationNeeded?.question) {
+        const question = task.clarificationNeeded.question;
+        // Look for GitHub repo patterns in the question
+        // Patterns like "github.com/owner/repo", "neonwatty/bugdrop", "owner/repo"
+        const patterns = [
+          /github\.com[\/:]([a-zA-Z0-9_-]+\/[a-zA-Z0-9_.-]+)/,
+          /['"](git@github\.com:[a-zA-Z0-9_-]+\/[a-zA-Z0-9_.-]+(?:\.git)?)['"]/,
+          /['"]https:\/\/github\.com\/([a-zA-Z0-9_-]+\/[a-zA-Z0-9_.-]+)['"]/,
+          // Look for repo name mentions like "found 'bugdrop'" or "repo 'owner/repo'"
+          /found ['"]?([a-zA-Z0-9_-]+\/[a-zA-Z0-9_.-]+)['"]?/i,
+          /repo(?:sitory)? ['"]?([a-zA-Z0-9_-]+\/[a-zA-Z0-9_.-]+)['"]?/i,
+        ];
+
+        for (const pattern of patterns) {
+          const match = question.match(pattern);
+          if (match) {
+            const repoName = match[1].replace(/\.git$/, '');
+            // If it's already a full URL, use it; otherwise construct one
+            if (match[0].includes('git@') || match[0].includes('https://')) {
+              return {
+                url: match[1],
+                name: repoName,
+              };
+            }
+            return {
+              url: `https://github.com/${repoName}`,
+              name: repoName,
+            };
+          }
+        }
+      }
+    }
+    return null;
+  }, [parsedTasks]);
+
+  // Check if any tasks have unknown_project clarity (candidates for clone setup)
+  const hasUnknownProjectTasks = parsedTasks.some(t => t.clarity === 'unknown_project');
 
   // Sort tasks by suggested order
   const orderedTasks = [...parsedTasks].sort((a, b) => {
@@ -114,6 +158,27 @@ export function ParsedTasksReview({ onBack, onComplete }: ParsedTasksReviewProps
     if (!projectId) return 'Unknown';
     const project = projects.find(p => p.id === projectId);
     return project?.name || 'Unknown';
+  };
+
+  const handleOpenCloneModal = (repoUrl?: string, repoName?: string) => {
+    if (repoUrl && repoName) {
+      setCloneRepoInfo({ url: repoUrl, name: repoName });
+    } else if (detectedGitHubRepo) {
+      setCloneRepoInfo(detectedGitHubRepo);
+    } else {
+      // Allow manual entry
+      setCloneRepoInfo({ url: '', name: '' });
+    }
+    setShowCloneModal(true);
+  };
+
+  const handleCloneComplete = (instanceId: string) => {
+    console.log('Clone complete, instance created:', instanceId);
+    // After successful clone, we could refresh the projects or navigate
+    // For now, just close the modal and let the user continue
+    setShowCloneModal(false);
+    setCloneRepoInfo(null);
+    toast.success('Project cloned and instance created!');
   };
 
   const getClarityBadge = (task: ParsedTask) => {
@@ -288,6 +353,22 @@ export function ParsedTasksReview({ onBack, onComplete }: ParsedTasksReviewProps
           </button>
 
           <div className="flex items-center gap-2">
+            {/* Clone & Create Instance button - shows when GitHub repo is detected or unknown projects exist */}
+            {(detectedGitHubRepo || hasUnknownProjectTasks) && (
+              <button
+                onClick={() => handleOpenCloneModal()}
+                className="px-4 py-2 bg-surface-700 text-theme-primary border border-surface-600 rounded-lg text-sm hover:bg-surface-600 transition-colors flex items-center gap-2"
+                title={detectedGitHubRepo ? `Clone ${detectedGitHubRepo.name}` : 'Clone a repo and create instance'}
+              >
+                <Icons.github />
+                {detectedGitHubRepo ? (
+                  <>Clone {detectedGitHubRepo.name.split('/').pop()}</>
+                ) : (
+                  <>Clone & Create</>
+                )}
+              </button>
+            )}
+
             {needsClarification && tasksNeedingClarification.length > 0 && (
               <button
                 onClick={handleClarificationSubmit}
@@ -318,6 +399,21 @@ export function ParsedTasksReview({ onBack, onComplete }: ParsedTasksReviewProps
           </div>
         </div>
       </div>
+
+      {/* Clone Setup Modal */}
+      {showCloneModal && sessionId && cloneRepoInfo && (
+        <CloneSetupModal
+          isOpen={showCloneModal}
+          onClose={() => {
+            setShowCloneModal(false);
+            setCloneRepoInfo(null);
+          }}
+          onComplete={handleCloneComplete}
+          sessionId={sessionId}
+          gitRepoUrl={cloneRepoInfo.url}
+          repoName={cloneRepoInfo.name}
+        />
+      )}
     </div>
   );
 }

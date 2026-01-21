@@ -1,8 +1,9 @@
 name: Deploy to Staging
 
 on:
-  push:
-    branches: [main]
+  # Temporarily disabled - uncomment to re-enable auto-deploy on PR merge
+  # push:
+  #   branches: [main]
   workflow_dispatch: # Allow manual trigger from GitHub UI
 
 jobs:

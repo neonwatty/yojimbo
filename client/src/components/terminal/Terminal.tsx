@@ -1,7 +1,7 @@
-import { useEffect, useRef, useCallback, forwardRef, useImperativeHandle } from 'react';
+import { useEffect, useRef, useState, useCallback, forwardRef, useImperativeHandle } from 'react';
 import { useTerminal } from '../../hooks/useTerminal';
 import { useWebSocket } from '../../hooks/useWebSocket';
-import { getWsUrl } from '../../config';
+import { getWsUrl, getApiUrl } from '../../config';
 import '@xterm/xterm/css/xterm.css';
 
 export interface TerminalRef {
@@ -20,6 +20,7 @@ export const Terminal = forwardRef<TerminalRef, TerminalProps>(
   ({ instanceId, theme = 'dark', onStatusChange }, ref) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const isSubscribedRef = useRef(false);
+    const [isDragOver, setIsDragOver] = useState(false);
 
     const { send, subscribe, isConnected } = useWebSocket(getWsUrl(), {
       onOpen: () => {
@@ -40,6 +41,62 @@ export const Terminal = forwardRef<TerminalRef, TerminalProps>(
     const handleResize = useCallback(
       (cols: number, rows: number) => {
         send('terminal:resize', { instanceId, cols, rows });
+      },
+      [instanceId, send]
+    );
+
+    // Drag and drop handlers for file path insertion
+    const handleDragOver = useCallback((e: React.DragEvent) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'copy';
+    }, []);
+
+    const handleDragEnter = useCallback((e: React.DragEvent) => {
+      e.preventDefault();
+      setIsDragOver(true);
+    }, []);
+
+    const handleDragLeave = useCallback((e: React.DragEvent) => {
+      e.preventDefault();
+      // Only set to false if we're leaving the container entirely
+      if (!containerRef.current?.contains(e.relatedTarget as Node)) {
+        setIsDragOver(false);
+      }
+    }, []);
+
+    const handleDrop = useCallback(
+      async (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragOver(false);
+
+        const files = Array.from(e.dataTransfer.files);
+        if (files.length === 0) return;
+
+        // Upload each file and paste paths
+        for (const file of files) {
+          try {
+            const response = await fetch(`${getApiUrl()}/api/filesystem/upload`, {
+              method: 'POST',
+              headers: { 'X-Filename': file.name },
+              body: file,
+            });
+
+            if (!response.ok) {
+              console.error('Failed to upload file:', file.name);
+              continue;
+            }
+
+            const result = await response.json();
+            if (result.success && result.data?.path) {
+              // Escape spaces in paths for shell compatibility
+              const escapedPath = result.data.path.replace(/ /g, '\\ ');
+              // Add space after path so multiple drops are separated
+              send('terminal:input', { instanceId, data: escapedPath + ' ' });
+            }
+          } catch (error) {
+            console.error('Error uploading file:', file.name, error);
+          }
+        }
       },
       [instanceId, send]
     );
@@ -127,11 +184,15 @@ export const Terminal = forwardRef<TerminalRef, TerminalProps>(
     return (
       <div
         ref={containerRef}
-        className="h-full w-full"
+        className={`h-full w-full ${isDragOver ? 'ring-2 ring-accent ring-inset' : ''}`}
         style={{
           backgroundColor: theme === 'dark' ? '#292c33' : '#ffffff',
           touchAction: 'pan-y',
         }}
+        onDragOver={handleDragOver}
+        onDragEnter={handleDragEnter}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
       />
     );
   }

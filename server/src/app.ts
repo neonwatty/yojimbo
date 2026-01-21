@@ -20,7 +20,8 @@ import tasksRouter from './routes/tasks.js';
 import releasesRouter from './routes/releases.js';
 import projectsRouter from './routes/projects.js';
 import smartTasksRouter from './routes/smart-tasks.js';
-import debugRouter from './routes/debug.js';
+// DISABLED: Debug routes are not currently being used
+// import debugRouter from './routes/debug.js';
 import CONFIG from './config/index.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -66,7 +67,8 @@ app.use('/api/tasks', tasksRouter);
 app.use('/api/releases', releasesRouter);
 app.use('/api/projects', projectsRouter);
 app.use('/api/smart-tasks', smartTasksRouter);
-app.use('/api/debug', debugRouter);
+// DISABLED: Debug routes are not currently being used
+// app.use('/api/debug', debugRouter);
 
 // Health check
 app.get('/api/health', (_req, res) => {

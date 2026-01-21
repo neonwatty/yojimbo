@@ -80,9 +80,9 @@ export function initWebSocketServer(server: Server): WebSocketServer {
   // Note: ptyService is now a thin wrapper around terminalManager, so we only
   // need to listen to terminalManager events to avoid duplicate broadcasts
   terminalManager.on('data', (instanceId: string, data: string) => {
-    // Record terminal activity for status tracking
-    // This updates the instance status to 'working' when output is received
-    terminalActivityService.recordActivity(instanceId);
+    // DISABLED: Terminal activity tracking is not currently being used
+    // terminalActivityService.recordActivity(instanceId);
+    void terminalActivityService.recordActivity(instanceId); // no-op stub
 
     // Debug: Log sync frames and potential blank line sources
     const DEBUG_ANIMATION = process.env.DEBUG_ANIMATION === '1';
@@ -146,7 +146,9 @@ export function initWebSocketServer(server: Server): WebSocketServer {
     // Clean up CWD tracking, port forwards, and activity tracking
     lastKnownCwds.delete(instanceId);
     portForwardService.closeInstanceForwards(instanceId);
-    terminalActivityService.clearInstance(instanceId);
+    // DISABLED: Terminal activity tracking is not currently being used
+    // terminalActivityService.clearInstance(instanceId);
+    void terminalActivityService.clearInstance(instanceId); // no-op stub
   });
 
   // Don't start polling immediately - wait for first subscriber

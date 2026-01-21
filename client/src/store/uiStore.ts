@@ -68,6 +68,8 @@ interface UIState {
   // Connection state (not persisted)
   isConnected: boolean;
   reconnectAttempts: number;
+  // Queue mode state (not persisted)
+  queueModeActive: boolean;
 
   setCurrentView: (view: ViewType) => void;
   setLayout: (layout: LayoutType) => void;
@@ -112,6 +114,8 @@ interface UIState {
   setPendingKeySequence: (key: string | null) => void;
   // Connection state actions
   setConnectionState: (connected: boolean, attempts?: number) => void;
+  // Queue mode actions
+  setQueueModeActive: (active: boolean) => void;
   // Reset to defaults
   resetToDefaults: () => void;
 }
@@ -138,6 +142,8 @@ export const useUIStore = create<UIState>()(
       // Connection state (not persisted)
       isConnected: false,
       reconnectAttempts: 0,
+      // Queue mode state (not persisted)
+      queueModeActive: false,
 
       setCurrentView: (currentView) => set({ currentView }),
       setLayout: (layout) => set({ layout }),
@@ -189,6 +195,7 @@ export const useUIStore = create<UIState>()(
       setShowCommandPalette: (showCommandPalette: boolean) => set({ showCommandPalette }),
       setPendingKeySequence: (pendingKeySequence: string | null) => set({ pendingKeySequence }),
       setConnectionState: (isConnected: boolean, reconnectAttempts = 0) => set({ isConnected, reconnectAttempts }),
+      setQueueModeActive: (queueModeActive: boolean) => set({ queueModeActive }),
       resetToDefaults: () => set(DEFAULT_UI_STATE),
     }),
     {

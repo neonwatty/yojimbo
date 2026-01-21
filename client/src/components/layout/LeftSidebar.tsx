@@ -32,6 +32,8 @@ export function LeftSidebar() {
   const setLeftSidebarWidth = useUIStore((state) => state.setLeftSidebarWidth);
   const toggleLeftSidebar = useUIStore((state) => state.toggleLeftSidebar);
   const setShowNewInstanceModal = useUIStore((state) => state.setShowNewInstanceModal);
+  const queueModeActive = useUIStore((state) => state.queueModeActive);
+  const setQueueModeActive = useUIStore((state) => state.setQueueModeActive);
 
   // Resize handler for draggable sidebar edge
   const handleResizeStart = (e: React.MouseEvent) => {
@@ -345,12 +347,23 @@ export function LeftSidebar() {
           <span>{instances.filter((i) => i.status === 'working').length} working</span>
           {instances.filter((i) => i.status === 'idle').length > 0 ? (
             <button
-              onClick={() => navigate('/queue')}
-              className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-frost-4/20 text-frost-3 hover:bg-frost-4/30 transition-colors"
-              title="Review idle instances (Q)"
+              onClick={() => {
+                if (queueModeActive) {
+                  setQueueModeActive(false);
+                  navigate('/instances');
+                } else {
+                  navigate('/queue');
+                }
+              }}
+              className={`flex items-center gap-1 px-1.5 py-0.5 rounded transition-colors ${
+                queueModeActive
+                  ? 'bg-accent text-surface-900 hover:bg-accent/90'
+                  : 'bg-frost-4/20 text-frost-3 hover:bg-frost-4/30'
+              }`}
+              title={queueModeActive ? "Exit queue mode (Q)" : "Review idle instances (Q)"}
             >
               <span>{instances.filter((i) => i.status === 'idle').length} idle</span>
-              <Icons.chevronRight />
+              {queueModeActive ? <Icons.close /> : <Icons.chevronRight />}
             </button>
           ) : (
             <span>{instances.filter((i) => i.status === 'idle').length} idle</span>

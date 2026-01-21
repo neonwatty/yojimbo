@@ -4,6 +4,7 @@ import type { WSClientMessage, WSServerMessage } from '@cc-orchestrator/shared';
 import { ptyService } from '../services/pty.service.js';
 import { terminalManager } from '../services/terminal-manager.service.js';
 import { portForwardService } from '../services/port-forward.service.js';
+import { terminalActivityService } from '../services/terminal-activity.service.js';
 import { getDatabase } from '../db/connection.js';
 import { CONFIG } from '../config/index.js';
 
@@ -79,6 +80,10 @@ export function initWebSocketServer(server: Server): WebSocketServer {
   // Note: ptyService is now a thin wrapper around terminalManager, so we only
   // need to listen to terminalManager events to avoid duplicate broadcasts
   terminalManager.on('data', (instanceId: string, data: string) => {
+    // DISABLED: Terminal activity tracking is not currently being used
+    // terminalActivityService.recordActivity(instanceId);
+    void terminalActivityService.recordActivity(instanceId); // no-op stub
+
     // Debug: Log sync frames and potential blank line sources
     const DEBUG_ANIMATION = process.env.DEBUG_ANIMATION === '1';
     if (DEBUG_ANIMATION) {
@@ -138,9 +143,12 @@ export function initWebSocketServer(server: Server): WebSocketServer {
       type: 'instance:closed',
       instanceId,
     });
-    // Clean up CWD tracking and port forwards
+    // Clean up CWD tracking, port forwards, and activity tracking
     lastKnownCwds.delete(instanceId);
     portForwardService.closeInstanceForwards(instanceId);
+    // DISABLED: Terminal activity tracking is not currently being used
+    // terminalActivityService.clearInstance(instanceId);
+    void terminalActivityService.clearInstance(instanceId); // no-op stub
   });
 
   // Don't start polling immediately - wait for first subscriber

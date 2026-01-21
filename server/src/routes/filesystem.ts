@@ -1,5 +1,7 @@
 import { Router } from 'express';
+import express from 'express';
 import fs from 'fs';
+import fsPromises from 'fs/promises';
 import path from 'path';
 import os from 'os';
 import { exec } from 'child_process';
@@ -8,6 +10,35 @@ import type { DirectoryListResponse, HomePathResponse, ClaudeCliStatus } from '@
 
 const execAsync = promisify(exec);
 const router = Router();
+
+// POST /api/filesystem/upload - Save dropped file and return path
+router.post('/upload', express.raw({ type: '*/*', limit: '50mb' }), async (req, res) => {
+  try {
+    const filename = req.headers['x-filename'] as string;
+    if (!filename) {
+      return res.status(400).json({ success: false, error: 'Missing X-Filename header' });
+    }
+
+    // Sanitize filename to prevent path traversal
+    const sanitizedFilename = path.basename(filename);
+    const uploadDir = path.join(os.tmpdir(), 'yojimbo-uploads');
+
+    // Create upload dir if not exists
+    await fsPromises.mkdir(uploadDir, { recursive: true });
+
+    // Generate unique filename to avoid collisions
+    const uniqueName = `${Date.now()}-${sanitizedFilename}`;
+    const filePath = path.join(uploadDir, uniqueName);
+
+    // Write file
+    await fsPromises.writeFile(filePath, req.body);
+
+    res.json({ success: true, data: { path: filePath } });
+  } catch (error) {
+    console.error('Error uploading file:', error);
+    res.status(500).json({ success: false, error: 'Failed to upload file' });
+  }
+});
 
 // Expand ~ to home directory
 function expandPath(p: string): string {

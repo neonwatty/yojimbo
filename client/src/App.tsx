@@ -32,12 +32,14 @@ function App() {
     showCommandPalette,
     showLocalKeychainModal,
     localKeychainError,
+    queueModeActive,
     setShowShortcutsModal,
     setShowSettingsModal,
     setShowNewInstanceModal,
     setShowCommandPalette,
     setShowLocalKeychainModal,
     setShowTasksPanel,
+    setQueueModeActive,
     toggleLeftSidebar,
     toggleEditorPanel,
     toggleMockupsPanel,
@@ -86,7 +88,18 @@ function App() {
         case 'home': navigate('/'); break;
         case 'instances': navigate('/instances'); break;
         case 'history': navigate('/history'); break;
-        case 'queue': navigate('/queue'); break;
+        case 'queue':
+          // Toggle queue mode on/off
+          if (queueModeActive) {
+            setQueueModeActive(false);
+            // If on /queue page, navigate to instances; otherwise stay on current page
+            if (location.pathname === '/queue') {
+              navigate('/instances');
+            }
+          } else {
+            navigate('/queue');
+          }
+          break;
       }
     },
   });
@@ -161,7 +174,7 @@ function App() {
         return;
       }
 
-      // Escape: Close modals or go back
+      // Escape: Close modals, exit queue mode, or go back
       if (e.key === 'Escape') {
         if (showCommandPalette) {
           setShowCommandPalette(false);
@@ -177,6 +190,15 @@ function App() {
         }
         if (showSettingsModal) {
           setShowSettingsModal(false);
+          return;
+        }
+        // Exit queue mode if active
+        if (queueModeActive) {
+          setQueueModeActive(false);
+          // If on /queue page, navigate to instances
+          if (window.location.pathname === '/queue') {
+            navigate('/instances');
+          }
           return;
         }
         // Navigate back to instances list
@@ -195,6 +217,7 @@ function App() {
     showSettingsModal,
     showNewInstanceModal,
     showCommandPalette,
+    queueModeActive,
     toggleLeftSidebar,
     toggleEditorPanel,
     toggleMockupsPanel,
@@ -203,6 +226,7 @@ function App() {
     setShowSettingsModal,
     setShowNewInstanceModal,
     setShowCommandPalette,
+    setQueueModeActive,
   ]);
 
   // Mobile layout - simplified full-screen terminal with gesture-based navigation

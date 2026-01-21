@@ -23,6 +23,16 @@ class LocalStatusPollerService {
   private pollInterval: NodeJS.Timeout | null = null;
   private readonly POLL_INTERVAL_MS = 15000; // 15 seconds - faster detection
   private readonly ACTIVITY_THRESHOLD_SECONDS = 60; // Consider "working" if activity within 60s
+  private readonly DEBUG = process.env.DEBUG_STATUS_POLLER === '1';
+
+  /**
+   * Debug log helper - only logs if DEBUG_STATUS_POLLER=1
+   */
+  private debugLog(message: string, data?: Record<string, unknown>): void {
+    if (this.DEBUG) {
+      console.log(`[StatusPoller] ${message}`, data ? JSON.stringify(data, null, 2) : '');
+    }
+  }
 
   /**
    * Start the polling service
@@ -115,7 +125,7 @@ class LocalStatusPollerService {
    * Check Claude Code status by examining local session files
    * Returns 'working' if recent activity (within threshold), 'idle' otherwise
    */
-  checkLocalClaudeStatus(workingDir: string, instanceName?: string): { status: InstanceStatus; ageSeconds?: number; sessionDir: string } {
+  checkLocalClaudeStatus(workingDir: string, instanceName?: string): { status: InstanceStatus; ageSeconds?: number; sessionDir: string; filesFound?: string[] } {
     // Expand ~ to home directory
     const expandedDir = workingDir.replace(/^~/, os.homedir());
 
@@ -125,6 +135,15 @@ class LocalStatusPollerService {
 
     // Claude session directory
     const sessionDir = path.join(os.homedir(), '.claude', 'projects', encodedDir);
+
+    this.debugLog('Checking status', {
+      instanceName,
+      workingDir,
+      expandedDir,
+      encodedDir,
+      sessionDir,
+      sessionDirExists: fs.existsSync(sessionDir),
+    });
 
     // Check if session directory exists
     if (!fs.existsSync(sessionDir)) {
@@ -151,6 +170,16 @@ class LocalStatusPollerService {
         }))
         .sort((a, b) => b.mtime - a.mtime);
 
+      this.debugLog('Found session files', {
+        instanceName,
+        sessionDir,
+        fileCount: files.length,
+        files: files.slice(0, 5).map(f => ({
+          name: f.name,
+          ageSeconds: ((Date.now() - f.mtime) / 1000).toFixed(1),
+        })),
+      });
+
       if (files.length === 0) {
         if (instanceName) {
           logFileActivityCheck({
@@ -171,6 +200,14 @@ class LocalStatusPollerService {
       // If file was modified within threshold, consider it working
       const result: InstanceStatus = ageSeconds <= this.ACTIVITY_THRESHOLD_SECONDS ? 'working' : 'idle';
 
+      this.debugLog('Status decision', {
+        instanceName,
+        latestFile: latestFile.name,
+        ageSeconds: ageSeconds.toFixed(1),
+        threshold: this.ACTIVITY_THRESHOLD_SECONDS,
+        result,
+      });
+
       if (instanceName) {
         logFileActivityCheck({
           instanceName,
@@ -182,7 +219,7 @@ class LocalStatusPollerService {
         });
       }
 
-      return { status: result, ageSeconds, sessionDir };
+      return { status: result, ageSeconds, sessionDir, filesFound: files.map(f => f.name) };
     } catch (error) {
       // If we can't read the directory, assume idle
       if (instanceName) {
@@ -219,6 +256,72 @@ class LocalStatusPollerService {
 
     // Log is already done in pollAllLocalInstances, this is just the DB update
     console.log(`📊 Local poll: ${instanceName} (${instanceId.slice(0, 8)}) DB updated: ${oldStatus} → ${newStatus}`);
+  }
+
+  /**
+   * Get debug info for a specific working directory
+   * Useful for troubleshooting status detection issues
+   */
+  getDebugInfo(workingDir: string): {
+    workingDir: string;
+    expandedDir: string;
+    encodedDir: string;
+    sessionDir: string;
+    sessionDirExists: boolean;
+    files: { name: string; ageSeconds: number; mtime: string }[];
+    status: InstanceStatus;
+    ageSeconds?: number;
+    threshold: number;
+  } {
+    const expandedDir = workingDir.replace(/^~/, os.homedir());
+    const encodedDir = expandedDir.replace(/\//g, '-');
+    const sessionDir = path.join(os.homedir(), '.claude', 'projects', encodedDir);
+    const sessionDirExists = fs.existsSync(sessionDir);
+
+    let files: { name: string; ageSeconds: number; mtime: string }[] = [];
+    let status: InstanceStatus = 'idle';
+    let ageSeconds: number | undefined;
+
+    if (sessionDirExists) {
+      try {
+        const allFiles = fs.readdirSync(sessionDir)
+          .filter(f => f.endsWith('.jsonl'))
+          .map(f => {
+            const stat = fs.statSync(path.join(sessionDir, f));
+            return {
+              name: f,
+              mtime: stat.mtime,
+              mtimeMs: stat.mtimeMs,
+            };
+          })
+          .sort((a, b) => b.mtimeMs - a.mtimeMs);
+
+        files = allFiles.map(f => ({
+          name: f.name,
+          ageSeconds: (Date.now() - f.mtimeMs) / 1000,
+          mtime: f.mtime.toISOString(),
+        }));
+
+        if (allFiles.length > 0) {
+          ageSeconds = (Date.now() - allFiles[0].mtimeMs) / 1000;
+          status = ageSeconds <= this.ACTIVITY_THRESHOLD_SECONDS ? 'working' : 'idle';
+        }
+      } catch {
+        // Ignore errors
+      }
+    }
+
+    return {
+      workingDir,
+      expandedDir,
+      encodedDir,
+      sessionDir,
+      sessionDirExists,
+      files,
+      status,
+      ageSeconds,
+      threshold: this.ACTIVITY_THRESHOLD_SECONDS,
+    };
   }
 }
 

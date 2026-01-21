@@ -48,6 +48,8 @@ export default function Header() {
   const unreadCount = useFeedStore((state) => state.stats.unread);
   const showTasksPanel = useUIStore((state) => state.showTasksPanel);
   const setShowTasksPanel = useUIStore((state) => state.setShowTasksPanel);
+  const queueModeActive = useUIStore((state) => state.queueModeActive);
+  const setQueueModeActive = useUIStore((state) => state.setQueueModeActive);
   const pendingTaskCount = useTasksStore((state) => state.stats.captured + state.stats.inProgress);
 
   // Close summary menu when clicking outside
@@ -199,7 +201,6 @@ export default function Header() {
 
   const isHistoryView = location.pathname === '/history';
   const isActivityView = location.pathname === '/activity';
-  const isQueueView = location.pathname === '/queue';
   const idleCount = instances.filter((i) => i.status === 'idle').length;
 
   return (
@@ -299,16 +300,23 @@ export default function Header() {
         </Tooltip>
 
         {/* Queue Button */}
-        <Tooltip text={isQueueView ? 'Exit queue mode' : 'Review idle instances (Q)'} position="bottom">
+        <Tooltip text={queueModeActive ? 'Exit queue mode (Q)' : 'Review idle instances (Q)'} position="bottom">
           <button
-            onClick={() => navigate(isQueueView ? '/instances' : '/queue')}
+            onClick={() => {
+              if (queueModeActive) {
+                setQueueModeActive(false);
+                navigate('/instances');
+              } else {
+                navigate('/queue');
+              }
+            }}
             className={`relative px-2 py-1 rounded text-xs transition-colors
-              ${isQueueView
+              ${queueModeActive
                 ? 'bg-frost-4/30 text-frost-2 border border-frost-4/50'
                 : 'text-theme-dim hover:text-theme-primary hover:bg-surface-700'}`}
           >
             Queue
-            {idleCount > 0 && !isQueueView && (
+            {idleCount > 0 && (
               <span className="absolute -top-0.5 -right-0.5 min-w-[14px] h-[14px] flex items-center justify-center text-[10px] font-bold bg-state-awaiting text-surface-900 rounded-full">
                 {idleCount > 99 ? '99+' : idleCount}
               </span>

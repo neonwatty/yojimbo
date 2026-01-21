@@ -234,6 +234,12 @@ export function useTerminal(options: UseTerminalOptions = {}) {
     fitAddonRef.current?.fit();
   }, []);
 
+  const refresh = useCallback(() => {
+    if (terminalRef.current) {
+      terminalRef.current.refresh(0, terminalRef.current.rows - 1);
+    }
+  }, []);
+
   const dispose = useCallback(() => {
     resizeObserverRef.current?.disconnect();
     terminalRef.current?.dispose();
@@ -262,6 +268,7 @@ export function useTerminal(options: UseTerminalOptions = {}) {
     clear,
     focus,
     fit,
+    refresh,
     dispose,
     terminal: terminalRef.current,
   };

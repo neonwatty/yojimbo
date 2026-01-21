@@ -358,5 +358,99 @@ describe('useTerminal', () => {
 
       expect(mockClear).toHaveBeenCalled();
     });
+
+    it('provides fit function that fits terminal to container', () => {
+      const { result } = renderHook(() => useTerminal());
+
+      act(() => {
+        result.current.initTerminal(mockContainer);
+      });
+
+      mockFit.mockClear();
+
+      act(() => {
+        result.current.fit();
+      });
+
+      expect(mockFit).toHaveBeenCalled();
+    });
+  });
+
+  describe('refresh method (terminal rendering fix)', () => {
+    it('provides refresh function in hook return value', () => {
+      const { result } = renderHook(() => useTerminal());
+
+      expect(typeof result.current.refresh).toBe('function');
+    });
+
+    it('refresh calls terminal.refresh with correct arguments to refresh all visible lines', () => {
+      const { result } = renderHook(() => useTerminal());
+
+      act(() => {
+        result.current.initTerminal(mockContainer);
+      });
+
+      mockRefresh.mockClear();
+
+      act(() => {
+        result.current.refresh();
+      });
+
+      // refresh(0, rows - 1) refreshes all visible lines
+      // rows = 24, so it should call refresh(0, 23)
+      expect(mockRefresh).toHaveBeenCalledWith(0, 23);
+    });
+
+    it('refresh does nothing if terminal is not initialized', () => {
+      const { result } = renderHook(() => useTerminal());
+
+      // Call refresh without initializing terminal
+      act(() => {
+        result.current.refresh();
+      });
+
+      // Should not throw and should not call refresh
+      expect(mockRefresh).not.toHaveBeenCalled();
+    });
+
+    it('refresh can be called multiple times', () => {
+      const { result } = renderHook(() => useTerminal());
+
+      act(() => {
+        result.current.initTerminal(mockContainer);
+      });
+
+      mockRefresh.mockClear();
+
+      act(() => {
+        result.current.refresh();
+        result.current.refresh();
+        result.current.refresh();
+      });
+
+      // Should be callable multiple times (important for the queue mode fix)
+      expect(mockRefresh).toHaveBeenCalledTimes(3);
+    });
+
+    it('refresh is idempotent after dispose', () => {
+      const { result } = renderHook(() => useTerminal());
+
+      act(() => {
+        result.current.initTerminal(mockContainer);
+      });
+
+      act(() => {
+        result.current.dispose();
+      });
+
+      mockRefresh.mockClear();
+
+      // Should not throw when called after dispose
+      act(() => {
+        result.current.refresh();
+      });
+
+      expect(mockRefresh).not.toHaveBeenCalled();
+    });
   });
 });

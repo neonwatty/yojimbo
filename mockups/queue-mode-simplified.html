@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Yojimbo - Simplified Queue Mode Mockup</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* Nord-inspired color system */
+    :root {
+      --surface-900: #2e3440;
+      --surface-800: #3b4252;
+      --surface-700: #434c5e;
+      --surface-600: #4c566a;
+      --surface-500: #5e6779;
+      --text-primary: #eceff4;
+      --text-secondary: #e5e9f0;
+      --text-muted: #d8dee9;
+      --text-dim: #7b88a1;
+      --accent: #d08770;
+      --accent-bright: #ebcb8b;
+      --frost-1: #8fbcbb;
+      --frost-2: #88c0d0;
+      --frost-3: #81a1c1;
+      --frost-4: #5e81ac;
+      --state-working: #a3be8c;
+      --state-awaiting: #ebcb8b;
+      --state-idle: #7b88a1;
+      --state-error: #bf616a;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: 'JetBrains Mono', monospace;
+      background: var(--surface-900);
+      color: var(--text-primary);
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+    }
+
+    .screen { display: none; min-height: 100vh; }
+    .screen.active { display: flex; flex-direction: column; }
+
+    /* Custom colors */
+    .bg-surface-900 { background-color: var(--surface-900); }
+    .bg-surface-800 { background-color: var(--surface-800); }
+    .bg-surface-700 { background-color: var(--surface-700); }
+    .bg-surface-600 { background-color: var(--surface-600); }
+    .text-theme-primary { color: var(--text-primary); }
+    .text-theme-secondary { color: var(--text-secondary); }
+    .text-theme-muted { color: var(--text-muted); }
+    .text-theme-dim { color: var(--text-dim); }
+    .bg-accent { background-color: var(--accent); }
+    .text-accent { color: var(--accent); }
+    .border-surface-600 { border-color: var(--surface-600); }
+    .border-surface-500 { border-color: var(--surface-500); }
+    .bg-frost-2 { background-color: var(--frost-2); }
+    .text-frost-2 { color: var(--frost-2); }
+    .bg-frost-3 { background-color: var(--frost-3); }
+    .text-frost-3 { color: var(--frost-3); }
+    .bg-frost-4 { background-color: var(--frost-4); }
+    .text-frost-4 { color: var(--frost-4); }
+    .bg-state-working { background-color: var(--state-working); }
+    .text-state-working { color: var(--state-working); }
+    .bg-state-idle { background-color: var(--state-idle); }
+    .text-state-idle { color: var(--state-idle); }
+
+    /* Terminal styling */
+    .terminal {
+      background: #1a1d23;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      line-height: 1.5;
+      padding: 1rem;
+      color: var(--text-muted);
+      overflow: auto;
+      flex: 1;
+    }
+
+    .terminal .prompt {
+      color: var(--frost-2);
+    }
+
+    .terminal .command {
+      color: var(--text-primary);
+    }
+
+    .terminal .output {
+      color: var(--text-dim);
+    }
+
+    .terminal .success {
+      color: var(--state-working);
+    }
+
+    .terminal .cursor {
+      display: inline-block;
+      width: 8px;
+      height: 16px;
+      background: var(--text-primary);
+      animation: blink 1s step-end infinite;
+    }
+
+    @keyframes blink {
+      50% { opacity: 0; }
+    }
+
+    /* Queue overlay animation */
+    @keyframes slideDown {
+      from { transform: translateY(-100%); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    .queue-overlay {
+      animation: slideDown 0.3s ease-out;
+    }
+
+    /* Navigation bar */
+    .nav-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--surface-800);
+      border-top: 1px solid var(--surface-600);
+      padding: 0.5rem 1rem;
+      display: flex;
+      justify-content: space-around;
+      z-index: 50;
+    }
+
+    .nav-btn {
+      padding: 0.5rem 1rem;
+      border-radius: 0.5rem;
+      font-size: 0.75rem;
+      transition: all 0.2s;
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+    }
+
+    .nav-btn:hover {
+      background: var(--surface-700);
+      color: var(--text-primary);
+    }
+
+    .nav-btn.active {
+      background: var(--accent);
+      color: var(--surface-900);
+    }
+
+    /* Keyboard hint pulse */
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+  </style>
+</head>
+<body class="font-mono">
+  <!-- Navigation between screens -->
+  <div class="nav-bar flex-wrap gap-1">
+    <span class="text-[10px] text-theme-dim w-full text-center mb-1">Desktop</span>
+    <button class="nav-btn active" onclick="showScreen('queue-active')">Active</button>
+    <button class="nav-btn" onclick="showScreen('queue-navigating')">Navigate</button>
+    <button class="nav-btn" onclick="showScreen('queue-complete')">Complete</button>
+    <button class="nav-btn" onclick="showScreen('empty-state')">Empty</button>
+    <span class="text-surface-600 mx-1">│</span>
+    <span class="text-[10px] text-theme-dim">Mobile</span>
+    <button class="nav-btn" onclick="showScreen('mobile-active')">📱 Active</button>
+    <button class="nav-btn" onclick="showScreen('mobile-swipe')">📱 Swipe</button>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       SCREEN 1: QUEUE MODE ACTIVE - Instance View with Overlay
+       ═══════════════════════════════════════════════════════════════════════ -->
+  <div id="screen-queue-active" class="screen active">
+    <div class="flex flex-col h-screen pb-16">
+
+      <!-- Queue Mode Overlay (NEW - the key simplification) -->
+      <div class="queue-overlay bg-accent/10 border-b border-accent/30 px-4 py-2 flex-shrink-0">
+        <div class="flex items-center justify-between max-w-6xl mx-auto">
+          <div class="flex items-center gap-3">
+            <span class="px-2 py-0.5 bg-accent/20 text-accent text-xs font-medium rounded">
+              QUEUE MODE
+            </span>
+            <span class="text-theme-secondary text-sm">
+              Reviewing <span class="text-accent font-semibold">2</span> of <span class="text-accent font-semibold">5</span> idle instances
+            </span>
+          </div>
+          <div class="flex items-center gap-2">
+            <button class="flex items-center gap-1.5 px-3 py-1 bg-surface-700 hover:bg-surface-600 text-theme-secondary text-xs rounded transition-colors">
+              <span>←</span>
+              <span>Skip</span>
+            </button>
+            <button class="flex items-center gap-1.5 px-3 py-1 bg-accent hover:bg-accent/90 text-surface-900 text-xs font-medium rounded transition-colors">
+              <span>Next</span>
+              <span>→</span>
+            </button>
+            <span class="text-surface-600 mx-1">│</span>
+            <button class="flex items-center gap-1.5 px-3 py-1 text-theme-dim hover:text-theme-primary text-xs rounded transition-colors">
+              <span>Exit</span>
+              <span class="text-[10px]">Esc</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Instance Header (unchanged from normal view) -->
+      <div class="flex items-center justify-between px-3 h-10 bg-surface-800 border-b border-surface-600 flex-shrink-0">
+        <div class="flex items-center gap-2">
+          <button class="p-1 rounded hover:bg-surface-700 text-theme-dim hover:text-theme-primary transition-colors">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M15 18l-6-6 6-6" />
+            </svg>
+          </button>
+          <span class="text-surface-600">│</span>
+          <div class="w-2.5 h-2.5 rounded-full bg-state-idle"></div>
+          <span class="text-sm font-medium text-theme-primary">api-refactor</span>
+          <span class="px-1.5 py-0.5 bg-state-idle/20 text-state-idle text-[10px] rounded">Idle</span>
+        </div>
+        <div class="flex items-center gap-1">
+          <button class="flex items-center gap-1.5 px-2 py-1 rounded text-xs bg-frost-4/30 text-frost-2 border border-frost-4/50">
+            <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="4" y="4" width="16" height="16" rx="2" />
+              <path d="M4 12h16M12 4v16" />
+            </svg>
+            <span>Terminal</span>
+          </button>
+          <span class="text-surface-600 mx-1">│</span>
+          <span class="text-[10px] text-theme-dim font-mono">~/projects/api-service</span>
+        </div>
+      </div>
+
+      <!-- Terminal (REAL terminal - full functionality) -->
+      <div class="terminal flex-1">
+        <div class="mb-2">
+          <span class="prompt">~/projects/api-service</span>
+          <span class="command"> $ npm test</span>
+        </div>
+        <div class="output mb-2">
+> api-service@1.0.0 test
+> jest --coverage
+
+PASS  src/routes/users.test.ts
+PASS  src/routes/auth.test.ts
+PASS  src/middleware/auth.test.ts
+
+Test Suites: 3 passed, 3 total
+Tests:       24 passed, 24 total
+Coverage:    89.2%
+        </div>
+        <div class="success mb-4">✓ All tests passed!</div>
+        <div>
+          <span class="prompt">~/projects/api-service</span>
+          <span class="command"> $ </span><span class="cursor"></span>
+        </div>
+      </div>
+
+      <!-- Keyboard Hints Footer -->
+      <div class="bg-surface-800 border-t border-surface-600 px-4 py-2 flex-shrink-0">
+        <div class="flex justify-center gap-6 text-[10px] text-theme-dim">
+          <span>
+            <kbd class="px-1.5 py-0.5 bg-surface-600 rounded text-[9px]">←</kbd> Skip to next
+          </span>
+          <span>
+            <kbd class="px-1.5 py-0.5 bg-surface-600 rounded text-[9px]">→</kbd> Go to next
+          </span>
+          <span>
+            <kbd class="px-1.5 py-0.5 bg-surface-600 rounded text-[9px]">Esc</kbd> Exit queue mode
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       SCREEN 2: NAVIGATING - Just switched to next instance
+       ═══════════════════════════════════════════════════════════════════════ -->
+  <div id="screen-queue-navigating" class="screen">
+    <div class="flex flex-col h-screen pb-16">
+
+      <!-- Queue Mode Overlay - Updated count -->
+      <div class="queue-overlay bg-accent/10 border-b border-accent/30 px-4 py-2 flex-shrink-0">
+        <div class="flex items-center justify-between max-w-6xl mx-auto">
+          <div class="flex items-center gap-3">
+            <span class="px-2 py-0.5 bg-accent/20 text-accent text-xs font-medium rounded">
+              QUEUE MODE
+            </span>
+            <span class="text-theme-secondary text-sm">
+              Reviewing <span class="text-accent font-semibold">3</span> of <span class="text-accent font-semibold">5</span> idle instances
+            </span>
+          </div>
+          <div class="flex items-center gap-2">
+            <button class="flex items-center gap-1.5 px-3 py-1 bg-surface-700 hover:bg-surface-600 text-theme-secondary text-xs rounded transition-colors">
+              <span>←</span>
+              <span>Skip</span>
+            </button>
+            <button class="flex items-center gap-1.5 px-3 py-1 bg-accent hover:bg-accent/90 text-surface-900 text-xs font-medium rounded transition-colors">
+              <span>Next</span>
+              <span>→</span>
+            </button>
+            <span class="text-surface-600 mx-1">│</span>
+            <button class="flex items-center gap-1.5 px-3 py-1 text-theme-dim hover:text-theme-primary text-xs rounded transition-colors">
+              <span>Exit</span>
+              <span class="text-[10px]">Esc</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Different instance header -->
+      <div class="flex items-center justify-between px-3 h-10 bg-surface-800 border-b border-surface-600 flex-shrink-0">
+        <div class="flex items-center gap-2">
+          <button class="p-1 rounded hover:bg-surface-700 text-theme-dim hover:text-theme-primary transition-colors">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M15 18l-6-6 6-6" />
+            </svg>
+          </button>
+          <span class="text-surface-600">│</span>
+          <div class="w-2.5 h-2.5 rounded-full bg-state-idle"></div>
+          <span class="text-sm font-medium text-theme-primary">yojimbo-frontend</span>
+          <span class="px-1.5 py-0.5 bg-state-idle/20 text-state-idle text-[10px] rounded">Idle</span>
+        </div>
+        <div class="flex items-center gap-1">
+          <button class="flex items-center gap-1.5 px-2 py-1 rounded text-xs bg-frost-4/30 text-frost-2 border border-frost-4/50">
+            <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="4" y="4" width="16" height="16" rx="2" />
+              <path d="M4 12h16M12 4v16" />
+            </svg>
+            <span>Terminal</span>
+          </button>
+          <span class="text-surface-600 mx-1">│</span>
+          <span class="text-[10px] text-theme-dim font-mono">~/Desktop/yojimbo-dev/client</span>
+        </div>
+      </div>
+
+      <!-- Terminal with different content -->
+      <div class="terminal flex-1">
+        <div class="mb-2">
+          <span class="prompt">~/Desktop/yojimbo-dev/client</span>
+          <span class="command"> $ npm run build</span>
+        </div>
+        <div class="output mb-2">
+> @cc-orchestrator/client@0.3.0 build
+> tsc -b && vite build
+
+vite v7.3.0 building for production...
+✓ 1247 modules transformed.
+dist/index.html                  0.46 kB │ gzip:  0.30 kB
+dist/assets/index-DZMsZ.css     42.16 kB │ gzip: 10.23 kB
+dist/assets/index-Fk3zA.js     384.72 kB │ gzip: 98.41 kB
+        </div>
+        <div class="success mb-4">✓ built in 2.34s</div>
+        <div>
+          <span class="prompt">~/Desktop/yojimbo-dev/client</span>
+          <span class="command"> $ </span><span class="cursor"></span>
+        </div>
+      </div>
+
+      <!-- Keyboard Hints Footer -->
+      <div class="bg-surface-800 border-t border-surface-600 px-4 py-2 flex-shrink-0">
+        <div class="flex justify-center gap-6 text-[10px] text-theme-dim">
+          <span>
+            <kbd class="px-1.5 py-0.5 bg-surface-600 rounded text-[9px]">←</kbd> Skip to next
+          </span>
+          <span>
+            <kbd class="px-1.5 py-0.5 bg-surface-600 rounded text-[9px]">→</kbd> Go to next
+          </span>
+          <span>
+            <kbd class="px-1.5 py-0.5 bg-surface-600 rounded text-[9px]">Esc</kbd> Exit queue mode
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       SCREEN 3: QUEUE COMPLETE
+       ═══════════════════════════════════════════════════════════════════════ -->
+  <div id="screen-queue-complete" class="screen">
+    <div class="flex flex-col h-screen pb-16">
+
+      <!-- Queue Mode Overlay - Complete state -->
+      <div class="queue-overlay bg-state-working/10 border-b border-state-working/30 px-4 py-2 flex-shrink-0">
+        <div class="flex items-center justify-between max-w-6xl mx-auto">
+          <div class="flex items-center gap-3">
+            <span class="px-2 py-0.5 bg-state-working/20 text-state-working text-xs font-medium rounded">
+              ✓ COMPLETE
+            </span>
+            <span class="text-theme-secondary text-sm">
+              Reviewed all <span class="text-state-working font-semibold">5</span> idle instances
+            </span>
+          </div>
+          <div class="flex items-center gap-2">
+            <button class="flex items-center gap-1.5 px-3 py-1 bg-surface-700 hover:bg-surface-600 text-theme-secondary text-xs rounded transition-colors">
+              <span>↻</span>
+              <span>Start Over</span>
+            </button>
+            <button class="flex items-center gap-1.5 px-3 py-1 bg-state-working hover:bg-state-working/90 text-surface-900 text-xs font-medium rounded transition-colors">
+              <span>Done</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Last instance header -->
+      <div class="flex items-center justify-between px-3 h-10 bg-surface-800 border-b border-surface-600 flex-shrink-0">
+        <div class="flex items-center gap-2">
+          <button class="p-1 rounded hover:bg-surface-700 text-theme-dim hover:text-theme-primary transition-colors">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M15 18l-6-6 6-6" />
+            </svg>
+          </button>
+          <span class="text-surface-600">│</span>
+          <div class="w-2.5 h-2.5 rounded-full bg-state-working"></div>
+          <span class="text-sm font-medium text-theme-primary">docs-update</span>
+          <span class="px-1.5 py-0.5 bg-state-working/20 text-state-working text-[10px] rounded">Working</span>
+        </div>
+        <div class="flex items-center gap-1">
+          <span class="text-[10px] text-theme-dim font-mono">~/projects/docs</span>
+        </div>
+      </div>
+
+      <!-- Terminal -->
+      <div class="terminal flex-1">
+        <div class="mb-2">
+          <span class="prompt">~/projects/docs</span>
+          <span class="command"> $ Update the API documentation with the new endpoints</span>
+        </div>
+        <div class="output mb-2 text-frost-2">
+● I'll update the API documentation with the new endpoints. Let me first check the
+  current documentation structure and identify the new endpoints that need to be added.
+
+  Reading: docs/api/endpoints.md
+  Reading: src/routes/index.ts
+
+  Found 3 new endpoints that need documentation:
+  - POST /api/tasks/smart
+  - GET /api/debug/status/:instanceId
+  - GET /api/debug/all-instances-status
+
+  Adding documentation...
+        </div>
+      </div>
+
+      <!-- Keyboard Hints Footer -->
+      <div class="bg-surface-800 border-t border-surface-600 px-4 py-2 flex-shrink-0">
+        <div class="flex justify-center gap-6 text-[10px] text-theme-dim">
+          <span>
+            <kbd class="px-1.5 py-0.5 bg-surface-600 rounded text-[9px]">Esc</kbd> Exit queue mode
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       SCREEN 4: EMPTY STATE - No idle instances
+       ═══════════════════════════════════════════════════════════════════════ -->
+  <div id="screen-empty-state" class="screen">
+    <div class="flex flex-col items-center justify-center h-screen pb-16 p-6">
+      <div class="text-center max-w-sm">
+        <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-surface-700 flex items-center justify-center">
+          <svg class="w-8 h-8 text-state-working" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+          </svg>
+        </div>
+        <h2 class="text-lg font-medium text-theme-primary mb-2">
+          All caught up!
+        </h2>
+        <p class="text-sm text-theme-dim mb-6">
+          No idle instances need attention right now. All your Claude Code instances are either working or have been reviewed.
+        </p>
+        <button class="px-4 py-2 bg-frost-4 text-white rounded-lg hover:bg-frost-3 transition-colors">
+          Back to Instances
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       SCREEN 5: MOBILE - Queue Mode Active
+       ═══════════════════════════════════════════════════════════════════════ -->
+  <div id="screen-mobile-active" class="screen">
+    <div class="flex flex-col h-screen pb-16 max-w-md mx-auto">
+
+      <!-- Mobile Queue Mode Overlay - Compact with swipe hints -->
+      <div class="queue-overlay bg-accent/10 border-b border-accent/30 px-3 py-2 flex-shrink-0">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-accent"></span>
+            <span class="text-theme-secondary text-xs">
+              <span class="text-accent font-semibold">2</span>/<span class="text-accent font-semibold">5</span> idle
+            </span>
+          </div>
+          <div class="flex items-center gap-2">
+            <button class="px-2 py-1 text-theme-dim text-xs">
+              ✕
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mobile Instance Header - Minimal -->
+      <div class="flex items-center justify-between px-3 py-2 bg-surface-800 border-b border-surface-600 flex-shrink-0">
+        <div class="flex items-center gap-2">
+          <div class="w-2 h-2 rounded-full bg-state-idle"></div>
+          <span class="text-sm font-medium text-theme-primary">api-refactor</span>
+          <span class="px-1 py-0.5 bg-state-idle/20 text-state-idle text-[9px] rounded">Idle</span>
+        </div>
+      </div>
+
+      <!-- Mobile Terminal -->
+      <div class="terminal flex-1 text-xs">
+        <div class="mb-2">
+          <span class="prompt text-[10px]">~/api-service</span>
+          <span class="command"> $ npm test</span>
+        </div>
+        <div class="output mb-2 text-[11px]">
+> jest --coverage
+
+PASS  src/routes/users.test.ts
+PASS  src/routes/auth.test.ts
+
+Tests: 24 passed
+Coverage: 89.2%
+        </div>
+        <div class="success mb-4 text-[11px]">✓ All tests passed!</div>
+        <div>
+          <span class="prompt text-[10px]">~/api-service</span>
+          <span class="command"> $ </span><span class="cursor"></span>
+        </div>
+      </div>
+
+      <!-- Mobile Swipe Gesture Hints -->
+      <div class="bg-surface-800 border-t border-surface-600 px-4 py-3 flex-shrink-0">
+        <div class="flex justify-between items-center text-xs text-theme-dim">
+          <div class="flex items-center gap-2">
+            <span class="text-lg">👈</span>
+            <span>Swipe left<br/><span class="text-accent">Skip</span></span>
+          </div>
+          <div class="w-px h-8 bg-surface-600"></div>
+          <div class="flex items-center gap-2">
+            <span>Swipe right<br/><span class="text-accent">Next</span></span>
+            <span class="text-lg">👉</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       SCREEN 6: MOBILE - Mid-Swipe Animation
+       ═══════════════════════════════════════════════════════════════════════ -->
+  <div id="screen-mobile-swipe" class="screen">
+    <div class="flex flex-col h-screen pb-16 max-w-md mx-auto overflow-hidden">
+
+      <!-- Mobile Queue Mode Overlay -->
+      <div class="queue-overlay bg-accent/10 border-b border-accent/30 px-3 py-2 flex-shrink-0">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-accent"></span>
+            <span class="text-theme-secondary text-xs">
+              <span class="text-accent font-semibold">2</span>/<span class="text-accent font-semibold">5</span> idle
+            </span>
+          </div>
+          <div class="flex items-center gap-2">
+            <button class="px-2 py-1 text-theme-dim text-xs">
+              ✕
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Swiping indicator -->
+      <div class="bg-accent/20 px-3 py-1 text-center">
+        <span class="text-accent text-xs">→ Swiping to next instance...</span>
+      </div>
+
+      <!-- Card Stack Visual - showing swipe in progress -->
+      <div class="flex-1 relative overflow-hidden p-4">
+        <!-- Current card being swiped (transforms right) -->
+        <div class="absolute inset-4 bg-surface-700 rounded-xl border border-surface-600 shadow-lg transform translate-x-8 rotate-3 opacity-90">
+          <div class="p-4">
+            <div class="flex items-center gap-2 mb-3">
+              <div class="w-2.5 h-2.5 rounded-full bg-state-idle"></div>
+              <span class="font-medium text-theme-primary">api-refactor</span>
+            </div>
+            <div class="bg-surface-800 rounded-lg p-3 h-40 overflow-hidden">
+              <div class="text-[10px] text-frost-2 font-mono">~/api-service $</div>
+              <div class="text-[10px] text-theme-dim mt-1">npm test</div>
+              <div class="text-[10px] text-state-working mt-2">✓ Tests passed</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Next card (peeking from behind) -->
+        <div class="absolute inset-4 bg-surface-700 rounded-xl border border-surface-600 shadow-md -translate-x-2 scale-95 opacity-80">
+          <div class="p-4">
+            <div class="flex items-center gap-2 mb-3">
+              <div class="w-2.5 h-2.5 rounded-full bg-state-idle"></div>
+              <span class="font-medium text-theme-primary">yojimbo-frontend</span>
+            </div>
+            <div class="bg-surface-800 rounded-lg p-3 h-40 overflow-hidden">
+              <div class="text-[10px] text-frost-2 font-mono">~/yojimbo-dev/client $</div>
+              <div class="text-[10px] text-theme-dim mt-1">npm run build</div>
+              <div class="text-[10px] text-state-working mt-2">✓ Built in 2.34s</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mobile Footer -->
+      <div class="bg-surface-800 border-t border-surface-600 px-4 py-3 flex-shrink-0">
+        <div class="flex justify-center">
+          <div class="flex gap-1">
+            <div class="w-2 h-2 rounded-full bg-surface-500"></div>
+            <div class="w-2 h-2 rounded-full bg-accent"></div>
+            <div class="w-2 h-2 rounded-full bg-surface-500"></div>
+            <div class="w-2 h-2 rounded-full bg-surface-500"></div>
+            <div class="w-2 h-2 rounded-full bg-surface-500"></div>
+          </div>
+        </div>
+        <p class="text-center text-[10px] text-theme-dim mt-2">
+          Release to go to next instance
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showScreen(screenId) {
+      document.querySelectorAll('.screen').forEach(screen => {
+        screen.classList.remove('active');
+      });
+      document.getElementById('screen-' + screenId).classList.add('active');
+
+      document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      event.target.classList.add('active');
+    }
+
+    // Keyboard navigation demo
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight') {
+        // Simulate going to next
+        const current = document.querySelector('.screen.active');
+        if (current.id === 'screen-queue-active') {
+          showScreen('queue-navigating');
+          document.querySelectorAll('.nav-btn')[1].classList.add('active');
+          document.querySelectorAll('.nav-btn')[0].classList.remove('active');
+        }
+      }
+      if (e.key === 'Escape') {
+        // Would exit queue mode - show empty for demo
+        showScreen('empty-state');
+        document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.nav-btn')[3].classList.add('active');
+      }
+    });
+  </script>
+</body>
+</html>

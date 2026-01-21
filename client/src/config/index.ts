@@ -57,6 +57,15 @@ export function getWsUrl(): string {
 }
 
 /**
+ * Get the API base URL for connecting to the server.
+ * Uses window.location.hostname to work from any device on the network.
+ */
+export function getApiUrl(): string {
+  const protocol = window.location.protocol;
+  return `${protocol}//${window.location.hostname}:${config.serverPort}`;
+}
+
+/**
  * Get the full config object.
  */
 export function getConfig(): AppConfig {

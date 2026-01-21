@@ -34,6 +34,9 @@
     "server": {
       "entry": ["src/index.ts", "src/**/*.test.ts"],
       "project": ["src/**/*.ts"],
+      "ignore": [
+        "src/routes/debug.ts"
+      ],
       "vitest": {
         "config": ["vitest.config.ts"]
       },

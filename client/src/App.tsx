@@ -10,8 +10,10 @@ import MainLayout from './components/layout/MainLayout';
 import { MobileLayout } from './components/mobile';
 import HomePage from './pages/HomePage';
 import InstancesPage from './pages/InstancesPage';
-import HistoryPage from './pages/HistoryPage';
-import ActivityPage from './pages/ActivityPage';
+// History tab temporarily disabled
+// import HistoryPage from './pages/HistoryPage';
+// Activity tab temporarily disabled
+// import ActivityPage from './pages/ActivityPage';
 import QueuePage from './pages/QueuePage';
 import { ShortcutsModal, SettingsModal, NewInstanceModal } from './components/modals';
 import { LocalKeychainUnlockModal } from './components/modals/LocalKeychainUnlockModal';
@@ -87,7 +89,8 @@ function App() {
       switch (page) {
         case 'home': navigate('/'); break;
         case 'instances': navigate('/instances'); break;
-        case 'history': navigate('/history'); break;
+        // History tab temporarily disabled
+        // case 'history': navigate('/history'); break;
         case 'queue':
           // Toggle queue mode on/off
           if (queueModeActive) {
@@ -238,8 +241,10 @@ function App() {
             <Route path="/" element={<MobileLayout />} />
             <Route path="/instances" element={<MobileLayout />} />
             <Route path="/instances/:id" element={<MobileLayout />} />
-            <Route path="/history" element={<MobileLayout />} />
-            <Route path="/activity" element={<MobileLayout />} />
+            {/* History tab temporarily disabled */}
+            {/* <Route path="/history" element={<MobileLayout />} /> */}
+            {/* Activity tab temporarily disabled */}
+            {/* <Route path="/activity" element={<MobileLayout />} /> */}
             <Route path="/tasks" element={<MobileLayout />} />
             {/* Redirect other routes to instances on mobile */}
             <Route path="*" element={<Navigate to="/instances" replace />} />
@@ -265,8 +270,10 @@ function App() {
             <Route path="/" element={<HomePage />} />
             <Route path="/instances" element={<InstancesPage />} />
             <Route path="/instances/:id" element={<InstancesPage />} />
-            <Route path="/history" element={<HistoryPage />} />
-            <Route path="/activity" element={<ActivityPage />} />
+            {/* History tab temporarily disabled */}
+            {/* <Route path="/history" element={<HistoryPage />} /> */}
+            {/* Activity tab temporarily disabled */}
+            {/* <Route path="/activity" element={<ActivityPage />} /> */}
             <Route path="/queue" element={<QueuePage />} />
             {/* Catch-all: redirect unknown routes to home */}
             <Route path="*" element={<Navigate to="/" replace />} />

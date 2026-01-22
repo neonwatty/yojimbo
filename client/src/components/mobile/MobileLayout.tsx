@@ -12,8 +12,10 @@ import { ErrorBoundary } from '../common/ErrorBoundary';
 import { Icons } from '../common/Icons';
 import { MobileTextInput } from './MobileTextInput';
 import { MobileHomeView } from './MobileHomeView';
-import { MobileHistoryView } from './MobileHistoryView';
-import { MobileActivityView } from './MobileActivityView';
+// History tab temporarily disabled
+// import { MobileHistoryView } from './MobileHistoryView';
+// Activity tab temporarily disabled
+// import { MobileActivityView } from './MobileActivityView';
 import { MobileTasksView } from './MobileTasksView';
 import { KeychainUnlockModal } from '../modals/KeychainUnlockModal';
 import { generateShortName } from '../../utils/strings';
@@ -419,8 +421,10 @@ function SettingsDrawer({
   isConnected,
   onOpenSettings,
   onNavigateHome,
-  onNavigateHistory,
-  onNavigateActivity,
+  // History tab temporarily disabled
+  // onNavigateHistory,
+  // Activity tab temporarily disabled
+  // onNavigateActivity,
   onNavigateTasks,
   onUnlockKeychain,
   hasRemoteInstances,
@@ -437,8 +441,10 @@ function SettingsDrawer({
   isConnected: boolean;
   onOpenSettings: () => void;
   onNavigateHome: () => void;
-  onNavigateHistory: () => void;
-  onNavigateActivity: () => void;
+  // History tab temporarily disabled
+  // onNavigateHistory: () => void;
+  // Activity tab temporarily disabled
+  // onNavigateActivity: () => void;
   onNavigateTasks: () => void;
   onUnlockKeychain: () => void;
   hasRemoteInstances: boolean;
@@ -574,11 +580,11 @@ function SettingsDrawer({
             </div>
           )}
 
-          {/* Action buttons - 5 cols if no keychain, 6 cols with keychain */}
+          {/* Action buttons - 3 cols if no keychain, 4 cols with keychain (History and Activity temporarily disabled) */}
           {(() => {
             const showKeychain = currentInstance?.machineType === 'remote' || hasRemoteInstances;
             return (
-              <div className={`grid gap-2 mt-3 ${showKeychain ? 'grid-cols-6' : 'grid-cols-5'}`}>
+              <div className={`grid gap-2 mt-3 ${showKeychain ? 'grid-cols-4' : 'grid-cols-3'}`}>
                 {/* Home button */}
                 <button
                   onClick={() => {
@@ -591,8 +597,8 @@ function SettingsDrawer({
                   <span className="text-[10px] text-theme-primary">Home</span>
                 </button>
 
-                {/* History button */}
-                <button
+                {/* History button - temporarily disabled */}
+                {/* <button
                   onClick={() => {
                     onNavigateHistory();
                     onClose();
@@ -601,10 +607,10 @@ function SettingsDrawer({
                 >
                   <Icons.history />
                   <span className="text-[10px] text-theme-primary">History</span>
-                </button>
+                </button> */}
 
-                {/* Activity button */}
-                <button
+                {/* Activity button - temporarily disabled */}
+                {/* <button
                   onClick={() => {
                     onNavigateActivity();
                     onClose();
@@ -613,7 +619,7 @@ function SettingsDrawer({
                 >
                   <Icons.activity />
                   <span className="text-[10px] text-theme-primary">Activity</span>
-                </button>
+                </button> */}
 
                 {/* Tasks button */}
                 <button
@@ -845,10 +851,12 @@ export function MobileLayout() {
   const { id } = useParams();
   const { instances, setActiveInstanceId, removeInstance } = useInstancesStore();
 
-  // Check if we're on the home page, history page, activity page, or tasks page
+  // Check if we're on the home page or tasks page (history and activity temporarily disabled)
   const isHomePage = location.pathname === '/';
-  const isHistoryPage = location.pathname === '/history';
-  const isActivityPage = location.pathname === '/activity';
+  // History tab temporarily disabled
+  // const isHistoryPage = location.pathname === '/history';
+  // Activity tab temporarily disabled
+  // const isActivityPage = location.pathname === '/activity';
   const isTasksPage = location.pathname === '/tasks';
   const { setShowSettingsModal, openNewInstanceModal, isConnected } = useUIStore();
   const { isFullscreen, isStandalone, fullscreenSupported, isIOS, isIOSSafari, toggleFullscreen } = useMobileLayout();
@@ -967,8 +975,10 @@ export function MobileLayout() {
             isConnected={isConnected}
             onOpenSettings={() => setShowSettingsModal(true)}
             onNavigateHome={() => navigate('/')}
-            onNavigateHistory={() => navigate('/history')}
-            onNavigateActivity={() => navigate('/activity')}
+            // History tab temporarily disabled
+            // onNavigateHistory={() => navigate('/history')}
+            // Activity tab temporarily disabled
+            // onNavigateActivity={() => navigate('/activity')}
             onNavigateTasks={() => navigate('/tasks')}
             onUnlockKeychain={() => setShowKeychainModal(true)}
             hasRemoteInstances={instances.some(i => i.machineType === 'remote')}
@@ -1009,16 +1019,18 @@ export function MobileLayout() {
                 onBottomGesture={() => {}}
                 onViewAllInstances={() => {}} // In landscape, sidebar is always visible
               />
-            ) : isHistoryPage ? (
-              <MobileHistoryView
-                onTopGesture={() => {}}
-                onBottomGesture={() => {}}
-              />
-            ) : isActivityPage ? (
-              <MobileActivityView
-                onTopGesture={() => {}}
-                onBottomGesture={() => {}}
-              />
+            // History tab temporarily disabled
+            // ) : isHistoryPage ? (
+            //   <MobileHistoryView
+            //     onTopGesture={() => {}}
+            //     onBottomGesture={() => {}}
+            //   />
+            // Activity tab temporarily disabled
+            // ) : isActivityPage ? (
+            //   <MobileActivityView
+            //     onTopGesture={() => {}}
+            //     onBottomGesture={() => {}}
+            //   />
             ) : isTasksPage ? (
               <MobileTasksView
                 onTopGesture={() => {}}
@@ -1067,16 +1079,18 @@ export function MobileLayout() {
             onBottomGesture={() => setBottomDrawerOpen(true)}
             onViewAllInstances={() => setBottomDrawerOpen(true)}
           />
-        ) : isHistoryPage ? (
-          <MobileHistoryView
-            onTopGesture={() => setTopDrawerOpen(true)}
-            onBottomGesture={() => setBottomDrawerOpen(true)}
-          />
-        ) : isActivityPage ? (
-          <MobileActivityView
-            onTopGesture={() => setTopDrawerOpen(true)}
-            onBottomGesture={() => setBottomDrawerOpen(true)}
-          />
+        // History tab temporarily disabled
+        // ) : isHistoryPage ? (
+        //   <MobileHistoryView
+        //     onTopGesture={() => setTopDrawerOpen(true)}
+        //     onBottomGesture={() => setBottomDrawerOpen(true)}
+        //   />
+        // Activity tab temporarily disabled
+        // ) : isActivityPage ? (
+        //   <MobileActivityView
+        //     onTopGesture={() => setTopDrawerOpen(true)}
+        //     onBottomGesture={() => setBottomDrawerOpen(true)}
+        //   />
         ) : isTasksPage ? (
           <MobileTasksView
             onTopGesture={() => setTopDrawerOpen(true)}
@@ -1124,8 +1138,10 @@ export function MobileLayout() {
           isConnected={isConnected}
           onOpenSettings={() => setShowSettingsModal(true)}
           onNavigateHome={() => navigate('/')}
-          onNavigateHistory={() => navigate('/history')}
-          onNavigateActivity={() => navigate('/activity')}
+          // History tab temporarily disabled
+          // onNavigateHistory={() => navigate('/history')}
+          // Activity tab temporarily disabled
+          // onNavigateActivity={() => navigate('/activity')}
           onNavigateTasks={() => navigate('/tasks')}
           onUnlockKeychain={() => setShowKeychainModal(true)}
           hasRemoteInstances={instances.some(i => i.machineType === 'remote')}

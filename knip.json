@@ -14,7 +14,11 @@
         "src/components/plans/**",
         "src/components/mockups/**",
         "src/hooks/useFileWatcher.ts",
-        "src/store/fileChangesStore.ts"
+        "src/store/fileChangesStore.ts",
+        "src/pages/ActivityPage.tsx",
+        "src/components/mobile/MobileActivityView.tsx",
+        "src/pages/HistoryPage.tsx",
+        "src/components/mobile/MobileHistoryView.tsx"
       ],
       "vite": {
         "config": ["vite.config.ts"]

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback, forwardRef, useImperativeHandle } from 'react';
+import { useEffect, useRef, useState, forwardRef, useImperativeHandle } from 'react';
 import { useTerminal } from '../../hooks/useTerminal';
 import { useWebSocket } from '../../hooks/useWebSocket';
 import { getWsUrl, getApiUrl } from '../../config';
@@ -19,6 +19,7 @@ interface TerminalProps {
 export const Terminal = forwardRef<TerminalRef, TerminalProps>(
   ({ instanceId, theme = 'dark', onStatusChange }, ref) => {
     const containerRef = useRef<HTMLDivElement>(null);
+    const wrapperRef = useRef<HTMLDivElement>(null);
     const isSubscribedRef = useRef(false);
     const [isDragOver, setIsDragOver] = useState(false);
 
@@ -31,62 +32,74 @@ export const Terminal = forwardRef<TerminalRef, TerminalProps>(
       },
     });
 
-    const handleData = useCallback(
-      (data: string) => {
-        send('terminal:input', { instanceId, data });
-      },
-      [instanceId, send]
-    );
+    const handleData = (data: string) => {
+      send('terminal:input', { instanceId, data });
+    };
 
-    const handleResize = useCallback(
-      (cols: number, rows: number) => {
-        send('terminal:resize', { instanceId, cols, rows });
-      },
-      [instanceId, send]
-    );
+    const handleResize = (cols: number, rows: number) => {
+      send('terminal:resize', { instanceId, cols, rows });
+    };
 
-    // Drag and drop handlers for file path insertion
-    const handleDragOver = useCallback((e: React.DragEvent) => {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = 'copy';
-    }, []);
+    // Native DOM drag and drop handlers (bypasses React's synthetic event system)
+    useEffect(() => {
+      const wrapper = wrapperRef.current;
+      if (!wrapper) return;
 
-    const handleDragEnter = useCallback((e: React.DragEvent) => {
-      e.preventDefault();
-      setIsDragOver(true);
-    }, []);
+      let dragCounter = 0;
 
-    const handleDragLeave = useCallback((e: React.DragEvent) => {
-      e.preventDefault();
-      // Only set to false if we're leaving the container entirely
-      if (!containerRef.current?.contains(e.relatedTarget as Node)) {
-        setIsDragOver(false);
-      }
-    }, []);
-
-    const handleDrop = useCallback(
-      async (e: React.DragEvent) => {
+      const handleDragEnter = (e: DragEvent) => {
         e.preventDefault();
+        e.stopPropagation();
+        dragCounter++;
+        if (dragCounter === 1) {
+          setIsDragOver(true);
+        }
+      };
+
+      const handleDragOver = (e: DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (e.dataTransfer) {
+          e.dataTransfer.dropEffect = 'copy';
+        }
+      };
+
+      const handleDragLeave = (e: DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dragCounter--;
+        if (dragCounter === 0) {
+          setIsDragOver(false);
+        }
+      };
+
+      const handleDrop = async (e: DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dragCounter = 0;
         setIsDragOver(false);
 
-        const files = Array.from(e.dataTransfer.files);
+        const files = e.dataTransfer ? Array.from(e.dataTransfer.files) : [];
         if (files.length === 0) return;
 
         // Upload each file and paste paths
         for (const file of files) {
           try {
-            const response = await fetch(`${getApiUrl()}/api/filesystem/upload`, {
+            const url = `${getApiUrl()}/api/filesystem/upload`;
+
+            const response = await fetch(url, {
               method: 'POST',
-              headers: { 'X-Filename': file.name },
+              headers: { 'X-Filename': encodeURIComponent(file.name) },
               body: file,
             });
 
             if (!response.ok) {
-              console.error('Failed to upload file:', file.name);
+              console.error('Failed to upload file:', file.name, response.status);
               continue;
             }
 
             const result = await response.json();
+
             if (result.success && result.data?.path) {
               // Escape spaces in paths for shell compatibility
               const escapedPath = result.data.path.replace(/ /g, '\\ ');
@@ -97,9 +110,21 @@ export const Terminal = forwardRef<TerminalRef, TerminalProps>(
             console.error('Error uploading file:', file.name, error);
           }
         }
-      },
-      [instanceId, send]
-    );
+      };
+
+      // Use capture phase to intercept events before xterm.js can handle them
+      wrapper.addEventListener('dragenter', handleDragEnter, true);
+      wrapper.addEventListener('dragover', handleDragOver, true);
+      wrapper.addEventListener('dragleave', handleDragLeave, true);
+      wrapper.addEventListener('drop', handleDrop, true);
+
+      return () => {
+        wrapper.removeEventListener('dragenter', handleDragEnter, true);
+        wrapper.removeEventListener('dragover', handleDragOver, true);
+        wrapper.removeEventListener('dragleave', handleDragLeave, true);
+        wrapper.removeEventListener('drop', handleDrop, true);
+      };
+    }, [instanceId, send]);
 
     const { initTerminal, write, fit, focus, refresh } = useTerminal({
       onData: handleData,
@@ -183,17 +208,28 @@ export const Terminal = forwardRef<TerminalRef, TerminalProps>(
 
     return (
       <div
-        ref={containerRef}
-        className={`h-full w-full ${isDragOver ? 'ring-2 ring-accent ring-inset' : ''}`}
-        style={{
-          backgroundColor: theme === 'dark' ? '#292c33' : '#ffffff',
-          touchAction: 'pan-y',
-        }}
-        onDragOver={handleDragOver}
-        onDragEnter={handleDragEnter}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-      />
+        ref={wrapperRef}
+        className="relative h-full w-full"
+      >
+        <div
+          ref={containerRef}
+          className="h-full w-full"
+          style={{
+            backgroundColor: theme === 'dark' ? '#292c33' : '#ffffff',
+            touchAction: 'pan-y',
+          }}
+        />
+        {/* Overlay that appears during drag to show visual feedback */}
+        {isDragOver && (
+          <div
+            className="absolute inset-0 bg-accent/10 ring-2 ring-accent ring-inset flex items-center justify-center pointer-events-none"
+          >
+            <div className="text-accent font-medium">
+              Drop file to paste path
+            </div>
+          </div>
+        )}
+      </div>
     );
   }
 );

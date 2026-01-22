@@ -90,7 +90,7 @@ jobs:
           cache: 'npm'
       - run: npm ci
       - name: Install Playwright browsers
-        run: npx playwright install chromium --with-deps
+        run: npx playwright install chromium webkit --with-deps
         working-directory: client
       - name: Run E2E tests (shard ${{ matrix.shard }}/3)
         run: npx playwright test --shard=${{ matrix.shard }}/3

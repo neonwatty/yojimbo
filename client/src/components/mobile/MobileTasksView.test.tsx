@@ -140,12 +140,12 @@ describe('MobileTasksView', () => {
       });
     });
 
-    it('shows swipe hint when tasks exist', async () => {
+    it('shows action hint when tasks exist', async () => {
       await act(async () => {
         render(<MobileTasksView {...defaultProps} />);
       });
 
-      expect(screen.getByText('← Swipe for actions')).toBeInTheDocument();
+      expect(screen.getByText('Swipe or tap ⋮ for actions')).toBeInTheDocument();
     });
   });
 

@@ -280,10 +280,10 @@ export function MobileTasksView({ onTopGesture, onBottomGesture, onOpenNewInstan
           </div>
         )}
 
-        {/* Swipe hints */}
+        {/* Action hints */}
         {activeTasks.length > 0 && (
           <div className="mt-3 flex justify-center gap-6 text-[10px] text-theme-dim">
-            <span>← Swipe for actions</span>
+            <span>Swipe or tap ⋮ for actions</span>
           </div>
         )}
       </div>
@@ -334,6 +334,7 @@ function SwipeableTaskItem({
   getStatusIcon,
 }: SwipeableTaskItemProps) {
   const touchRef = useRef({ startX: 0, startY: 0, isHorizontal: false });
+  const [showMenu, setShowMenu] = useState(false);
   const ACTION_THRESHOLD = 80;
 
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -434,14 +435,69 @@ function SwipeableTaskItem({
             )}
           </div>
 
-          {/* Swipe indicator */}
+          {/* Action menu button (alternative to swipe) */}
           {!isRevealed && (
-            <div className="shrink-0 text-theme-dim">
-              <Icons.chevronLeft className="w-4 h-4" />
-            </div>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowMenu(!showMenu);
+              }}
+              className="shrink-0 p-1 -mr-1 text-theme-dim hover:text-theme-muted active:text-theme-primary transition-colors"
+              data-testid={`task-menu-${task.id}`}
+              aria-label="Task actions"
+            >
+              <Icons.moreVertical className="w-4 h-4" />
+            </button>
           )}
         </div>
+
+        {/* Dropdown action menu */}
+        {showMenu && (
+          <div
+            className="absolute right-2 top-full mt-1 z-10 bg-surface-700 rounded-lg shadow-lg border border-surface-600 overflow-hidden"
+            data-testid={`task-menu-dropdown-${task.id}`}
+          >
+            <button
+              onClick={() => {
+                setShowMenu(false);
+                onDispatch();
+              }}
+              className="w-full flex items-center gap-3 px-4 py-3 text-sm text-theme-primary hover:bg-surface-600 active:bg-surface-500 transition-colors"
+            >
+              <Icons.send className="w-4 h-4 text-frost-3" />
+              Dispatch
+            </button>
+            <button
+              onClick={() => {
+                setShowMenu(false);
+                onToggleDone();
+              }}
+              className="w-full flex items-center gap-3 px-4 py-3 text-sm text-theme-primary hover:bg-surface-600 active:bg-surface-500 transition-colors"
+            >
+              <Icons.check className="w-4 h-4 text-green-500" />
+              {task.status === 'done' ? 'Mark pending' : 'Mark done'}
+            </button>
+            <button
+              onClick={() => {
+                setShowMenu(false);
+                onDelete();
+              }}
+              className="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-400 hover:bg-surface-600 active:bg-surface-500 transition-colors"
+            >
+              <Icons.trash className="w-4 h-4" />
+              Delete
+            </button>
+          </div>
+        )}
       </div>
+
+      {/* Backdrop to close menu */}
+      {showMenu && (
+        <div
+          className="fixed inset-0 z-0"
+          onClick={() => setShowMenu(false)}
+        />
+      )}
     </div>
   );
 }

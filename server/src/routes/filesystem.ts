@@ -14,12 +14,13 @@ const router = Router();
 // POST /api/filesystem/upload - Save dropped file and return path
 router.post('/upload', express.raw({ type: '*/*', limit: '50mb' }), async (req, res) => {
   try {
-    const filename = req.headers['x-filename'] as string;
-    if (!filename) {
+    const encodedFilename = req.headers['x-filename'] as string;
+    if (!encodedFilename) {
       return res.status(400).json({ success: false, error: 'Missing X-Filename header' });
     }
 
-    // Sanitize filename to prevent path traversal
+    // Decode the URL-encoded filename and sanitize to prevent path traversal
+    const filename = decodeURIComponent(encodedFilename);
     const sanitizedFilename = path.basename(filename);
     const uploadDir = path.join(os.tmpdir(), 'yojimbo-uploads');
 

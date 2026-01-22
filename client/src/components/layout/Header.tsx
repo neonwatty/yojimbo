@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { getDisplayLabel, isDevMode } from '../../config';
 import { useUIStore } from '../../store/uiStore';
 import { useInstancesStore } from '../../store/instancesStore';
 import { useSettingsStore } from '../../store/settingsStore';
-import { useFeedStore } from '../../store/feedStore';
+// Activity tab temporarily disabled
+// import { useFeedStore } from '../../store/feedStore';
 import { useTasksStore } from '../../store/tasksStore';
 import { Icons } from '../common/Icons';
 import Tooltip from '../common/Tooltip';
@@ -17,7 +18,8 @@ import type { SummaryType, GenerateSummaryResponse, CommandExecution, SummarySSE
 
 export default function Header() {
   const navigate = useNavigate();
-  const location = useLocation();
+  // History tab temporarily disabled - location was only used for isHistoryView
+  // const location = useLocation();
 
   // Summary menu state
   const [showSummaryMenu, setShowSummaryMenu] = useState(false);
@@ -40,12 +42,14 @@ export default function Header() {
   const instances = useInstancesStore((state) => state.instances);
   const theme = useSettingsStore((state) => state.theme);
   const setTheme = useSettingsStore((state) => state.setTheme);
-  const showActivityInNav = useSettingsStore((state) => state.showActivityInNav);
+  // Activity tab temporarily disabled
+  // const showActivityInNav = useSettingsStore((state) => state.showActivityInNav);
   const summaryIncludePRs = useSettingsStore((state) => state.summaryIncludePRs);
   const summaryIncludeCommits = useSettingsStore((state) => state.summaryIncludeCommits);
   const summaryIncludeIssues = useSettingsStore((state) => state.summaryIncludeIssues);
   const summaryCustomPrompt = useSettingsStore((state) => state.summaryCustomPrompt);
-  const unreadCount = useFeedStore((state) => state.stats.unread);
+  // Activity tab temporarily disabled
+  // const unreadCount = useFeedStore((state) => state.stats.unread);
   const showTasksPanel = useUIStore((state) => state.showTasksPanel);
   const setShowTasksPanel = useUIStore((state) => state.setShowTasksPanel);
   const queueModeActive = useUIStore((state) => state.queueModeActive);
@@ -199,8 +203,10 @@ export default function Header() {
   const pinnedCount = instances.filter((i) => i.isPinned).length;
   const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
 
-  const isHistoryView = location.pathname === '/history';
-  const isActivityView = location.pathname === '/activity';
+  // History tab temporarily disabled
+  // const isHistoryView = location.pathname === '/history';
+  // Activity tab temporarily disabled
+  // const isActivityView = location.pathname === '/activity';
   const idleCount = instances.filter((i) => i.status === 'idle').length;
 
   return (
@@ -248,8 +254,8 @@ export default function Header() {
 
         <span className="text-surface-600 mx-1">│</span>
 
-        {/* History Button */}
-        <Tooltip text={isHistoryView ? 'Close history' : 'View history'} position="bottom">
+        {/* History Button - temporarily disabled */}
+        {/* <Tooltip text={isHistoryView ? 'Close history' : 'View history'} position="bottom">
           <button
             onClick={() => navigate(isHistoryView ? '/instances' : '/history')}
             className={`px-2 py-1 rounded text-xs transition-colors
@@ -259,10 +265,10 @@ export default function Header() {
           >
             History
           </button>
-        </Tooltip>
+        </Tooltip> */}
 
-        {/* Activity Button */}
-        {showActivityInNav && (
+        {/* Activity Button - temporarily disabled */}
+        {/* {showActivityInNav && (
           <Tooltip text={isActivityView ? 'Close activity' : 'View activity'} position="bottom">
             <button
               onClick={() => navigate(isActivityView ? '/instances' : '/activity')}
@@ -279,7 +285,7 @@ export default function Header() {
               )}
             </button>
           </Tooltip>
-        )}
+        )} */}
 
         {/* Tasks Button */}
         <Tooltip text="Global tasks (⌘G)" position="bottom">

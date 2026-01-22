@@ -25,7 +25,8 @@ test.describe('Navigation', () => {
     await expect(basePage.page).toHaveURL(/.*\/instances/);
   });
 
-  test('can navigate to history page', async ({ basePage }) => {
+  // History tab temporarily disabled
+  test.skip('can navigate to history page', async ({ basePage }) => {
     await basePage.goto('/');
     await basePage.page.goto('/history');
     await expect(basePage.page).toHaveURL(/.*\/history/);
@@ -87,7 +88,8 @@ test.describe('Keyboard Shortcuts', () => {
     await expect(basePage.page).toHaveURL(/.*\/instances/);
   });
 
-  test('G S navigates to history', async ({ basePage }) => {
+  // History tab temporarily disabled
+  test.skip('G S navigates to history', async ({ basePage }) => {
     await basePage.goto('/');
     await basePage.page.keyboard.press('g');
     await basePage.page.keyboard.press('s');

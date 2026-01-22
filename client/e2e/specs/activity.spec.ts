@@ -1,6 +1,8 @@
 import { test, expect } from '../fixtures/test-fixtures';
 
-test.describe('Activity Feed', () => {
+// Activity tab temporarily disabled - skip all UI tests
+// API tests still work but UI navigation to Activity page is disabled
+test.describe.skip('Activity Feed', () => {
   test.beforeEach(async ({ apiClient }) => {
     // Clean up before each test
     await apiClient.cleanupAllInstances();

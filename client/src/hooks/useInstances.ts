@@ -1,17 +1,17 @@
 import { useEffect, useCallback } from 'react';
 import { useInstancesStore } from '../store/instancesStore';
 import { useFeedStore } from '../store/feedStore';
-import { useTasksStore } from '../store/tasksStore';
+import { useTodosStore } from '../store/todosStore';
 import { useUIStore } from '../store/uiStore';
-import { instancesApi, feedApi, tasksApi, keychainApi } from '../api/client';
+import { instancesApi, feedApi, todosApi, keychainApi } from '../api/client';
 import { useWebSocket } from './useWebSocket';
 import { getWsUrl } from '../config';
-import type { Instance, ActivityEvent, GlobalTask } from '@cc-orchestrator/shared';
+import type { Instance, ActivityEvent, GlobalTodo } from '@cc-orchestrator/shared';
 
 export function useInstances() {
   const { instances, setInstances, setLoading, addInstance, updateInstance, removeInstance, setCurrentCwd } = useInstancesStore();
   const { addEvent, setStats } = useFeedStore();
-  const { addTask, updateTask: updateTaskInStore, removeTask, setStats: setTaskStats } = useTasksStore();
+  const { addTodo, updateTodo: updateTodoInStore, removeTodo, setStats: setTodoStats } = useTodosStore();
   const { showLocalKeychainUnlockPrompt } = useUIStore();
 
   const { subscribe, isConnected } = useWebSocket(getWsUrl(), {
@@ -81,32 +81,32 @@ export function useInstances() {
       }
     });
 
-    // Task events
-    const unsubscribeTaskCreated = subscribe('task:created', (data: unknown) => {
-      const { task } = data as { task: GlobalTask };
-      addTask(task);
+    // Todo events
+    const unsubscribeTodoCreated = subscribe('todo:created', (data: unknown) => {
+      const { todo } = data as { todo: GlobalTodo };
+      addTodo(todo);
     });
 
-    const unsubscribeTaskUpdated = subscribe('task:updated', (data: unknown) => {
-      const { task } = data as { task: GlobalTask | undefined };
-      if (task) {
-        updateTaskInStore(task.id, task);
+    const unsubscribeTodoUpdated = subscribe('todo:updated', (data: unknown) => {
+      const { todo } = data as { todo: GlobalTodo | undefined };
+      if (todo) {
+        updateTodoInStore(todo.id, todo);
       }
-      // Refresh stats when tasks are updated
-      tasksApi.getStats().then((response) => {
+      // Refresh stats when todos are updated
+      todosApi.getStats().then((response) => {
         if (response.data) {
-          setTaskStats(response.data);
+          setTodoStats(response.data);
         }
       }).catch(() => {});
     });
 
-    const unsubscribeTaskDeleted = subscribe('task:deleted', (data: unknown) => {
-      const { taskId } = data as { taskId: string };
-      removeTask(taskId);
-      // Refresh stats when tasks are deleted
-      tasksApi.getStats().then((response) => {
+    const unsubscribeTodoDeleted = subscribe('todo:deleted', (data: unknown) => {
+      const { todoId } = data as { todoId: string };
+      removeTodo(todoId);
+      // Refresh stats when todos are deleted
+      todosApi.getStats().then((response) => {
         if (response.data) {
-          setTaskStats(response.data);
+          setTodoStats(response.data);
         }
       }).catch(() => {});
     });
@@ -129,10 +129,10 @@ export function useInstances() {
       }
     }).catch(() => {});
 
-    // Fetch initial task stats
-    tasksApi.getStats().then((response) => {
+    // Fetch initial todo stats
+    todosApi.getStats().then((response) => {
       if (response.data) {
-        setTaskStats(response.data);
+        setTodoStats(response.data);
       }
     }).catch(() => {});
 
@@ -154,12 +154,12 @@ export function useInstances() {
       unsubscribeCwd();
       unsubscribeFeedNew();
       unsubscribeFeedUpdated();
-      unsubscribeTaskCreated();
-      unsubscribeTaskUpdated();
-      unsubscribeTaskDeleted();
+      unsubscribeTodoCreated();
+      unsubscribeTodoUpdated();
+      unsubscribeTodoDeleted();
       unsubscribeKeychainFailed();
     };
-  }, [isConnected, subscribe, addInstance, updateInstance, removeInstance, setCurrentCwd, fetchInstances, addEvent, setStats, addTask, updateTaskInStore, removeTask, setTaskStats, showLocalKeychainUnlockPrompt]);
+  }, [isConnected, subscribe, addInstance, updateInstance, removeInstance, setCurrentCwd, fetchInstances, addEvent, setStats, addTodo, updateTodoInStore, removeTodo, setTodoStats, showLocalKeychainUnlockPrompt]);
 
   // Fetch instances on mount
   useEffect(() => {

@@ -1,45 +1,45 @@
 import { test, expect } from '../fixtures/test-fixtures';
 
-test.describe('Global Tasks', () => {
+test.describe('Global Todos', () => {
   test.beforeEach(async ({ apiClient }) => {
     // Clean up before each test
-    await apiClient.cleanupAllTasks();
+    await apiClient.cleanupAllTodos();
     await apiClient.cleanupAllInstances();
   });
 
-  test.describe('Tasks Button in Header', () => {
-    test('shows Tasks button in header', async ({ basePage }) => {
+  test.describe('Todos Button in Header', () => {
+    test('shows Todos button in header', async ({ basePage }) => {
       await basePage.goto('/instances');
 
-      // Tasks button should be visible
-      const tasksButton = basePage.page.locator('button:has-text("Tasks")');
+      // Todos button should be visible
+      const tasksButton = basePage.page.locator('button:has-text("Todos")');
       await expect(tasksButton).toBeVisible();
     });
 
-    test('Tasks button opens modal with keyboard shortcut', async ({ basePage }) => {
+    test('Todos button opens modal with keyboard shortcut', async ({ basePage }) => {
       await basePage.goto('/instances');
 
       // Press Cmd+G to open tasks panel
       await basePage.page.keyboard.press('Meta+g');
 
       // Should show tasks modal
-      await expect(basePage.page.locator('h2:has-text("Global Tasks")')).toBeVisible();
+      await expect(basePage.page.locator('h2:has-text("Global Todos")')).toBeVisible();
     });
 
-    test('Tasks button click opens modal', async ({ basePage }) => {
+    test('Todos button click opens modal', async ({ basePage }) => {
       await basePage.goto('/instances');
 
-      // Click Tasks button
-      await basePage.page.locator('button:has-text("Tasks")').click();
+      // Click Todos button
+      await basePage.page.locator('button:has-text("Todos")').click();
 
       // Should show tasks modal
-      await expect(basePage.page.locator('h2:has-text("Global Tasks")')).toBeVisible();
+      await expect(basePage.page.locator('h2:has-text("Global Todos")')).toBeVisible();
     });
 
     test('shows pending badge when there are tasks', async ({ basePage, apiClient }) => {
       // Create test tasks
-      await apiClient.createTask('Test task 1');
-      await apiClient.createTask('Test task 2');
+      await apiClient.createTodo('Test task 1');
+      await apiClient.createTodo('Test task 2');
 
       await basePage.goto('/instances');
 
@@ -47,27 +47,27 @@ test.describe('Global Tasks', () => {
       await basePage.page.waitForTimeout(500);
 
       // Check for pending badge (should show 2)
-      const badge = basePage.page.locator('button:has-text("Tasks") span').filter({ hasText: /\d+/ });
+      const badge = basePage.page.locator('button:has-text("Todos") span').filter({ hasText: /\d+/ });
       await expect(badge).toBeVisible();
       await expect(badge).toHaveText('2');
     });
   });
 
-  test.describe('Tasks Panel', () => {
+  test.describe('Todos Panel', () => {
     test('shows empty state when no tasks', async ({ basePage }) => {
       await basePage.goto('/instances');
-      await basePage.page.locator('button:has-text("Tasks")').click();
+      await basePage.page.locator('button:has-text("Todos")').click();
 
       // Should show empty state
-      await expect(basePage.page.locator('text=No tasks yet')).toBeVisible();
+      await expect(basePage.page.locator('text=No todos yet')).toBeVisible();
     });
 
     test('can create a new task', async ({ basePage, apiClient }) => {
       await basePage.goto('/instances');
-      await basePage.page.locator('button:has-text("Tasks")').click();
+      await basePage.page.locator('button:has-text("Todos")').click();
 
       // Type in the input
-      const input = basePage.page.locator('input[placeholder="Add a new task..."]');
+      const input = basePage.page.locator('input[placeholder="Add a new todo..."]');
       await input.fill('My new task');
 
       // Click Add button
@@ -77,17 +77,17 @@ test.describe('Global Tasks', () => {
       await expect(basePage.page.locator('text=My new task')).toBeVisible();
 
       // Verify via API
-      const tasks = await apiClient.listTasks();
+      const tasks = await apiClient.listTodos();
       expect(tasks.length).toBe(1);
       expect(tasks[0].text).toBe('My new task');
     });
 
     test('can mark task as done', async ({ basePage, apiClient }) => {
       // Create test task via API
-      const task = await apiClient.createTask('Task to complete');
+      const task = await apiClient.createTodo('Task to complete');
 
       await basePage.goto('/instances');
-      await basePage.page.locator('button:has-text("Tasks")').click();
+      await basePage.page.locator('button:has-text("Todos")').click();
 
       // Wait for task to appear
       await expect(basePage.page.locator('text=Task to complete')).toBeVisible();
@@ -101,16 +101,16 @@ test.describe('Global Tasks', () => {
       await basePage.page.waitForTimeout(300);
 
       // Verify via API
-      const updatedTask = await apiClient.getTask(task.id);
+      const updatedTask = await apiClient.getTodo(task.id);
       expect(updatedTask.status).toBe('done');
     });
 
     test('can delete task', async ({ basePage, apiClient }) => {
       // Create test task via API
-      await apiClient.createTask('Task to delete');
+      await apiClient.createTodo('Task to delete');
 
       await basePage.goto('/instances');
-      await basePage.page.locator('button:has-text("Tasks")').click();
+      await basePage.page.locator('button:has-text("Todos")').click();
 
       // Wait for task to appear
       await expect(basePage.page.locator('text=Task to delete')).toBeVisible();
@@ -120,7 +120,7 @@ test.describe('Global Tasks', () => {
       await taskRow.hover();
 
       // Click delete button (trash icon)
-      const deleteButton = taskRow.locator('button[title="Delete task"]');
+      const deleteButton = taskRow.locator('button[title="Delete todo"]');
       await deleteButton.click();
 
       // Wait for deletion
@@ -130,32 +130,32 @@ test.describe('Global Tasks', () => {
       await expect(basePage.page.locator('text=Task to delete')).not.toBeVisible();
 
       // Verify via API
-      const tasks = await apiClient.listTasks();
+      const tasks = await apiClient.listTodos();
       expect(tasks.length).toBe(0);
     });
 
     test('Escape key closes modal', async ({ basePage }) => {
       await basePage.goto('/instances');
-      await basePage.page.locator('button:has-text("Tasks")').click();
+      await basePage.page.locator('button:has-text("Todos")').click();
 
       // Verify modal is open
-      await expect(basePage.page.locator('h2:has-text("Global Tasks")')).toBeVisible();
+      await expect(basePage.page.locator('h2:has-text("Global Todos")')).toBeVisible();
 
       // Press Escape
       await basePage.page.keyboard.press('Escape');
 
       // Modal should be closed
-      await expect(basePage.page.locator('h2:has-text("Global Tasks")')).not.toBeVisible();
+      await expect(basePage.page.locator('h2:has-text("Global Todos")')).not.toBeVisible();
     });
   });
 
-  test.describe('Tasks API', () => {
+  test.describe('Todos API', () => {
     test('can list tasks', async ({ apiClient }) => {
       // Create test tasks
-      await apiClient.createTask('Task 1');
-      await apiClient.createTask('Task 2');
+      await apiClient.createTodo('Task 1');
+      await apiClient.createTodo('Task 2');
 
-      const tasks = await apiClient.listTasks();
+      const tasks = await apiClient.listTodos();
 
       expect(tasks.length).toBe(2);
       expect(tasks.map(t => t.text)).toContain('Task 1');
@@ -163,7 +163,7 @@ test.describe('Global Tasks', () => {
     });
 
     test('can create task', async ({ apiClient }) => {
-      const task = await apiClient.createTask('New task');
+      const task = await apiClient.createTodo('New task');
 
       expect(task.text).toBe('New task');
       expect(task.status).toBe('captured');
@@ -171,43 +171,43 @@ test.describe('Global Tasks', () => {
     });
 
     test('can get task by id', async ({ apiClient }) => {
-      const created = await apiClient.createTask('Test task');
-      const task = await apiClient.getTask(created.id);
+      const created = await apiClient.createTodo('Test task');
+      const task = await apiClient.getTodo(created.id);
 
       expect(task.text).toBe('Test task');
       expect(task.id).toBe(created.id);
     });
 
     test('can update task', async ({ apiClient }) => {
-      const task = await apiClient.createTask('Original text');
-      const updated = await apiClient.updateTask(task.id, { text: 'Updated text' });
+      const task = await apiClient.createTodo('Original text');
+      const updated = await apiClient.updateTodo(task.id, { text: 'Updated text' });
 
       expect(updated.text).toBe('Updated text');
     });
 
     test('can mark task as done', async ({ apiClient }) => {
-      const task = await apiClient.createTask('Task to complete');
-      const completed = await apiClient.markTaskDone(task.id);
+      const task = await apiClient.createTodo('Task to complete');
+      const completed = await apiClient.markTodoDone(task.id);
 
       expect(completed.status).toBe('done');
       expect(completed.completedAt).not.toBeNull();
     });
 
     test('can delete task', async ({ apiClient }) => {
-      const task = await apiClient.createTask('Task to delete');
-      await apiClient.deleteTask(task.id);
+      const task = await apiClient.createTodo('Task to delete');
+      await apiClient.deleteTodo(task.id);
 
-      const tasks = await apiClient.listTasks();
+      const tasks = await apiClient.listTodos();
       expect(tasks.find(t => t.id === task.id)).toBeUndefined();
     });
 
     test('can get task stats', async ({ apiClient }) => {
       // Create tasks with different statuses
-      await apiClient.createTask('Captured task');
-      const taskToComplete = await apiClient.createTask('To complete');
-      await apiClient.markTaskDone(taskToComplete.id);
+      await apiClient.createTodo('Captured task');
+      const taskToComplete = await apiClient.createTodo('To complete');
+      await apiClient.markTodoDone(taskToComplete.id);
 
-      const stats = await apiClient.getTaskStats();
+      const stats = await apiClient.getTodoStats();
 
       expect(stats.total).toBe(2);
       expect(stats.captured).toBe(1);
@@ -215,12 +215,12 @@ test.describe('Global Tasks', () => {
     });
   });
 
-  test.describe('Task Dispatch', () => {
+  test.describe('Todo Dispatch', () => {
     test('dispatch button shows dropdown', async ({ basePage, apiClient }) => {
-      await apiClient.createTask('Task to dispatch');
+      await apiClient.createTodo('Task to dispatch');
 
       await basePage.goto('/instances');
-      await basePage.page.locator('button:has-text("Tasks")').click();
+      await basePage.page.locator('button:has-text("Todos")').click();
 
       // Wait for task
       await expect(basePage.page.locator('text=Task to dispatch')).toBeVisible();
@@ -241,10 +241,10 @@ test.describe('Global Tasks', () => {
       // Grant clipboard permissions
       await context.grantPermissions(['clipboard-read', 'clipboard-write']);
 
-      await apiClient.createTask('CopyTaskTest');
+      await apiClient.createTodo('CopyTaskTest');
 
       await basePage.goto('/instances');
-      await basePage.page.locator('button:has-text("Tasks")').click();
+      await basePage.page.locator('button:has-text("Todos")').click();
 
       // Wait for task
       await expect(basePage.page.locator('text=CopyTaskTest')).toBeVisible();
@@ -267,10 +267,10 @@ test.describe('Global Tasks', () => {
       await apiClient.createInstance({ name: 'DropdownInstance', workingDir: '/tmp' });
 
       // Create a task
-      await apiClient.createTask('TaskForDropdown');
+      await apiClient.createTodo('TaskForDropdown');
 
       await basePage.goto('/instances');
-      await basePage.page.locator('button:has-text("Tasks")').click();
+      await basePage.page.locator('button:has-text("Todos")').click();
 
       // Wait for task
       await expect(basePage.page.locator('text=TaskForDropdown')).toBeVisible();
@@ -289,10 +289,10 @@ test.describe('Global Tasks', () => {
     });
 
     test('shows create new instance option', async ({ basePage, apiClient }) => {
-      await apiClient.createTask('Task to dispatch');
+      await apiClient.createTodo('Task to dispatch');
 
       await basePage.goto('/instances');
-      await basePage.page.locator('button:has-text("Tasks")').click();
+      await basePage.page.locator('button:has-text("Todos")').click();
 
       // Wait for task
       await expect(basePage.page.locator('text=Task to dispatch')).toBeVisible();
@@ -312,10 +312,10 @@ test.describe('Global Tasks', () => {
       const instance = await apiClient.createInstance({ name: 'Dispatch Target', workingDir: '/tmp' });
 
       // Create a task
-      const task = await apiClient.createTask('Task to dispatch via API');
+      const task = await apiClient.createTodo('Task to dispatch via API');
 
       // Dispatch the task
-      const dispatchedTask = await apiClient.dispatchTask(task.id, instance.id);
+      const dispatchedTask = await apiClient.dispatchTodo(task.id, instance.id);
 
       // Verify task is now in_progress and linked to instance
       expect(dispatchedTask.status).toBe('in_progress');
@@ -328,10 +328,10 @@ test.describe('Global Tasks', () => {
       const instance = await apiClient.createInstance({ name: 'DispatchTargetUI', workingDir: '/tmp' });
 
       // Create a task
-      const task = await apiClient.createTask('UIDispatchTask');
+      const task = await apiClient.createTodo('UIDispatchTask');
 
       await basePage.goto('/instances');
-      await basePage.page.locator('button:has-text("Tasks")').click();
+      await basePage.page.locator('button:has-text("Todos")').click();
 
       // Wait for task
       await expect(basePage.page.locator('text=UIDispatchTask')).toBeVisible();
@@ -350,16 +350,16 @@ test.describe('Global Tasks', () => {
       await basePage.page.waitForTimeout(500);
 
       // Verify via API that task was dispatched
-      const updatedTask = await apiClient.getTask(task.id);
+      const updatedTask = await apiClient.getTodo(task.id);
       expect(updatedTask.status).toBe('in_progress');
       expect(updatedTask.dispatchedInstanceId).toBe(instance.id);
     });
 
     test('create new instance from dispatch opens modal', async ({ basePage, apiClient }) => {
-      await apiClient.createTask('Task for new instance');
+      await apiClient.createTodo('Task for new instance');
 
       await basePage.goto('/instances');
-      await basePage.page.locator('button:has-text("Tasks")').click();
+      await basePage.page.locator('button:has-text("Todos")').click();
 
       // Wait for task
       await expect(basePage.page.locator('text=Task for new instance')).toBeVisible();
@@ -374,15 +374,15 @@ test.describe('Global Tasks', () => {
       await basePage.page.locator('text=Create new instance').click();
 
       // Tasks panel should close and New Session modal should open
-      await expect(basePage.page.locator('h2:has-text("Global Tasks")')).not.toBeVisible();
+      await expect(basePage.page.locator('h2:has-text("Global Todos")')).not.toBeVisible();
       await expect(basePage.page.locator('h2:has-text("New Session")')).toBeVisible();
     });
 
     test('create new instance defaults to Claude Code mode', async ({ basePage, apiClient }) => {
-      await apiClient.createTask('Task for Claude Code');
+      await apiClient.createTodo('Task for Claude Code');
 
       await basePage.goto('/instances');
-      await basePage.page.locator('button:has-text("Tasks")').click();
+      await basePage.page.locator('button:has-text("Todos")').click();
 
       // Wait for task
       await expect(basePage.page.locator('text=Task for Claude Code')).toBeVisible();
@@ -408,10 +408,10 @@ test.describe('Global Tasks', () => {
       // Grant clipboard permissions
       await context.grantPermissions(['clipboard-read', 'clipboard-write']);
 
-      await apiClient.createTask('ClipboardTaskNewInstance');
+      await apiClient.createTodo('ClipboardTaskNewInstance');
 
       await basePage.goto('/instances');
-      await basePage.page.locator('button:has-text("Tasks")').click();
+      await basePage.page.locator('button:has-text("Todos")').click();
 
       // Wait for task
       await expect(basePage.page.locator('text=ClipboardTaskNewInstance')).toBeVisible();
@@ -434,12 +434,12 @@ test.describe('Global Tasks', () => {
     });
   });
 
-  test.describe('Task Creation Flow', () => {
+  test.describe('Todo Creation Flow', () => {
     test('input clears after task creation', async ({ basePage }) => {
       await basePage.goto('/instances');
-      await basePage.page.locator('button:has-text("Tasks")').click();
+      await basePage.page.locator('button:has-text("Todos")').click();
 
-      const input = basePage.page.locator('input[placeholder="Add a new task..."]');
+      const input = basePage.page.locator('input[placeholder="Add a new todo..."]');
       await input.fill('Task to create');
       await basePage.page.locator('button:has-text("Add")').click();
 
@@ -452,9 +452,9 @@ test.describe('Global Tasks', () => {
 
     test('can create multiple tasks in sequence', async ({ basePage, apiClient }) => {
       await basePage.goto('/instances');
-      await basePage.page.locator('button:has-text("Tasks")').click();
+      await basePage.page.locator('button:has-text("Todos")').click();
 
-      const input = basePage.page.locator('input[placeholder="Add a new task..."]');
+      const input = basePage.page.locator('input[placeholder="Add a new todo..."]');
 
       // Create first task
       await input.fill('First task');
@@ -472,13 +472,13 @@ test.describe('Global Tasks', () => {
       await expect(basePage.page.locator('text=Third task')).toBeVisible();
 
       // Verify via API
-      const tasks = await apiClient.listTasks();
+      const tasks = await apiClient.listTodos();
       expect(tasks.length).toBe(3);
     });
 
     test('pending badge updates after task creation', async ({ basePage, apiClient }) => {
       // Start with one task
-      await apiClient.createTask('Initial task');
+      await apiClient.createTodo('Initial task');
 
       await basePage.goto('/instances');
 
@@ -486,12 +486,12 @@ test.describe('Global Tasks', () => {
       await basePage.page.waitForTimeout(500);
 
       // Badge should show 1
-      const badge = basePage.page.locator('button:has-text("Tasks") span').filter({ hasText: /\d+/ });
+      const badge = basePage.page.locator('button:has-text("Todos") span').filter({ hasText: /\d+/ });
       await expect(badge).toHaveText('1');
 
       // Open tasks and create another
-      await basePage.page.locator('button:has-text("Tasks")').click();
-      const input = basePage.page.locator('input[placeholder="Add a new task..."]');
+      await basePage.page.locator('button:has-text("Todos")').click();
+      const input = basePage.page.locator('input[placeholder="Add a new todo..."]');
       await input.fill('Second task');
       await basePage.page.locator('button:has-text("Add")').click();
 
@@ -509,12 +509,12 @@ test.describe('Global Tasks', () => {
     });
   });
 
-  test.describe('Task Editing', () => {
+  test.describe('Todo Editing', () => {
     test('can edit task via edit button', async ({ basePage, apiClient }) => {
-      const task = await apiClient.createTask('EditButtonTask');
+      const task = await apiClient.createTodo('EditButtonTask');
 
       await basePage.goto('/instances');
-      await basePage.page.locator('button:has-text("Tasks")').click();
+      await basePage.page.locator('button:has-text("Todos")').click();
 
       // Wait for task text
       await expect(basePage.page.locator('text=EditButtonTask')).toBeVisible();
@@ -524,7 +524,7 @@ test.describe('Global Tasks', () => {
       await taskRow.hover();
 
       // Click edit button
-      await taskRow.locator('button[title="Edit task"]').click({ force: true });
+      await taskRow.locator('button[title="Edit todo"]').click({ force: true });
 
       // Wait for edit mode - find the input with the task value
       const editInput = basePage.page.locator('input[value="EditButtonTask"]');
@@ -541,15 +541,15 @@ test.describe('Global Tasks', () => {
       await expect(basePage.page.locator('text=UpdatedButtonTask')).toBeVisible();
 
       // Verify via API
-      const updatedTask = await apiClient.getTask(task.id);
+      const updatedTask = await apiClient.getTodo(task.id);
       expect(updatedTask.text).toBe('UpdatedButtonTask');
     });
 
     test('can edit task via double-click', async ({ basePage, apiClient }) => {
-      const task = await apiClient.createTask('DoubleClickTask');
+      const task = await apiClient.createTodo('DoubleClickTask');
 
       await basePage.goto('/instances');
-      await basePage.page.locator('button:has-text("Tasks")').click();
+      await basePage.page.locator('button:has-text("Todos")').click();
 
       // Wait for task text
       await expect(basePage.page.locator('text=DoubleClickTask')).toBeVisible();
@@ -573,15 +573,15 @@ test.describe('Global Tasks', () => {
       await expect(basePage.page.locator('text=DoubleClickedEdit')).toBeVisible();
 
       // Verify via API
-      const updatedTask = await apiClient.getTask(task.id);
+      const updatedTask = await apiClient.getTodo(task.id);
       expect(updatedTask.text).toBe('DoubleClickedEdit');
     });
 
     test('Escape cancels edit without saving', async ({ basePage, apiClient }) => {
-      const task = await apiClient.createTask('EscapeCancelTask');
+      const task = await apiClient.createTodo('EscapeCancelTask');
 
       await basePage.goto('/instances');
-      await basePage.page.locator('button:has-text("Tasks")').click();
+      await basePage.page.locator('button:has-text("Todos")').click();
 
       // Wait for task text
       await expect(basePage.page.locator('text=EscapeCancelTask')).toBeVisible();
@@ -589,7 +589,7 @@ test.describe('Global Tasks', () => {
       // Find the task row and hover
       const taskRow = basePage.page.locator('div.group').filter({ hasText: 'EscapeCancelTask' });
       await taskRow.hover();
-      await taskRow.locator('button[title="Edit task"]').click({ force: true });
+      await taskRow.locator('button[title="Edit todo"]').click({ force: true });
 
       // Wait for edit mode - find the input with the task value
       const editInput = basePage.page.locator('input[value="EscapeCancelTask"]');
@@ -609,15 +609,15 @@ test.describe('Global Tasks', () => {
       await expect(basePage.page.locator('text=ChangedText')).not.toBeVisible();
 
       // Verify via API that text was not changed
-      const unchangedTask = await apiClient.getTask(task.id);
+      const unchangedTask = await apiClient.getTodo(task.id);
       expect(unchangedTask.text).toBe('EscapeCancelTask');
     });
 
     test('blur saves edit', async ({ basePage, apiClient }) => {
-      const task = await apiClient.createTask('BlurSaveTask');
+      const task = await apiClient.createTodo('BlurSaveTask');
 
       await basePage.goto('/instances');
-      await basePage.page.locator('button:has-text("Tasks")').click();
+      await basePage.page.locator('button:has-text("Todos")').click();
 
       // Wait for task text
       await expect(basePage.page.locator('text=BlurSaveTask')).toBeVisible();
@@ -625,7 +625,7 @@ test.describe('Global Tasks', () => {
       // Find the task row and hover
       const taskRow = basePage.page.locator('div.group').filter({ hasText: 'BlurSaveTask' });
       await taskRow.hover();
-      await taskRow.locator('button[title="Edit task"]').click({ force: true });
+      await taskRow.locator('button[title="Edit todo"]').click({ force: true });
 
       // Wait for edit mode - find the input with the task value
       const editInput = basePage.page.locator('input[value="BlurSaveTask"]');
@@ -635,7 +635,7 @@ test.describe('Global Tasks', () => {
       await editInput.fill('SavedViaBlur');
 
       // Click elsewhere to blur (on the modal header)
-      await basePage.page.locator('h2:has-text("Global Tasks")').click();
+      await basePage.page.locator('h2:has-text("Global Todos")').click();
 
       // Wait for update
       await basePage.page.waitForTimeout(300);
@@ -644,27 +644,27 @@ test.describe('Global Tasks', () => {
       await expect(basePage.page.locator('text=SavedViaBlur')).toBeVisible();
 
       // Verify via API
-      const updatedTask = await apiClient.getTask(task.id);
+      const updatedTask = await apiClient.getTodo(task.id);
       expect(updatedTask.text).toBe('SavedViaBlur');
     });
 
     test('edit updates task via API', async ({ apiClient }) => {
-      const task = await apiClient.createTask('API edit test');
+      const task = await apiClient.createTodo('API edit test');
 
       // Update via API
-      const updated = await apiClient.updateTask(task.id, { text: 'API updated text' });
+      const updated = await apiClient.updateTodo(task.id, { text: 'API updated text' });
 
       expect(updated.text).toBe('API updated text');
       expect(updated.id).toBe(task.id);
     });
   });
 
-  test.describe('Task Deletion Flow', () => {
+  test.describe('Todo Deletion Flow', () => {
     test('delete task removes it from UI immediately', async ({ basePage, apiClient }) => {
-      await apiClient.createTask('Task to delete immediately');
+      await apiClient.createTodo('Task to delete immediately');
 
       await basePage.goto('/instances');
-      await basePage.page.locator('button:has-text("Tasks")').click();
+      await basePage.page.locator('button:has-text("Todos")').click();
 
       // Wait for task
       await expect(basePage.page.locator('text=Task to delete immediately')).toBeVisible();
@@ -672,7 +672,7 @@ test.describe('Global Tasks', () => {
       // Hover and delete
       const taskRow = basePage.page.locator('div').filter({ hasText: 'Task to delete immediately' }).first();
       await taskRow.hover();
-      const deleteButton = taskRow.locator('button[title="Delete task"]');
+      const deleteButton = taskRow.locator('button[title="Delete todo"]');
       await deleteButton.click();
 
       // Task should be removed from UI
@@ -680,10 +680,10 @@ test.describe('Global Tasks', () => {
     });
 
     test('delete last task shows empty state', async ({ basePage, apiClient }) => {
-      await apiClient.createTask('Only task');
+      await apiClient.createTodo('Only task');
 
       await basePage.goto('/instances');
-      await basePage.page.locator('button:has-text("Tasks")').click();
+      await basePage.page.locator('button:has-text("Todos")').click();
 
       // Wait for task
       await expect(basePage.page.locator('text=Only task')).toBeVisible();
@@ -691,20 +691,20 @@ test.describe('Global Tasks', () => {
       // Hover and delete
       const taskRow = basePage.page.locator('div').filter({ hasText: 'Only task' }).first();
       await taskRow.hover();
-      const deleteButton = taskRow.locator('button[title="Delete task"]');
+      const deleteButton = taskRow.locator('button[title="Delete todo"]');
       await deleteButton.click();
 
       // Wait for deletion
       await basePage.page.waitForTimeout(300);
 
       // Should show empty state
-      await expect(basePage.page.locator('text=No tasks yet')).toBeVisible();
+      await expect(basePage.page.locator('text=No todos yet')).toBeVisible();
     });
 
     test('pending badge updates after task deletion', async ({ basePage, apiClient }) => {
       // Create two tasks with unique names
-      await apiClient.createTask('DeleteBadgeTaskA');
-      await apiClient.createTask('DeleteBadgeTaskB');
+      await apiClient.createTodo('DeleteBadgeTaskA');
+      await apiClient.createTodo('DeleteBadgeTaskB');
 
       await basePage.goto('/instances');
 
@@ -712,14 +712,14 @@ test.describe('Global Tasks', () => {
       await basePage.page.waitForTimeout(500);
 
       // Badge should show 2
-      const badge = basePage.page.locator('button:has-text("Tasks") span').filter({ hasText: /\d+/ });
+      const badge = basePage.page.locator('button:has-text("Todos") span').filter({ hasText: /\d+/ });
       await expect(badge).toHaveText('2');
 
       // Open tasks and delete one
-      await basePage.page.locator('button:has-text("Tasks")').click();
+      await basePage.page.locator('button:has-text("Todos")').click();
       const taskItem = basePage.page.locator('div.group').filter({ hasText: 'DeleteBadgeTaskA' });
       await taskItem.hover();
-      const deleteButton = taskItem.locator('button[title="Delete task"]');
+      const deleteButton = taskItem.locator('button[title="Delete todo"]');
       await deleteButton.click();
 
       // Wait for deletion
@@ -736,12 +736,12 @@ test.describe('Global Tasks', () => {
     });
 
     test('can delete multiple tasks', async ({ basePage, apiClient }) => {
-      await apiClient.createTask('MultiDeleteA');
-      await apiClient.createTask('MultiDeleteB');
-      await apiClient.createTask('MultiKeeper');
+      await apiClient.createTodo('MultiDeleteA');
+      await apiClient.createTodo('MultiDeleteB');
+      await apiClient.createTodo('MultiKeeper');
 
       await basePage.goto('/instances');
-      await basePage.page.locator('button:has-text("Tasks")').click();
+      await basePage.page.locator('button:has-text("Todos")').click();
 
       // Wait for tasks
       await expect(basePage.page.locator('text=MultiDeleteA')).toBeVisible();
@@ -751,13 +751,13 @@ test.describe('Global Tasks', () => {
       // Delete first task using task item locator
       let taskItem = basePage.page.locator('div.group').filter({ hasText: 'MultiDeleteA' });
       await taskItem.hover();
-      await taskItem.locator('button[title="Delete task"]').click();
+      await taskItem.locator('button[title="Delete todo"]').click();
       await basePage.page.waitForTimeout(200);
 
       // Delete second task
       taskItem = basePage.page.locator('div.group').filter({ hasText: 'MultiDeleteB' });
       await taskItem.hover();
-      await taskItem.locator('button[title="Delete task"]').click();
+      await taskItem.locator('button[title="Delete todo"]').click();
       await basePage.page.waitForTimeout(200);
 
       // Verify only "MultiKeeper" remains
@@ -766,7 +766,7 @@ test.describe('Global Tasks', () => {
       await expect(basePage.page.locator('text=MultiKeeper')).toBeVisible();
 
       // Verify via API
-      const tasks = await apiClient.listTasks();
+      const tasks = await apiClient.listTodos();
       expect(tasks.length).toBe(1);
       expect(tasks[0].text).toBe('MultiKeeper');
     });

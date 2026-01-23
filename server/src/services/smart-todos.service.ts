@@ -1,5 +1,5 @@
 import { gatherFullContext, formatContextForPrompt } from './context-gathering.service.js';
-import { parseTasks, clarifyTasks, checkClaudeCliAvailable } from './claude-cli.service.js';
+import { parseTodos, clarifyTodos, checkClaudeCliAvailable } from './claude-cli.service.js';
 import {
   cloneRepository,
   validateClonePath,
@@ -9,8 +9,8 @@ import {
 import { createProject } from './projects.service.js';
 import { broadcast } from '../websocket/server.js';
 import type {
-  ParsedTasksResponse,
-  ParsedTask,
+  ParsedTodosResponse,
+  ParsedTodo,
   SetupProjectRequest,
   SetupProjectResponse,
   ValidatePathResponse,
@@ -20,10 +20,10 @@ import type {
 /**
  * Stored parsing sessions for multi-turn clarification
  */
-interface ParsingSession {
+export interface ParsingSession {
   sessionId: string;
   input: string;
-  tasks: ParsedTasksResponse;
+  todos: ParsedTodosResponse;
   clarificationRound: number;
   createdAt: Date;
 }
@@ -46,16 +46,16 @@ function cleanupOldSessions(): void {
 setInterval(cleanupOldSessions, 5 * 60 * 1000);
 
 /**
- * Parse free-form task input into structured tasks
+ * Parse free-form todo input into structured todos
  *
  * @param input - Raw user input (voice transcription or typed text)
- * @returns Parsed tasks with session info for potential clarification
+ * @returns Parsed todos with session info for potential clarification
  */
-export async function parseTaskInput(
+export async function parseTodoInput(
   input: string
 ): Promise<{
   success: true;
-  data: ParsedTasksResponse;
+  data: ParsedTodosResponse;
   sessionId: string;
   needsClarification: boolean;
   cost: number;
@@ -74,29 +74,29 @@ export async function parseTaskInput(
   const context = await gatherFullContext();
 
   if (context.projects.length === 0) {
-    console.log('⚠️ No projects registered. Tasks will need manual project assignment.');
+    console.log('⚠️ No projects registered. Todos will need manual project assignment.');
   }
 
   // Format context for prompt
   const contextPrompt = formatContextForPrompt(context);
 
   // Call Claude CLI
-  const result = await parseTasks(input, contextPrompt);
+  const result = await parseTodos(input, contextPrompt);
 
   if (!result.success) {
     return result;
   }
 
-  // Check if any tasks need clarification
-  const needsClarification = result.data.tasks.some(
-    task => task.clarity !== 'clear' || task.clarificationNeeded
+  // Check if any todos need clarification
+  const needsClarification = result.data.todos.some(
+    todo => todo.clarity !== 'clear' || todo.clarificationNeeded
   );
 
   // Store session for potential follow-up
   const session: ParsingSession = {
     sessionId: result.sessionId,
     input,
-    tasks: result.data,
+    todos: result.data,
     clarificationRound: 0,
     createdAt: new Date(),
   };
@@ -112,18 +112,18 @@ export async function parseTaskInput(
 }
 
 /**
- * Provide clarification for ambiguous tasks
+ * Provide clarification for ambiguous todos
  *
  * @param sessionId - The session ID from the initial parse
  * @param clarification - User's clarification response
- * @returns Updated parsed tasks
+ * @returns Updated parsed todos
  */
-export async function provideTaskClarification(
+export async function provideTodoClarification(
   sessionId: string,
   clarification: string
 ): Promise<{
   success: true;
-  data: ParsedTasksResponse;
+  data: ParsedTodosResponse;
   needsClarification: boolean;
   cost: number;
 } | { success: false; error: string }> {
@@ -140,24 +140,24 @@ export async function provideTaskClarification(
   if (session.clarificationRound >= 3) {
     return {
       success: false,
-      error: 'Maximum clarification rounds (3) reached. Please edit tasks manually or start over.',
+      error: 'Maximum clarification rounds (3) reached. Please edit todos manually or start over.',
     };
   }
 
   // Call Claude CLI with session resumption
-  const result = await clarifyTasks(sessionId, clarification);
+  const result = await clarifyTodos(sessionId, clarification);
 
   if (!result.success) {
     return result;
   }
 
   // Update session
-  session.tasks = result.data;
+  session.todos = result.data;
   session.clarificationRound++;
 
   // Check if still needs clarification
-  const needsClarification = result.data.tasks.some(
-    task => task.clarity !== 'clear' || task.clarificationNeeded
+  const needsClarification = result.data.todos.some(
+    todo => todo.clarity !== 'clear' || todo.clarificationNeeded
   );
 
   return {
@@ -183,35 +183,35 @@ export function clearParsingSession(sessionId: string): boolean {
 }
 
 /**
- * Get all tasks that are ready to route (clear clarity)
+ * Get all todos that are ready to route (clear clarity)
  */
-export function getRoutableTasks(tasks: ParsedTasksResponse): ParsedTask[] {
-  return tasks.tasks.filter(task => task.clarity === 'clear' && task.projectId !== null);
+export function getRoutableTodos(todos: ParsedTodosResponse): ParsedTodo[] {
+  return todos.todos.filter(todo => todo.clarity === 'clear' && todo.projectId !== null);
 }
 
 /**
- * Get tasks that need clarification
+ * Get todos that need clarification
  */
-export function getTasksNeedingClarification(tasks: ParsedTasksResponse): ParsedTask[] {
-  return tasks.tasks.filter(
-    task => task.clarity !== 'clear' || task.clarificationNeeded
+export function getTodosNeedingClarification(todos: ParsedTodosResponse): ParsedTodo[] {
+  return todos.todos.filter(
+    todo => todo.clarity !== 'clear' || todo.clarificationNeeded
   );
 }
 
 /**
- * Validate that all tasks have project assignments before routing
+ * Validate that all todos have project assignments before routing
  */
-export function validateTasksForRouting(
-  tasks: ParsedTasksResponse
+export function validateTodosForRouting(
+  todos: ParsedTodosResponse
 ): { valid: boolean; issues: string[] } {
   const issues: string[] = [];
 
-  for (const task of tasks.tasks) {
-    if (task.projectId === null) {
-      issues.push(`Task "${task.title}" has no project assignment`);
+  for (const todo of todos.todos) {
+    if (todo.projectId === null) {
+      issues.push(`Todo "${todo.title}" has no project assignment`);
     }
-    if (task.clarity !== 'clear') {
-      issues.push(`Task "${task.title}" needs clarification (${task.clarity})`);
+    if (todo.clarity !== 'clear') {
+      issues.push(`Todo "${todo.title}" needs clarification (${todo.clarity})`);
     }
   }
 

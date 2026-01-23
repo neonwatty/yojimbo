@@ -9,14 +9,14 @@ import type { Page } from '@playwright/test';
  */
 
 /**
- * Helper to click the Tasks button in the bottom navigation.
+ * Helper to click the Todos button in the bottom navigation.
  * Uses dispatchEvent('click') because the fixed-position bottom nav
  * can be outside the viewport on mobile emulation, causing regular
  * clicks to fail even with force:true.
  */
-async function clickTasksButton(page: Page) {
-  const tasksButton = page.locator('button:has-text("Tasks")');
-  await tasksButton.dispatchEvent('click');
+async function clickTodosButton(page: Page) {
+  const todosButton = page.locator('button:has-text("Todos")');
+  await todosButton.dispatchEvent('click');
   await page.waitForTimeout(300);
 }
 
@@ -33,7 +33,7 @@ async function clickMenuItem(page: Page, selector: string) {
 test.describe('Mobile Workflows', () => {
   test.beforeEach(async ({ apiClient }) => {
     // Clean up before each test
-    await apiClient.cleanupAllTasks();
+    await apiClient.cleanupAllTodos();
     await apiClient.cleanupAllInstances();
   });
 
@@ -138,58 +138,58 @@ test.describe('Mobile Workflows', () => {
     });
   });
 
-  test.describe('Workflow 4: Task Management', () => {
-    test('navigates to tasks view', async ({ basePage }) => {
+  test.describe('Workflow 4: Todo Management', () => {
+    test('navigates to todos view', async ({ basePage }) => {
       await basePage.goto('/');
 
-      // Click on Tasks in navigation
-      await clickTasksButton(basePage.page);
+      // Click on Todos in navigation
+      await clickTodosButton(basePage.page);
 
-      // Should show tasks interface
-      await expect(basePage.page.locator('text=pending').or(basePage.page.locator('input[placeholder*="task"]'))).toBeVisible();
+      // Should show todos interface
+      await expect(basePage.page.locator('text=pending').or(basePage.page.locator('input[placeholder*="todo"]'))).toBeVisible();
     });
 
-    test('can create new task', async ({ basePage, apiClient }) => {
+    test('can create new todo', async ({ basePage, apiClient }) => {
       await basePage.goto('/');
 
-      // Open tasks
-      await clickTasksButton(basePage.page);
+      // Open todos
+      await clickTodosButton(basePage.page);
 
-      // Find task input and add a task
-      const input = basePage.page.locator('input[placeholder*="task"]').or(basePage.page.locator('input[placeholder*="Add"]'));
-      await input.fill('Mobile test task');
+      // Find todo input and add a todo
+      const input = basePage.page.locator('input[placeholder*="todo"]').or(basePage.page.locator('input[placeholder*="Add"]'));
+      await input.fill('Mobile test todo');
 
       // Click Add button
       await basePage.page.locator('button:has-text("Add")').click();
       await basePage.page.waitForTimeout(300);
 
-      // Task should appear
-      await expect(basePage.page.locator('text=Mobile test task')).toBeVisible();
+      // Todo should appear
+      await expect(basePage.page.locator('text=Mobile test todo')).toBeVisible();
 
       // Verify via API
-      const tasks = await apiClient.listTasks();
-      expect(tasks.some(t => t.text === 'Mobile test task')).toBe(true);
+      const todos = await apiClient.listTodos();
+      expect(todos.some(t => t.text === 'Mobile test todo')).toBe(true);
     });
 
-    test('shows action menu button on task (accessibility alternative to swipe)', async ({ basePage, apiClient }) => {
-      await apiClient.createTask('Task with menu');
+    test('shows action menu button on todo (accessibility alternative to swipe)', async ({ basePage, apiClient }) => {
+      await apiClient.createTodo('Todo with menu');
 
       await basePage.goto('/');
-      await clickTasksButton(basePage.page);
+      await clickTodosButton(basePage.page);
 
       // The overflow menu button (three dots) should be visible
-      const menuButton = basePage.page.locator('[data-testid^="task-menu-"]');
+      const menuButton = basePage.page.locator('[data-testid^="todo-menu-"]');
       await expect(menuButton).toBeVisible();
     });
 
-    test('can mark task done via menu button', async ({ basePage, apiClient }) => {
-      const task = await apiClient.createTask('Task to complete via menu');
+    test('can mark todo done via menu button', async ({ basePage, apiClient }) => {
+      const todo = await apiClient.createTodo('Todo to complete via menu');
 
       await basePage.goto('/');
-      await clickTasksButton(basePage.page);
+      await clickTodosButton(basePage.page);
 
       // Click the menu button
-      const menuButton = basePage.page.locator('[data-testid^="task-menu-"]').first();
+      const menuButton = basePage.page.locator('[data-testid^="todo-menu-"]').first();
       await menuButton.click();
       await basePage.page.waitForTimeout(100);
 
@@ -197,67 +197,67 @@ test.describe('Mobile Workflows', () => {
       await clickMenuItem(basePage.page, 'text=Mark done');
       await basePage.page.waitForTimeout(300);
 
-      // Verify task is done via API
-      const updatedTask = await apiClient.getTask(task.id);
-      expect(updatedTask.status).toBe('done');
+      // Verify todo is done via API
+      const updatedTodo = await apiClient.getTodo(todo.id);
+      expect(updatedTodo.status).toBe('done');
     });
 
-    test('can delete task via menu button', async ({ basePage, apiClient }) => {
-      await apiClient.createTask('Task to delete via menu');
+    test('can delete todo via menu button', async ({ basePage, apiClient }) => {
+      await apiClient.createTodo('Todo to delete via menu');
 
       await basePage.goto('/');
-      await clickTasksButton(basePage.page);
+      await clickTodosButton(basePage.page);
 
       // Click the menu button
-      const menuButton = basePage.page.locator('[data-testid^="task-menu-"]').first();
+      const menuButton = basePage.page.locator('[data-testid^="todo-menu-"]').first();
       await menuButton.click();
       await basePage.page.waitForTimeout(100);
 
       // Click "Delete" option using dispatchEvent to bypass backdrop
-      await clickMenuItem(basePage.page, '[data-testid^="task-menu-dropdown-"] button:has-text("Delete")');
+      await clickMenuItem(basePage.page, '[data-testid^="todo-menu-dropdown-"] button:has-text("Delete")');
       await basePage.page.waitForTimeout(300);
 
-      // Verify task is deleted
-      const tasks = await apiClient.listTasks();
-      expect(tasks.length).toBe(0);
+      // Verify todo is deleted
+      const todos = await apiClient.listTodos();
+      expect(todos.length).toBe(0);
     });
 
-    test('can dispatch task via menu button', async ({ basePage, apiClient }) => {
-      await apiClient.createTask('Task to dispatch via menu');
+    test('can dispatch todo via menu button', async ({ basePage, apiClient }) => {
+      await apiClient.createTodo('Todo to dispatch via menu');
 
       await basePage.goto('/');
-      await clickTasksButton(basePage.page);
+      await clickTodosButton(basePage.page);
 
       // Click the menu button
-      const menuButton = basePage.page.locator('[data-testid^="task-menu-"]').first();
+      const menuButton = basePage.page.locator('[data-testid^="todo-menu-"]').first();
       await menuButton.click();
       await basePage.page.waitForTimeout(100);
 
       // Click "Dispatch" option using dispatchEvent to bypass backdrop
-      await clickMenuItem(basePage.page, '[data-testid^="task-menu-dropdown-"] button:has-text("Dispatch")');
+      await clickMenuItem(basePage.page, '[data-testid^="todo-menu-dropdown-"] button:has-text("Dispatch")');
       await basePage.page.waitForTimeout(300);
 
       // Dispatch sheet should open with options
-      await expect(basePage.page.getByRole('heading', { name: 'Dispatch Task' })).toBeVisible();
+      await expect(basePage.page.getByRole('heading', { name: 'Dispatch Todo' })).toBeVisible();
     });
 
     test('shows action hint text', async ({ basePage, apiClient }) => {
-      await apiClient.createTask('Hint test task');
+      await apiClient.createTodo('Hint test todo');
 
       await basePage.goto('/');
-      await clickTasksButton(basePage.page);
+      await clickTodosButton(basePage.page);
 
       // Should show the updated hint text
       await expect(basePage.page.locator('text=Swipe or tap')).toBeVisible();
     });
 
-    test('pending count updates after task creation', async ({ basePage, apiClient }) => {
+    test('pending count updates after todo creation', async ({ basePage, apiClient }) => {
       await basePage.goto('/');
-      await clickTasksButton(basePage.page);
+      await clickTodosButton(basePage.page);
 
-      // Create a task
-      const input = basePage.page.locator('input[placeholder*="task"]').or(basePage.page.locator('input[placeholder*="Add"]'));
-      await input.fill('Count test task');
+      // Create a todo
+      const input = basePage.page.locator('input[placeholder*="todo"]').or(basePage.page.locator('input[placeholder*="Add"]'));
+      await input.fill('Count test todo');
       await basePage.page.locator('button:has-text("Add")').click();
       await basePage.page.waitForTimeout(300);
 
@@ -266,18 +266,18 @@ test.describe('Mobile Workflows', () => {
     });
   });
 
-  test.describe('Workflow 5: Task Dispatch', () => {
+  test.describe('Workflow 5: Todo Dispatch', () => {
     test('dispatch sheet shows copy to clipboard option', async ({ basePage, apiClient }) => {
-      await apiClient.createTask('Dispatch sheet test');
+      await apiClient.createTodo('Dispatch sheet test todo');
 
       await basePage.goto('/');
-      await clickTasksButton(basePage.page);
+      await clickTodosButton(basePage.page);
 
       // Open menu and click dispatch
-      const menuButton = basePage.page.locator('[data-testid^="task-menu-"]').first();
+      const menuButton = basePage.page.locator('[data-testid^="todo-menu-"]').first();
       await menuButton.click();
       await basePage.page.waitForTimeout(100);
-      await clickMenuItem(basePage.page, '[data-testid^="task-menu-dropdown-"] button:has-text("Dispatch")');
+      await clickMenuItem(basePage.page, '[data-testid^="todo-menu-dropdown-"] button:has-text("Dispatch")');
       await basePage.page.waitForTimeout(300);
 
       // Should show copy option
@@ -287,16 +287,16 @@ test.describe('Mobile Workflows', () => {
     test('dispatch sheet shows running instances', async ({ basePage, apiClient }) => {
       // Create an instance first
       await apiClient.createInstance({ name: 'RunningInstance', workingDir: '/tmp' });
-      await apiClient.createTask('Dispatch to instance test');
+      await apiClient.createTodo('Dispatch to instance test todo');
 
       await basePage.goto('/');
-      await clickTasksButton(basePage.page);
+      await clickTodosButton(basePage.page);
 
       // Open menu and click dispatch
-      const menuButton = basePage.page.locator('[data-testid^="task-menu-"]').first();
+      const menuButton = basePage.page.locator('[data-testid^="todo-menu-"]').first();
       await menuButton.click();
       await basePage.page.waitForTimeout(100);
-      await clickMenuItem(basePage.page, '[data-testid^="task-menu-dropdown-"] button:has-text("Dispatch")');
+      await clickMenuItem(basePage.page, '[data-testid^="todo-menu-dropdown-"] button:has-text("Dispatch")');
       await basePage.page.waitForTimeout(300);
 
       // Should show the running instance (use first() since name may appear in multiple places)
@@ -304,16 +304,16 @@ test.describe('Mobile Workflows', () => {
     });
 
     test('dispatch sheet shows create new instance option', async ({ basePage, apiClient }) => {
-      await apiClient.createTask('New instance dispatch test');
+      await apiClient.createTodo('New instance dispatch test');
 
       await basePage.goto('/');
-      await clickTasksButton(basePage.page);
+      await clickTodosButton(basePage.page);
 
       // Open menu and click dispatch
-      const menuButton = basePage.page.locator('[data-testid^="task-menu-"]').first();
+      const menuButton = basePage.page.locator('[data-testid^="todo-menu-"]').first();
       await menuButton.click();
       await basePage.page.waitForTimeout(100);
-      await clickMenuItem(basePage.page, '[data-testid^="task-menu-dropdown-"] button:has-text("Dispatch")');
+      await clickMenuItem(basePage.page, '[data-testid^="todo-menu-dropdown-"] button:has-text("Dispatch")');
       await basePage.page.waitForTimeout(300);
 
       // Should show create new instance option
@@ -323,10 +323,10 @@ test.describe('Mobile Workflows', () => {
 
   test.describe('UX Best Practices', () => {
     test('buttons have adequate touch target size (44px minimum)', async ({ basePage, apiClient }) => {
-      await apiClient.createTask('Touch target test');
+      await apiClient.createTodo('Touch target test');
 
       await basePage.goto('/');
-      await clickTasksButton(basePage.page);
+      await clickTodosButton(basePage.page);
 
       // Check Add button size
       const addButton = basePage.page.locator('button:has-text("Add")');
@@ -334,7 +334,7 @@ test.describe('Mobile Workflows', () => {
       expect(addBox?.height).toBeGreaterThanOrEqual(44);
 
       // Check menu button has adequate touch area
-      const menuButton = basePage.page.locator('[data-testid^="task-menu-"]').first();
+      const menuButton = basePage.page.locator('[data-testid^="todo-menu-"]').first();
       const menuBox = await menuButton.boundingBox();
       // The clickable area should be at least 24px, though visual may be smaller
       expect(menuBox?.height).toBeGreaterThanOrEqual(20);
@@ -342,38 +342,38 @@ test.describe('Mobile Workflows', () => {
 
     test('input fields have adequate height for mobile', async ({ basePage }) => {
       await basePage.goto('/');
-      await clickTasksButton(basePage.page);
+      await clickTodosButton(basePage.page);
 
-      // Task input should have comfortable height
-      const input = basePage.page.locator('input[placeholder*="task"]').or(basePage.page.locator('input[placeholder*="Add"]'));
+      // Todo input should have comfortable height
+      const input = basePage.page.locator('input[placeholder*="todo"]').or(basePage.page.locator('input[placeholder*="Add"]'));
       const inputBox = await input.boundingBox();
       expect(inputBox?.height).toBeGreaterThanOrEqual(40);
     });
 
     test('text is readable size on mobile', async ({ basePage, apiClient }) => {
-      await apiClient.createTask('Readable text test task with longer content');
+      await apiClient.createTodo('Readable text test todo with longer content');
 
       await basePage.goto('/');
-      await clickTasksButton(basePage.page);
+      await clickTodosButton(basePage.page);
 
-      // Task text should be visible and readable (font-size at least 14px equivalent)
-      const taskText = basePage.page.locator('text=Readable text test');
-      await expect(taskText).toBeVisible();
+      // Todo text should be visible and readable (font-size at least 14px equivalent)
+      const todoText = basePage.page.locator('text=Readable text test');
+      await expect(todoText).toBeVisible();
     });
 
     test('action menu closes when clicking outside', async ({ basePage, apiClient }) => {
-      await apiClient.createTask('Menu close test');
+      await apiClient.createTodo('Menu close test');
 
       await basePage.goto('/');
-      await clickTasksButton(basePage.page);
+      await clickTodosButton(basePage.page);
 
       // Open menu
-      const menuButton = basePage.page.locator('[data-testid^="task-menu-"]').first();
+      const menuButton = basePage.page.locator('[data-testid^="todo-menu-"]').first();
       await menuButton.click();
       await basePage.page.waitForTimeout(100);
 
       // Menu should be visible
-      await expect(basePage.page.locator('[data-testid^="task-menu-dropdown-"]')).toBeVisible();
+      await expect(basePage.page.locator('[data-testid^="todo-menu-dropdown-"]')).toBeVisible();
 
       // Click on the backdrop element that closes the menu (use the specific z-0 backdrop)
       const backdrop = basePage.page.locator('.fixed.inset-0.z-0');
@@ -381,7 +381,7 @@ test.describe('Mobile Workflows', () => {
       await basePage.page.waitForTimeout(100);
 
       // Menu should be closed
-      await expect(basePage.page.locator('[data-testid^="task-menu-dropdown-"]')).not.toBeVisible();
+      await expect(basePage.page.locator('[data-testid^="todo-menu-dropdown-"]')).not.toBeVisible();
     });
 
     test('loading states are shown appropriately', async ({ basePage }) => {
@@ -396,34 +396,34 @@ test.describe('Mobile Workflows', () => {
 
     test('empty states have clear messaging', async ({ basePage }) => {
       await basePage.goto('/');
-      await clickTasksButton(basePage.page);
+      await clickTodosButton(basePage.page);
 
-      // With no tasks, should show empty state message
-      await expect(basePage.page.getByText('No tasks yet')).toBeVisible();
+      // With no todos, should show empty state message
+      await expect(basePage.page.getByText('No todos yet')).toBeVisible();
     });
   });
 
   test.describe('Accessibility', () => {
     test('menu button has aria-label', async ({ basePage, apiClient }) => {
-      await apiClient.createTask('Accessibility test');
+      await apiClient.createTodo('Accessibility test');
 
       await basePage.goto('/');
-      await clickTasksButton(basePage.page);
+      await clickTodosButton(basePage.page);
 
       // Menu button should have aria-label
-      const menuButton = basePage.page.locator('[data-testid^="task-menu-"]').first();
+      const menuButton = basePage.page.locator('[data-testid^="todo-menu-"]').first();
       const ariaLabel = await menuButton.getAttribute('aria-label');
       expect(ariaLabel).toBeTruthy();
     });
 
     test('action buttons have descriptive labels', async ({ basePage, apiClient }) => {
-      await apiClient.createTask('Button label test');
+      await apiClient.createTodo('Button label test');
 
       await basePage.goto('/');
-      await clickTasksButton(basePage.page);
+      await clickTodosButton(basePage.page);
 
       // Open menu
-      const menuButton = basePage.page.locator('[data-testid^="task-menu-"]').first();
+      const menuButton = basePage.page.locator('[data-testid^="todo-menu-"]').first();
       await menuButton.click();
 
       // Menu options should have clear text labels
@@ -433,13 +433,13 @@ test.describe('Mobile Workflows', () => {
     });
 
     test('checkbox is keyboard accessible', async ({ basePage, apiClient }) => {
-      await apiClient.createTask('Keyboard test');
+      await apiClient.createTodo('Keyboard test');
 
       await basePage.goto('/');
-      await clickTasksButton(basePage.page);
+      await clickTodosButton(basePage.page);
 
       // Checkbox button should be focusable
-      const checkbox = basePage.page.locator('[data-testid^="task-checkbox-"]').first();
+      const checkbox = basePage.page.locator('[data-testid^="todo-checkbox-"]').first();
       await expect(checkbox).toBeVisible();
 
       // Should be a button element (accessible)

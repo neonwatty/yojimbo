@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Icons } from '../../common/Icons';
-import { SmartTaskInput } from './SmartTaskInput';
-import { ParsedTasksReview } from './ParsedTasksReview';
-import { useSmartTasksStore } from '../../../store/smartTasksStore';
+import { SmartTodoInput } from './SmartTodoInput';
+import { ParsedTodosReview } from './ParsedTodosReview';
+import { useSmartTodosStore } from '../../../store/smartTodosStore';
 
 type Step = 'input' | 'review';
 
@@ -11,9 +11,9 @@ interface SmartTasksModalProps {
   onClose: () => void;
 }
 
-export function SmartTasksModal({ isOpen, onClose }: SmartTasksModalProps) {
+export function SmartTodosModal({ isOpen, onClose }: SmartTasksModalProps) {
   const [step, setStep] = useState<Step>('input');
-  const { state, reset } = useSmartTasksStore();
+  const { state, reset } = useSmartTodosStore();
 
   // Reset state when modal closes
   useEffect(() => {
@@ -47,11 +47,11 @@ export function SmartTasksModal({ isOpen, onClose }: SmartTasksModalProps) {
   const getTitle = () => {
     switch (step) {
       case 'input':
-        return 'Smart Task Input';
+        return 'Smart Todo Input';
       case 'review':
-        return 'Review Parsed Tasks';
+        return 'Review Parsed Todos';
       default:
-        return 'Smart Tasks';
+        return 'Smart Todos';
     }
   };
 
@@ -83,14 +83,14 @@ export function SmartTasksModal({ isOpen, onClose }: SmartTasksModalProps) {
 
         {/* Content */}
         {step === 'input' && (
-          <SmartTaskInput
+          <SmartTodoInput
             onCancel={onClose}
             onParsed={() => setStep('review')}
           />
         )}
 
         {step === 'review' && (
-          <ParsedTasksReview
+          <ParsedTodosReview
             onBack={() => setStep('input')}
             onComplete={onClose}
           />

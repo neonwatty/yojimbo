@@ -1,28 +1,28 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Icons } from '../../common/Icons';
-import { useSmartTasksStore, selectTasksNeedingClarification, selectRoutableTasks, getEffectiveClarity } from '../../../store/smartTasksStore';
-import { smartTasksApi, projectsApi } from '../../../api/client';
+import { useSmartTodosStore, selectTodosNeedingClarification, selectRoutableTodos, getEffectiveClarity } from '../../../store/smartTodosStore';
+import { smartTodosApi, projectsApi } from '../../../api/client';
 import { toast } from '../../../store/toastStore';
 import { CloneSetupModal } from './CloneSetupModal';
 import { ProjectSelector } from './ProjectSelector';
 import { DispatchTargetSelector } from './DispatchTargetSelector';
-import type { ParsedTask, CreateAndDispatchRequest } from '@cc-orchestrator/shared';
+import type { ParsedTodo, CreateAndDispatchRequest } from '@cc-orchestrator/shared';
 
-interface ParsedTasksReviewProps {
+interface ParsedTodosReviewProps {
   onBack: () => void;
   onComplete: () => void;
 }
 
-export function ParsedTasksReview({ onBack, onComplete }: ParsedTasksReviewProps) {
+export function ParsedTodosReview({ onBack, onComplete }: ParsedTodosReviewProps) {
   const {
-    parsedTasks,
+    parsedTodos,
     suggestedOrder,
     sessionId,
     summary,
     projects,
     needsClarification,
-    removeTask,
-    selectProjectForTask,
+    removeTodo,
+    selectProjectForTodo,
     startClarifying,
     setParsedResult,
     setError,
@@ -36,24 +36,24 @@ export function ParsedTasksReview({ onBack, onComplete }: ParsedTasksReviewProps
     startDispatching,
     setDispatchComplete,
     setDispatchError,
-  } = useSmartTasksStore();
+  } = useSmartTodosStore();
 
   const [clarificationInputs, setClarificationInputs] = useState<Record<string, string>>({});
   const [isSubmittingClarification, setIsSubmittingClarification] = useState(false);
-  const [isCreatingTasks, setIsCreatingTasks] = useState(false);
-  const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
+  const [isCreatingTodos, setIsCreatingTodos] = useState(false);
+  const [expandedTodoId, setExpandedTodoId] = useState<string | null>(null);
   const [showCloneModal, setShowCloneModal] = useState(false);
   const [cloneRepoInfo, setCloneRepoInfo] = useState<{ url: string; name: string } | null>(null);
   const [instancesFetched, setInstancesFetched] = useState(false);
 
-  const tasksNeedingClarification = selectTasksNeedingClarification(useSmartTasksStore.getState());
-  const routableTasks = selectRoutableTasks(useSmartTasksStore.getState());
+  const todosNeedingClarification = selectTodosNeedingClarification(useSmartTodosStore.getState());
+  const routableTodos = selectRoutableTodos(useSmartTodosStore.getState());
 
   // Fetch project instances and compute smart defaults
   useEffect(() => {
     async function fetchProjectInstances() {
-      // Get unique project IDs from tasks
-      const projectIds = [...new Set(parsedTasks.map((t) => t.projectId).filter(Boolean))] as string[];
+      // Get unique project IDs from todos
+      const projectIds = [...new Set(parsedTodos.map((t: ParsedTodo) => t.projectId).filter(Boolean))] as string[];
 
       // Fetch instances for each project
       for (const projectId of projectIds) {
@@ -74,16 +74,16 @@ export function ParsedTasksReview({ onBack, onComplete }: ParsedTasksReviewProps
       setInstancesFetched(true);
     }
 
-    if (parsedTasks.length > 0 && !instancesFetched) {
+    if (parsedTodos.length > 0 && !instancesFetched) {
       fetchProjectInstances();
     }
-  }, [parsedTasks, instancesFetched, projectInstancesCache, setProjectInstances, computeSmartDefaults]);
+  }, [parsedTodos, instancesFetched, projectInstancesCache, setProjectInstances, computeSmartDefaults]);
 
   // Detect GitHub repos mentioned in clarification questions
   const detectedGitHubRepo = useMemo(() => {
-    for (const task of parsedTasks) {
-      if (task.clarificationNeeded?.question) {
-        const question = task.clarificationNeeded.question;
+    for (const todo of parsedTodos) {
+      if (todo.clarificationNeeded?.question) {
+        const question = todo.clarificationNeeded.question;
         // Look for GitHub repo patterns in the question
         // Patterns like "github.com/owner/repo", "neonwatty/bugdrop", "owner/repo"
         const patterns = [
@@ -115,14 +115,14 @@ export function ParsedTasksReview({ onBack, onComplete }: ParsedTasksReviewProps
       }
     }
     return null;
-  }, [parsedTasks]);
+  }, [parsedTodos]);
 
-  // Check if any tasks have unknown project (candidates for clone setup)
+  // Check if any todos have unknown project (candidates for clone setup)
   // Use getEffectiveClarity to derive this, don't trust parser's clarity field
-  const hasUnknownProjectTasks = parsedTasks.some(t => getEffectiveClarity(t) === 'unknown_project');
+  const hasUnknownProjectTodos = parsedTodos.some((t: ParsedTodo) => getEffectiveClarity(t) === 'unknown_project');
 
-  // Sort tasks by suggested order
-  const orderedTasks = [...parsedTasks].sort((a, b) => {
+  // Sort todos by suggested order
+  const orderedTodos = [...parsedTodos].sort((a: ParsedTodo, b: ParsedTodo) => {
     const aIndex = suggestedOrder.indexOf(a.id);
     const bIndex = suggestedOrder.indexOf(b.id);
     return aIndex - bIndex;
@@ -130,14 +130,14 @@ export function ParsedTasksReview({ onBack, onComplete }: ParsedTasksReviewProps
 
   // Calculate dispatch summary
   const dispatchSummary = useMemo(() => {
-    const tasksToDispatch = routableTasks.filter(
-      (t) => dispatchTargets[t.id]?.type !== 'none'
+    const todosToDispatch = routableTodos.filter(
+      (t: ParsedTodo) => dispatchTargets[t.id]?.type !== 'none'
     );
     const existingInstanceIds = new Set<string>();
     let newInstanceCount = 0;
 
-    for (const task of tasksToDispatch) {
-      const target = dispatchTargets[task.id];
+    for (const todo of todosToDispatch) {
+      const target = dispatchTargets[todo.id];
       if (target?.type === 'instance' && target.instanceId) {
         existingInstanceIds.add(target.instanceId);
       } else if (target?.type === 'new-instance') {
@@ -146,13 +146,13 @@ export function ParsedTasksReview({ onBack, onComplete }: ParsedTasksReviewProps
     }
 
     return {
-      totalTasks: tasksToDispatch.length,
+      totalTodos: todosToDispatch.length,
       existingInstances: existingInstanceIds.size,
       newInstances: newInstanceCount,
       totalInstances: existingInstanceIds.size + newInstanceCount,
-      saveOnly: routableTasks.length - tasksToDispatch.length,
+      saveOnly: routableTodos.length - todosToDispatch.length,
     };
-  }, [routableTasks, dispatchTargets]);
+  }, [routableTodos, dispatchTargets]);
 
   const handleClarificationSubmit = async () => {
     if (!sessionId) return;
@@ -160,9 +160,9 @@ export function ParsedTasksReview({ onBack, onComplete }: ParsedTasksReviewProps
     // Collect all clarification answers
     const answers = Object.entries(clarificationInputs)
       .filter(([_, value]) => value.trim())
-      .map(([taskId, answer]) => {
-        const task = parsedTasks.find(t => t.id === taskId);
-        return `For "${task?.title}": ${answer}`;
+      .map(([todoId, answer]) => {
+        const todo = parsedTodos.find((t: ParsedTodo) => t.id === todoId);
+        return `For "${todo?.title}": ${answer}`;
       })
       .join('\n');
 
@@ -175,12 +175,12 @@ export function ParsedTasksReview({ onBack, onComplete }: ParsedTasksReviewProps
     startClarifying();
 
     try {
-      const response = await smartTasksApi.clarify(sessionId, answers);
+      const response = await smartTodosApi.clarify(sessionId, answers);
 
       if (response.data) {
         setParsedResult(
           sessionId,
-          { tasks: response.data.tasks, suggestedOrder: response.data.suggestedOrder },
+          { todos: response.data.todos, suggestedOrder: response.data.suggestedOrder },
           response.data.needsClarification,
           response.data.summary
         );
@@ -196,44 +196,44 @@ export function ParsedTasksReview({ onBack, onComplete }: ParsedTasksReviewProps
   const handleCreateAndDispatch = async () => {
     if (!sessionId) return;
 
-    // Create tasks from all clear, routable parsed tasks
-    const tasksToCreate = parsedTasks.filter(
-      (t) => getEffectiveClarity(t) === 'clear' && t.projectId !== null
+    // Create todos from all clear, routable parsed todos
+    const todosToCreate = parsedTodos.filter(
+      (t: ParsedTodo) => getEffectiveClarity(t) === 'clear' && t.projectId !== null
     );
 
-    if (tasksToCreate.length === 0) {
-      toast.error('No tasks ready to create');
+    if (todosToCreate.length === 0) {
+      toast.error('No todos ready to create');
       return;
     }
 
-    setIsCreatingTasks(true);
+    setIsCreatingTodos(true);
     startDispatching();
 
     try {
       // Build the request with dispatch targets
       const request: CreateAndDispatchRequest = {
         sessionId,
-        tasks: tasksToCreate.map((parsedTask) => {
-          const projectName = getProjectName(parsedTask.projectId);
-          const taskText = `[${parsedTask.type}] ${parsedTask.title}${projectName !== 'Unknown' ? ` (${projectName})` : ''}`;
-          const target = dispatchTargets[parsedTask.id] || { type: 'none' };
+        todos: todosToCreate.map((parsedTodo: ParsedTodo) => {
+          const projectName = getProjectName(parsedTodo.projectId);
+          const todoText = `[${parsedTodo.type}] ${parsedTodo.title}${projectName !== 'Unknown' ? ` (${projectName})` : ''}`;
+          const target = dispatchTargets[parsedTodo.id] || { type: 'none' };
 
           return {
-            parsedTaskId: parsedTask.id,
-            text: taskText,
-            projectId: parsedTask.projectId!,
+            parsedTodoId: parsedTodo.id,
+            text: todoText,
+            projectId: parsedTodo.projectId!,
             dispatchTarget: target,
           };
         }),
       };
 
-      const response = await smartTasksApi.createAndDispatch(request);
+      const response = await smartTodosApi.createAndDispatch(request);
 
       if (response.data) {
         const { created, dispatched, newInstances } = response.data;
 
         // Build success message
-        let message = `Created ${created} task${created !== 1 ? 's' : ''}`;
+        let message = `Created ${created} todo${created !== 1 ? 's' : ''}`;
         if (dispatched > 0) {
           message += `, dispatched ${dispatched}`;
         }
@@ -246,10 +246,10 @@ export function ParsedTasksReview({ onBack, onComplete }: ParsedTasksReviewProps
         onComplete();
       }
     } catch (err) {
-      setDispatchError(err instanceof Error ? err.message : 'Failed to create and dispatch tasks');
-      toast.error(err instanceof Error ? err.message : 'Failed to create and dispatch tasks');
+      setDispatchError(err instanceof Error ? err.message : 'Failed to create and dispatch todos');
+      toast.error(err instanceof Error ? err.message : 'Failed to create and dispatch todos');
     } finally {
-      setIsCreatingTasks(false);
+      setIsCreatingTodos(false);
     }
   };
 
@@ -280,9 +280,9 @@ export function ParsedTasksReview({ onBack, onComplete }: ParsedTasksReviewProps
     toast.success('Project cloned and instance created!');
   };
 
-  const getClarityBadge = (task: ParsedTask) => {
+  const getClarityBadge = (todo: ParsedTodo) => {
     // Use derived clarity, not the parser's value directly
-    const effectiveClarity = getEffectiveClarity(task);
+    const effectiveClarity = getEffectiveClarity(todo);
 
     if (effectiveClarity === 'clear') {
       return (
@@ -308,8 +308,8 @@ export function ParsedTasksReview({ onBack, onComplete }: ParsedTasksReviewProps
     );
   };
 
-  const getTypeBadge = (type: ParsedTask['type']) => {
-    const colors: Record<ParsedTask['type'], string> = {
+  const getTypeBadge = (type: ParsedTodo['type']) => {
+    const colors: Record<ParsedTodo['type'], string> = {
       bug: 'bg-red-500/20 text-red-400',
       feature: 'bg-purple-500/20 text-purple-400',
       enhancement: 'bg-blue-500/20 text-blue-400',
@@ -330,7 +330,7 @@ export function ParsedTasksReview({ onBack, onComplete }: ParsedTasksReviewProps
       {/* Header Summary */}
       <div className="px-6 py-4 border-b border-surface-600 shrink-0">
         <h3 className="text-sm font-medium text-theme-primary">
-          {parsedTasks.length} task{parsedTasks.length !== 1 ? 's' : ''} parsed
+          {parsedTodos.length} todo{parsedTodos.length !== 1 ? 's' : ''} parsed
         </h3>
         {summary && (
           <p className="text-xs text-theme-muted mt-0.5">
@@ -341,61 +341,61 @@ export function ParsedTasksReview({ onBack, onComplete }: ParsedTasksReviewProps
         )}
       </div>
 
-      {/* Task List */}
+      {/* Todo List */}
       <div className="flex-1 overflow-auto px-6 py-4">
         <div className="space-y-3">
-          {orderedTasks.map((task, index) => (
+          {orderedTodos.map((todo: ParsedTodo, index: number) => (
             <div
-              key={task.id}
+              key={todo.id}
               className={`p-4 bg-surface-800 rounded-lg border transition-colors ${
-                getEffectiveClarity(task) === 'clear'
+                getEffectiveClarity(todo) === 'clear'
                   ? 'border-surface-600'
                   : 'border-yellow-500/30'
               }`}
             >
-              {/* Task Header */}
+              {/* Todo Header */}
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-xs text-theme-muted">{index + 1}.</span>
                     <h4 className="text-sm font-medium text-theme-primary truncate">
-                      {task.title}
+                      {todo.title}
                     </h4>
                   </div>
                   <div className="flex flex-wrap items-center gap-2 mt-2">
-                    {getTypeBadge(task.type)}
-                    {getClarityBadge(task)}
+                    {getTypeBadge(todo.type)}
+                    {getClarityBadge(todo)}
                     <ProjectSelector
-                      task={task}
+                      todo={todo}
                       projects={projects}
-                      onSelect={(projectId) => selectProjectForTask(task.id, projectId)}
+                      onSelect={(projectId) => selectProjectForTodo(todo.id, projectId)}
                     />
                     <DispatchTargetSelector
-                      task={task}
-                      projectId={task.projectId}
-                      availableInstances={task.projectId ? (projectInstancesCache[task.projectId] || []) : []}
-                      currentTarget={dispatchTargets[task.id]}
-                      onSelect={(target) => setDispatchTarget(task.id, target)}
-                      projectName={getProjectName(task.projectId)}
-                      projectPath={projects.find((p) => p.id === task.projectId)?.path}
+                      todo={todo}
+                      projectId={todo.projectId}
+                      availableInstances={todo.projectId ? (projectInstancesCache[todo.projectId] || []) : []}
+                      currentTarget={dispatchTargets[todo.id]}
+                      onSelect={(target) => setDispatchTarget(todo.id, target)}
+                      projectName={getProjectName(todo.projectId)}
+                      projectPath={projects.find((p: { id: string }) => p.id === todo.projectId)?.path}
                     />
                   </div>
                 </div>
 
                 <div className="flex items-center gap-1 shrink-0">
                   <button
-                    onClick={() => setExpandedTaskId(expandedTaskId === task.id ? null : task.id)}
+                    onClick={() => setExpandedTodoId(expandedTodoId === todo.id ? null : todo.id)}
                     className={`p-1.5 rounded text-theme-muted hover:text-theme-primary hover:bg-surface-700 transition-all ${
-                      expandedTaskId === task.id ? 'rotate-180' : ''
+                      expandedTodoId === todo.id ? 'rotate-180' : ''
                     }`}
                     title="Show details"
                   >
                     <Icons.chevronDown />
                   </button>
                   <button
-                    onClick={() => removeTask(task.id)}
+                    onClick={() => removeTodo(todo.id)}
                     className="p-1.5 rounded text-theme-muted hover:text-red-400 hover:bg-surface-700 transition-colors"
-                    title="Remove task"
+                    title="Remove todo"
                   >
                     <Icons.trash className="w-4 h-4" />
                   </button>
@@ -403,28 +403,28 @@ export function ParsedTasksReview({ onBack, onComplete }: ParsedTasksReviewProps
               </div>
 
               {/* Expanded Details */}
-              {expandedTaskId === task.id && (
+              {expandedTodoId === todo.id && (
                 <div className="mt-3 pt-3 border-t border-surface-700">
                   <p className="text-xs text-theme-muted mb-1">Original text:</p>
                   <p className="text-sm text-theme-secondary font-mono bg-surface-900 p-2 rounded">
-                    {task.originalText}
+                    {todo.originalText}
                   </p>
                 </div>
               )}
 
               {/* Clarification Input */}
-              {task.clarificationNeeded && (
+              {todo.clarificationNeeded && (
                 <div className="mt-3 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
                   <p className="text-sm text-yellow-400 mb-2">
-                    {task.clarificationNeeded.question}
+                    {todo.clarificationNeeded.question}
                   </p>
                   <input
                     type="text"
-                    value={clarificationInputs[task.id] || ''}
+                    value={clarificationInputs[todo.id] || ''}
                     onChange={(e) =>
                       setClarificationInputs((prev) => ({
                         ...prev,
-                        [task.id]: e.target.value,
+                        [todo.id]: e.target.value,
                       }))
                     }
                     placeholder="Your answer..."
@@ -434,10 +434,10 @@ export function ParsedTasksReview({ onBack, onComplete }: ParsedTasksReviewProps
               )}
 
               {/* Unknown project prompt - show when no explicit clarification but project is unknown */}
-              {!task.clarificationNeeded && getEffectiveClarity(task) === 'unknown_project' && (
+              {!todo.clarificationNeeded && getEffectiveClarity(todo) === 'unknown_project' && (
                 <div className="mt-3 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
                   <p className="text-sm text-yellow-400 mb-2">
-                    This task mentions a project that isn't registered locally.
+                    This todo mentions a project that isn't registered locally.
                   </p>
                   <div className="flex items-center gap-2">
                     <button
@@ -447,7 +447,7 @@ export function ParsedTasksReview({ onBack, onComplete }: ParsedTasksReviewProps
                       <Icons.github />
                       Clone & Create Instance
                     </button>
-                    <span className="text-xs text-theme-muted">or remove this task</span>
+                    <span className="text-xs text-theme-muted">or remove this todo</span>
                   </div>
                 </div>
               )}
@@ -455,10 +455,10 @@ export function ParsedTasksReview({ onBack, onComplete }: ParsedTasksReviewProps
           ))}
         </div>
 
-        {parsedTasks.length === 0 && (
+        {parsedTodos.length === 0 && (
           <div className="text-center py-12">
             <div className="text-4xl mb-3">🤔</div>
-            <p className="text-theme-muted text-sm">No tasks were parsed from your input.</p>
+            <p className="text-theme-muted text-sm">No todos were parsed from your input.</p>
             <button
               onClick={onBack}
               className="mt-4 text-sm text-accent hover:underline"
@@ -472,12 +472,12 @@ export function ParsedTasksReview({ onBack, onComplete }: ParsedTasksReviewProps
       {/* Footer Actions */}
       <div className="px-6 py-4 border-t border-surface-600 shrink-0 space-y-3">
         {/* Dispatch Summary */}
-        {routableTasks.length > 0 && instancesFetched && (
+        {routableTodos.length > 0 && instancesFetched && (
           <div className="flex items-center gap-3 px-3 py-2 bg-frost-200/10 rounded-lg text-xs text-frost-200">
             <Icons.computer />
-            {dispatchSummary.totalTasks > 0 ? (
+            {dispatchSummary.totalTodos > 0 ? (
               <span>
-                Will dispatch <strong>{dispatchSummary.totalTasks} task{dispatchSummary.totalTasks !== 1 ? 's' : ''}</strong> to{' '}
+                Will dispatch <strong>{dispatchSummary.totalTodos} todo{dispatchSummary.totalTodos !== 1 ? 's' : ''}</strong> to{' '}
                 <strong>{dispatchSummary.totalInstances} instance{dispatchSummary.totalInstances !== 1 ? 's' : ''}</strong>
                 {dispatchSummary.newInstances > 0 && (
                   <span className="text-accent"> ({dispatchSummary.newInstances} new)</span>
@@ -485,7 +485,7 @@ export function ParsedTasksReview({ onBack, onComplete }: ParsedTasksReviewProps
               </span>
             ) : (
               <span>
-                Will save <strong>{dispatchSummary.saveOnly} task{dispatchSummary.saveOnly !== 1 ? 's' : ''}</strong> without dispatching
+                Will save <strong>{dispatchSummary.saveOnly} todo{dispatchSummary.saveOnly !== 1 ? 's' : ''}</strong> without dispatching
               </span>
             )}
           </div>
@@ -501,7 +501,7 @@ export function ParsedTasksReview({ onBack, onComplete }: ParsedTasksReviewProps
 
           <div className="flex items-center gap-2">
             {/* Clone & Create Instance button - shows when GitHub repo is detected or unknown projects exist */}
-            {(detectedGitHubRepo || hasUnknownProjectTasks) && (
+            {(detectedGitHubRepo || hasUnknownProjectTodos) && (
               <button
                 onClick={() => handleOpenCloneModal()}
                 className="px-4 py-2 bg-surface-700 text-theme-primary border border-surface-600 rounded-lg text-sm hover:bg-surface-600 transition-colors flex items-center gap-2"
@@ -516,7 +516,7 @@ export function ParsedTasksReview({ onBack, onComplete }: ParsedTasksReviewProps
               </button>
             )}
 
-            {needsClarification && tasksNeedingClarification.length > 0 && (
+            {needsClarification && todosNeedingClarification.length > 0 && (
               <button
                 onClick={handleClarificationSubmit}
                 disabled={isSubmittingClarification || Object.keys(clarificationInputs).length === 0}
@@ -528,10 +528,10 @@ export function ParsedTasksReview({ onBack, onComplete }: ParsedTasksReviewProps
 
             <button
               onClick={handleCreateAndDispatch}
-              disabled={isCreatingTasks || routableTasks.length === 0}
+              disabled={isCreatingTodos || routableTodos.length === 0}
               className="px-4 py-2 bg-accent text-surface-900 rounded-lg font-medium text-sm hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
             >
-              {isCreatingTasks ? (
+              {isCreatingTodos ? (
                 <>
                   <div className="animate-spin w-4 h-4 border-2 border-surface-900 border-t-transparent rounded-full" />
                   {dispatchState === 'dispatching' ? 'Dispatching...' : 'Creating...'}
@@ -539,7 +539,7 @@ export function ParsedTasksReview({ onBack, onComplete }: ParsedTasksReviewProps
               ) : (
                 <>
                   <Icons.send className="w-4 h-4" />
-                  Create & Dispatch {routableTasks.length} Task{routableTasks.length !== 1 ? 's' : ''}
+                  Create & Dispatch {routableTodos.length} Todo{routableTodos.length !== 1 ? 's' : ''}
                 </>
               )}
             </button>

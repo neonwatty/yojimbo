@@ -630,7 +630,7 @@ function SettingsDrawer({
                   className="flex flex-col items-center justify-center gap-1 py-3 bg-surface-600 rounded-xl active:scale-[0.98] transition-transform"
                 >
                   <Icons.tasks />
-                  <span className="text-[10px] text-theme-primary">Tasks</span>
+                  <span className="text-[10px] text-theme-primary">Todos</span>
                 </button>
 
                 {/* Unlock Keychain button - only on macOS with remote instances */}
@@ -881,11 +881,11 @@ export function MobileLayout() {
     }
   }, [navigate, setActiveInstanceId, instances]);
 
-  // Handle new instance (with optional task text for auto-generated name)
-  const handleNewInstance = useCallback((options?: { taskText?: string }) => {
+  // Handle new instance (with optional todo text for auto-generated name)
+  const handleNewInstance = useCallback((options?: { todoText?: string }) => {
     setBottomDrawerOpen(false);
     const existingNames = instances.map(i => i.name);
-    const suggestedName = options?.taskText ? generateShortName(options.taskText, existingNames) : undefined;
+    const suggestedName = options?.todoText ? generateShortName(options.todoText, existingNames) : undefined;
     openNewInstanceModal({ defaultMode: 'claude-code', suggestedName });
   }, [instances, openNewInstanceModal]);
 

@@ -27,16 +27,16 @@ import type {
   InstancePorts,
   InstanceHtmlFiles,
   HtmlFile,
-  GlobalTask,
-  TaskStats,
-  CreateTaskRequest,
-  UpdateTaskRequest,
-  DispatchTaskRequest,
-  ReorderTasksRequest,
+  GlobalTodo,
+  TodoStats,
+  CreateTodoRequest,
+  UpdateTodoRequest,
+  DispatchTodoRequest,
+  ReorderTodosRequest,
   Release,
   Project,
   CreateProjectRequest,
-  ParsedTasksResponse,
+  ParsedTodosResponse,
   SetupProjectRequest,
   SetupProjectResponse,
   ValidatePathResponse,
@@ -409,50 +409,50 @@ export const keychainApi = {
     }),
 };
 
-// Tasks API
-export const tasksApi = {
+// Todos API
+export const todosApi = {
   list: (includeArchived = false) =>
-    request<ApiResponse<GlobalTask[]>>(`/tasks?includeArchived=${includeArchived}`),
+    request<ApiResponse<GlobalTodo[]>>(`/todos?includeArchived=${includeArchived}`),
 
-  get: (id: string) => request<ApiResponse<GlobalTask>>(`/tasks/${id}`),
+  get: (id: string) => request<ApiResponse<GlobalTodo>>(`/todos/${id}`),
 
-  getStats: () => request<ApiResponse<TaskStats>>('/tasks/stats'),
+  getStats: () => request<ApiResponse<TodoStats>>('/todos/stats'),
 
-  create: (data: CreateTaskRequest) =>
-    request<ApiResponse<GlobalTask>>('/tasks', {
+  create: (data: CreateTodoRequest) =>
+    request<ApiResponse<GlobalTodo>>('/todos', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
 
-  update: (id: string, data: UpdateTaskRequest) =>
-    request<ApiResponse<GlobalTask>>(`/tasks/${id}`, {
+  update: (id: string, data: UpdateTodoRequest) =>
+    request<ApiResponse<GlobalTodo>>(`/todos/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(data),
     }),
 
   delete: (id: string) =>
-    request<ApiResponse<void>>(`/tasks/${id}`, {
+    request<ApiResponse<void>>(`/todos/${id}`, {
       method: 'DELETE',
     }),
 
-  dispatch: (id: string, data: DispatchTaskRequest) =>
-    request<ApiResponse<GlobalTask | { text: string }>>(`/tasks/${id}/dispatch`, {
+  dispatch: (id: string, data: DispatchTodoRequest) =>
+    request<ApiResponse<GlobalTodo | { text: string }>>(`/todos/${id}/dispatch`, {
       method: 'POST',
       body: JSON.stringify(data),
     }),
 
   markDone: (id: string) =>
-    request<ApiResponse<GlobalTask>>(`/tasks/${id}/done`, {
+    request<ApiResponse<GlobalTodo>>(`/todos/${id}/done`, {
       method: 'POST',
     }),
 
   archive: (id: string) =>
-    request<ApiResponse<GlobalTask>>(`/tasks/${id}/archive`, {
+    request<ApiResponse<GlobalTodo>>(`/todos/${id}/archive`, {
       method: 'POST',
     }),
 
-  reorder: (data: ReorderTasksRequest) =>
-    request<ApiResponse<void>>('/tasks/reorder', {
+  reorder: (data: ReorderTodosRequest) =>
+    request<ApiResponse<void>>('/todos/reorder', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
@@ -516,91 +516,91 @@ export const projectsApi = {
     request<ApiResponse<{ instances: ProjectInstanceInfo[] }>>(`/projects/${projectId}/instances`),
 };
 
-// Smart Tasks API response types
-export interface SmartTasksStatusResponse {
+// Smart Todos API response types
+export interface SmartTodosStatusResponse {
   available: boolean;
   message: string;
 }
 
-export interface SmartTasksParseResponse extends ParsedTasksResponse {
+export interface SmartTodosParseResponse extends ParsedTodosResponse {
   sessionId: string;
   needsClarification: boolean;
   summary: {
-    totalTasks: number;
+    totalTodos: number;
     routableCount: number;
     needsClarificationCount: number;
     estimatedCost: string;
   };
 }
 
-export interface SmartTasksSessionResponse {
+export interface SmartTodosSessionResponse {
   sessionId: string;
   input: string;
-  tasks: ParsedTasksResponse;
+  todos: ParsedTodosResponse;
   clarificationRound: number;
   createdAt: string;
   summary: {
-    totalTasks: number;
+    totalTodos: number;
     routableCount: number;
     needsClarificationCount: number;
   };
 }
 
-// Smart Tasks API
-export const smartTasksApi = {
+// Smart Todos API
+export const smartTodosApi = {
   status: () =>
-    request<ApiResponse<SmartTasksStatusResponse>>('/smart-tasks/status'),
+    request<ApiResponse<SmartTodosStatusResponse>>('/smart-todos/status'),
 
   parse: (input: string) =>
-    request<ApiResponse<SmartTasksParseResponse>>('/smart-tasks/parse', {
+    request<ApiResponse<SmartTodosParseResponse>>('/smart-todos/parse', {
       method: 'POST',
       body: JSON.stringify({ input }),
     }),
 
   clarify: (sessionId: string, clarification: string) =>
-    request<ApiResponse<SmartTasksParseResponse>>('/smart-tasks/clarify', {
+    request<ApiResponse<SmartTodosParseResponse>>('/smart-todos/clarify', {
       method: 'POST',
       body: JSON.stringify({ sessionId, clarification }),
     }),
 
   getSession: (sessionId: string) =>
-    request<ApiResponse<SmartTasksSessionResponse>>(`/smart-tasks/session/${sessionId}`),
+    request<ApiResponse<SmartTodosSessionResponse>>(`/smart-todos/session/${sessionId}`),
 
   clearSession: (sessionId: string) =>
-    request<ApiResponse<void>>(`/smart-tasks/session/${sessionId}`, {
+    request<ApiResponse<void>>(`/smart-todos/session/${sessionId}`, {
       method: 'DELETE',
     }),
 
-  validate: (tasks: ParsedTasksResponse) =>
+  validate: (todos: ParsedTodosResponse) =>
     request<ApiResponse<{
       valid: boolean;
       issues: string[];
-      routableTasks: ParsedTasksResponse['tasks'];
-    }>>('/smart-tasks/validate', {
+      routableTodos: ParsedTodosResponse['todos'];
+    }>>('/smart-todos/validate', {
       method: 'POST',
-      body: JSON.stringify({ tasks }),
+      body: JSON.stringify({ todos }),
     }),
 
   validatePath: (path: string) =>
-    request<ApiResponse<ValidatePathResponse>>('/smart-tasks/validate-path', {
+    request<ApiResponse<ValidatePathResponse>>('/smart-todos/validate-path', {
       method: 'POST',
       body: JSON.stringify({ path }),
     }),
 
   expandPath: (path: string) =>
-    request<ApiResponse<{ expandedPath: string }>>('/smart-tasks/expand-path', {
+    request<ApiResponse<{ expandedPath: string }>>('/smart-todos/expand-path', {
       method: 'POST',
       body: JSON.stringify({ path }),
     }),
 
   setupProject: (data: SetupProjectRequest) =>
-    request<ApiResponse<SetupProjectResponse>>('/smart-tasks/setup-project', {
+    request<ApiResponse<SetupProjectResponse>>('/smart-todos/setup-project', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
 
   createAndDispatch: (data: CreateAndDispatchRequest) =>
-    request<ApiResponse<CreateAndDispatchResponse>>('/smart-tasks/create-and-dispatch', {
+    request<ApiResponse<CreateAndDispatchResponse>>('/smart-todos/create-and-dispatch', {
       method: 'POST',
       body: JSON.stringify(data),
     }),

@@ -1,9 +1,9 @@
 import { randomUUID } from 'crypto';
 import { getDatabase } from '../db/connection.js';
 import { broadcast } from '../websocket/server.js';
-import type { GlobalTask, TaskStatus, TaskStats } from '@cc-orchestrator/shared';
+import type { GlobalTodo, TodoStatus, TodoStats } from '@cc-orchestrator/shared';
 
-interface TaskRow {
+interface TodoRow {
   id: string;
   text: string;
   status: string;
@@ -16,11 +16,11 @@ interface TaskRow {
   updated_at: string;
 }
 
-function rowToTask(row: TaskRow): GlobalTask {
+function rowToTodo(row: TodoRow): GlobalTodo {
   return {
     id: row.id,
     text: row.text,
-    status: row.status as TaskStatus,
+    status: row.status as TodoStatus,
     dispatchedInstanceId: row.dispatched_instance_id,
     dispatchedAt: row.dispatched_at,
     completedAt: row.completed_at,
@@ -31,7 +31,7 @@ function rowToTask(row: TaskRow): GlobalTask {
   };
 }
 
-export function createTask(text: string): GlobalTask {
+export function createTodo(text: string): GlobalTodo {
   const db = getDatabase();
   const id = randomUUID();
 
@@ -46,7 +46,7 @@ export function createTask(text: string): GlobalTask {
     VALUES (?, ?, 'captured', ?)
   `).run(id, text, displayOrder);
 
-  const task: GlobalTask = {
+  const todo: GlobalTodo = {
     id,
     text,
     status: 'captured',
@@ -59,13 +59,13 @@ export function createTask(text: string): GlobalTask {
     updatedAt: new Date().toISOString(),
   };
 
-  broadcast({ type: 'task:created', task });
-  console.log(`📋 Task created: ${text.substring(0, 50)}...`);
+  broadcast({ type: 'todo:created', todo });
+  console.log(`📋 Todo created: ${text.substring(0, 50)}...`);
 
-  return task;
+  return todo;
 }
 
-export function listTasks(includeArchived: boolean = false): GlobalTask[] {
+export function listTodos(includeArchived: boolean = false): GlobalTodo[] {
   const db = getDatabase();
 
   let query = `
@@ -79,20 +79,20 @@ export function listTasks(includeArchived: boolean = false): GlobalTask[] {
 
   query += ' ORDER BY display_order ASC, created_at ASC';
 
-  const rows = db.prepare(query).all() as TaskRow[];
-  return rows.map(rowToTask);
+  const rows = db.prepare(query).all() as TodoRow[];
+  return rows.map(rowToTodo);
 }
 
-export function getTask(id: string): GlobalTask | null {
+export function getTodo(id: string): GlobalTodo | null {
   const db = getDatabase();
-  const row = db.prepare('SELECT * FROM global_tasks WHERE id = ?').get(id) as TaskRow | undefined;
-  return row ? rowToTask(row) : null;
+  const row = db.prepare('SELECT * FROM global_tasks WHERE id = ?').get(id) as TodoRow | undefined;
+  return row ? rowToTodo(row) : null;
 }
 
-export function updateTask(
+export function updateTodo(
   id: string,
-  updates: { text?: string; status?: TaskStatus; dispatchedInstanceId?: string | null }
-): GlobalTask | null {
+  updates: { text?: string; status?: TodoStatus; dispatchedInstanceId?: string | null }
+): GlobalTodo | null {
   const db = getDatabase();
 
   const updateFields: string[] = [];
@@ -121,7 +121,7 @@ export function updateTask(
   }
 
   if (updateFields.length === 0) {
-    return getTask(id);
+    return getTodo(id);
   }
 
   updateFields.push("updated_at = datetime('now')");
@@ -133,27 +133,27 @@ export function updateTask(
     WHERE id = ?
   `).run(...values);
 
-  const task = getTask(id);
-  if (task) {
-    broadcast({ type: 'task:updated', task });
+  const todo = getTodo(id);
+  if (todo) {
+    broadcast({ type: 'todo:updated', todo });
   }
 
-  return task;
+  return todo;
 }
 
-export function deleteTask(id: string): boolean {
+export function deleteTodo(id: string): boolean {
   const db = getDatabase();
   const result = db.prepare('DELETE FROM global_tasks WHERE id = ?').run(id);
 
   if (result.changes > 0) {
-    broadcast({ type: 'task:deleted', taskId: id });
+    broadcast({ type: 'todo:deleted', todoId: id });
     return true;
   }
 
   return false;
 }
 
-export function dispatchTask(taskId: string, instanceId: string): GlobalTask | null {
+export function dispatchTodo(todoId: string, instanceId: string): GlobalTodo | null {
   const db = getDatabase();
 
   db.prepare(`
@@ -163,26 +163,26 @@ export function dispatchTask(taskId: string, instanceId: string): GlobalTask | n
         dispatched_at = datetime('now'),
         updated_at = datetime('now')
     WHERE id = ?
-  `).run(instanceId, taskId);
+  `).run(instanceId, todoId);
 
-  const task = getTask(taskId);
-  if (task) {
-    broadcast({ type: 'task:updated', task });
-    console.log(`📋 Task dispatched to instance: ${instanceId}`);
+  const todo = getTodo(todoId);
+  if (todo) {
+    broadcast({ type: 'todo:updated', todo });
+    console.log(`📋 Todo dispatched to instance: ${instanceId}`);
   }
 
-  return task;
+  return todo;
 }
 
-export function markTaskDone(id: string): GlobalTask | null {
-  return updateTask(id, { status: 'done' });
+export function markTodoDone(id: string): GlobalTodo | null {
+  return updateTodo(id, { status: 'done' });
 }
 
-export function archiveTask(id: string): GlobalTask | null {
-  return updateTask(id, { status: 'archived' });
+export function archiveTodo(id: string): GlobalTodo | null {
+  return updateTodo(id, { status: 'archived' });
 }
 
-export function reorderTasks(taskIds: string[]): void {
+export function reorderTodos(todoIds: string[]): void {
   const db = getDatabase();
 
   const updateOrder = db.transaction((ids: string[]) => {
@@ -195,13 +195,13 @@ export function reorderTasks(taskIds: string[]): void {
     });
   });
 
-  updateOrder(taskIds);
+  updateOrder(todoIds);
 
-  // Broadcast that tasks were reordered (clients should refetch)
-  broadcast({ type: 'task:updated', task: undefined });
+  // Broadcast that todos were reordered (clients should refetch)
+  broadcast({ type: 'todo:updated', todo: undefined });
 }
 
-export function getTaskStats(): TaskStats {
+export function getTodoStats(): TodoStats {
   const db = getDatabase();
 
   const stats = db.prepare(`

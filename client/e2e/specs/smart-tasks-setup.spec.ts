@@ -65,7 +65,7 @@ test.describe('Smart Tasks Setup API', () => {
     test('validates non-existent path with existing parent', async ({ request }) => {
       const testPath = getTestDir();
 
-      const response = await request.post(`${API_BASE}/smart-tasks/validate-path`, {
+      const response = await request.post(`${API_BASE}/smart-todos/validate-path`, {
         data: { path: testPath },
       });
 
@@ -83,7 +83,7 @@ test.describe('Smart Tasks Setup API', () => {
       // Use a directory that definitely exists
       const existingPath = os.tmpdir();
 
-      const response = await request.post(`${API_BASE}/smart-tasks/validate-path`, {
+      const response = await request.post(`${API_BASE}/smart-todos/validate-path`, {
         data: { path: existingPath },
       });
 
@@ -99,7 +99,7 @@ test.describe('Smart Tasks Setup API', () => {
     test('rejects path with non-existent parent', async ({ request }) => {
       const badPath = '/nonexistent/parent/directory/test';
 
-      const response = await request.post(`${API_BASE}/smart-tasks/validate-path`, {
+      const response = await request.post(`${API_BASE}/smart-todos/validate-path`, {
         data: { path: badPath },
       });
 
@@ -112,7 +112,7 @@ test.describe('Smart Tasks Setup API', () => {
     });
 
     test('expands ~ to home directory', async ({ request }) => {
-      const response = await request.post(`${API_BASE}/smart-tasks/validate-path`, {
+      const response = await request.post(`${API_BASE}/smart-todos/validate-path`, {
         data: { path: '~/test-nonexistent-dir-12345' },
       });
 
@@ -126,7 +126,7 @@ test.describe('Smart Tasks Setup API', () => {
 
   test.describe('Expand Path Endpoint', () => {
     test('expands ~ to home directory', async ({ request }) => {
-      const response = await request.post(`${API_BASE}/smart-tasks/expand-path`, {
+      const response = await request.post(`${API_BASE}/smart-todos/expand-path`, {
         data: { path: '~/Desktop' },
       });
 
@@ -171,7 +171,7 @@ test.describe('Smart Tasks Setup API', () => {
     });
 
     test('returns error for missing sessionId', async ({ request }) => {
-      const response = await request.post(`${API_BASE}/smart-tasks/setup-project`, {
+      const response = await request.post(`${API_BASE}/smart-todos/setup-project`, {
         data: {
           action: 'clone-and-create',
           gitRepoUrl: TEST_REPO_URL,
@@ -185,7 +185,7 @@ test.describe('Smart Tasks Setup API', () => {
     });
 
     test('returns error for missing gitRepoUrl', async ({ request }) => {
-      const response = await request.post(`${API_BASE}/smart-tasks/setup-project`, {
+      const response = await request.post(`${API_BASE}/smart-todos/setup-project`, {
         data: {
           sessionId: 'test-session',
           action: 'clone-and-create',
@@ -199,7 +199,7 @@ test.describe('Smart Tasks Setup API', () => {
     });
 
     test('returns error for invalid session', async ({ request }) => {
-      const response = await request.post(`${API_BASE}/smart-tasks/setup-project`, {
+      const response = await request.post(`${API_BASE}/smart-todos/setup-project`, {
         data: {
           sessionId: 'nonexistent-session-id',
           action: 'clone-and-create',
@@ -219,7 +219,7 @@ test.describe('Smart Tasks Setup API', () => {
       // which requires Claude CLI. Skip unless explicitly enabled.
 
       // First, create a session by parsing a task
-      const parseResponse = await request.post(`${API_BASE}/smart-tasks/parse`, {
+      const parseResponse = await request.post(`${API_BASE}/smart-todos/parse`, {
         data: { input: 'Test task for Hello-World repo' },
       });
 
@@ -232,7 +232,7 @@ test.describe('Smart Tasks Setup API', () => {
       const sessionId = parseData.data.sessionId;
 
       // Now setup the project
-      const setupResponse = await request.post(`${API_BASE}/smart-tasks/setup-project`, {
+      const setupResponse = await request.post(`${API_BASE}/smart-todos/setup-project`, {
         data: {
           sessionId,
           action: 'clone-and-create',
@@ -280,7 +280,7 @@ test.describe('Git Clone Service (via API)', () => {
     await fs.promises.mkdir(existingDir, { recursive: true });
 
     try {
-      const response = await request.post(`${API_BASE}/smart-tasks/validate-path`, {
+      const response = await request.post(`${API_BASE}/smart-todos/validate-path`, {
         data: { path: existingDir },
       });
 

@@ -1,14 +1,14 @@
 import { useState, useRef, useEffect } from 'react';
 import { Icons } from '../../common/Icons';
-import type { ParsedTask, Project } from '@cc-orchestrator/shared';
+import type { ParsedTodo, Project } from '@cc-orchestrator/shared';
 
 interface ProjectSelectorProps {
-  task: ParsedTask;
+  todo: ParsedTodo;
   projects: Project[];
   onSelect: (projectId: string) => void;
 }
 
-export function ProjectSelector({ task, projects, onSelect }: ProjectSelectorProps) {
+export function ProjectSelector({ todo, projects, onSelect }: ProjectSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -39,23 +39,23 @@ export function ProjectSelector({ task, projects, onSelect }: ProjectSelectorPro
   // Build the list of options to show
   const getOptions = (): Array<{ projectId: string; confidence: number; reason?: string }> => {
     // If we have projectMatches, use those
-    if (task.projectMatches && task.projectMatches.length > 0) {
-      return task.projectMatches;
+    if (todo.projectMatches && todo.projectMatches.length > 0) {
+      return todo.projectMatches;
     }
     // Fallback: just show the current selection if available
-    if (task.projectId) {
-      return [{ projectId: task.projectId, confidence: task.projectConfidence }];
+    if (todo.projectId) {
+      return [{ projectId: todo.projectId, confidence: todo.projectConfidence }];
     }
     return [];
   };
 
   const options = getOptions();
   const hasMultipleOptions = options.length > 1;
-  const currentProjectName = getProjectName(task.projectId);
-  const confidencePercent = Math.round(task.projectConfidence * 100);
+  const currentProjectName = getProjectName(todo.projectId);
+  const confidencePercent = Math.round(todo.projectConfidence * 100);
 
   // If no options and no project, show static "Unknown"
-  if (options.length === 0 && !task.projectId) {
+  if (options.length === 0 && !todo.projectId) {
     return (
       <span className="text-xs text-theme-muted">
         Project: Unknown
@@ -68,7 +68,7 @@ export function ProjectSelector({ task, projects, onSelect }: ProjectSelectorPro
     return (
       <span className="text-xs text-theme-muted">
         Project: {currentProjectName}
-        {task.projectConfidence < 1 && task.projectId && (
+        {todo.projectConfidence < 1 && todo.projectId && (
           <span className="ml-1 opacity-60">
             ({confidencePercent}%)
           </span>
@@ -87,7 +87,7 @@ export function ProjectSelector({ task, projects, onSelect }: ProjectSelectorPro
         <span>Project:</span>
         <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-surface-700 rounded hover:bg-surface-600 transition-colors">
           <span className="text-theme-secondary">{currentProjectName}</span>
-          {task.projectConfidence < 1 && task.projectId && (
+          {todo.projectConfidence < 1 && todo.projectId && (
             <span className="opacity-60">({confidencePercent}%)</span>
           )}
           <Icons.chevronDown />
@@ -97,7 +97,7 @@ export function ProjectSelector({ task, projects, onSelect }: ProjectSelectorPro
       {isOpen && (
         <div className="absolute z-50 mt-1 left-0 min-w-[280px] bg-surface-800 border border-surface-600 rounded-lg shadow-xl overflow-hidden">
           {options.map((option) => {
-            const isSelected = option.projectId === task.projectId;
+            const isSelected = option.projectId === todo.projectId;
             const projectName = getProjectName(option.projectId);
             const projectPath = getProjectPath(option.projectId);
             const optionConfidence = Math.round(option.confidence * 100);

@@ -1,36 +1,36 @@
 import { Router, Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import type {
-  ParsedTasksResponse,
+  ParsedTodosResponse,
   SetupProjectRequest,
   CreateAndDispatchRequest,
   CreateAndDispatchResponse,
   CreateAndDispatchResult,
 } from '@cc-orchestrator/shared';
 import {
-  parseTaskInput,
-  provideTaskClarification,
+  parseTodoInput,
+  provideTodoClarification,
   getParsingSession,
   clearParsingSession,
-  getRoutableTasks,
-  getTasksNeedingClarification,
-  validateTasksForRouting,
+  getRoutableTodos,
+  getTodosNeedingClarification,
+  validateTodosForRouting,
   validatePath,
   setupProject,
   getExpandedPath,
-} from '../services/smart-tasks.service.js';
+} from '../services/smart-todos.service.js';
 import { checkClaudeCliAvailable } from '../services/claude-cli.service.js';
 import { getDatabase } from '../db/connection.js';
 import { terminalManager } from '../services/terminal-manager.service.js';
 import { broadcast } from '../websocket/server.js';
-import { createTask, dispatchTask } from '../services/tasks.service.js';
+import { createTodo, dispatchTodo } from '../services/todos.service.js';
 import { getProject, linkInstanceToProject } from '../services/projects.service.js';
 
 const router = Router();
 
 /**
- * GET /api/smart-tasks/status
- * Check if the smart tasks feature is available (Claude CLI installed)
+ * GET /api/smart-todos/status
+ * Check if the smart todos feature is available (Claude CLI installed)
  */
 router.get('/status', async (_req: Request, res: Response) => {
   try {
@@ -41,19 +41,19 @@ router.get('/status', async (_req: Request, res: Response) => {
       data: {
         available: cliAvailable,
         message: cliAvailable
-          ? 'Smart Tasks is ready'
+          ? 'Smart Todos is ready'
           : 'Claude CLI not found. Install it with: npm install -g @anthropic-ai/claude-code',
       },
     });
   } catch (error) {
-    console.error('Failed to check smart tasks status:', error);
+    console.error('Failed to check smart todos status:', error);
     res.status(500).json({ success: false, error: 'Failed to check status' });
   }
 });
 
 /**
- * POST /api/smart-tasks/parse
- * Parse free-form task input into structured tasks
+ * POST /api/smart-todos/parse
+ * Parse free-form todo input into structured todos
  */
 router.post('/parse', async (req: Request, res: Response) => {
   try {
@@ -66,9 +66,9 @@ router.post('/parse', async (req: Request, res: Response) => {
       });
     }
 
-    console.log(`📝 Parsing task input: "${input.substring(0, 100)}${input.length > 100 ? '...' : ''}"`);
+    console.log(`📝 Parsing todo input: "${input.substring(0, 100)}${input.length > 100 ? '...' : ''}"`);
 
-    const result = await parseTaskInput(input.trim());
+    const result = await parseTodoInput(input.trim());
 
     if (!result.success) {
       return res.status(500).json({
@@ -78,8 +78,8 @@ router.post('/parse', async (req: Request, res: Response) => {
     }
 
     // Enhance response with helpful info
-    const routableTasks = getRoutableTasks(result.data);
-    const tasksNeedingClarification = getTasksNeedingClarification(result.data);
+    const routableTodos = getRoutableTodos(result.data);
+    const todosNeedingClarification = getTodosNeedingClarification(result.data);
 
     res.json({
       success: true,
@@ -88,22 +88,22 @@ router.post('/parse', async (req: Request, res: Response) => {
         sessionId: result.sessionId,
         needsClarification: result.needsClarification,
         summary: {
-          totalTasks: result.data.tasks.length,
-          routableCount: routableTasks.length,
-          needsClarificationCount: tasksNeedingClarification.length,
+          totalTodos: result.data.todos.length,
+          routableCount: routableTodos.length,
+          needsClarificationCount: todosNeedingClarification.length,
           estimatedCost: `$${result.cost.toFixed(4)}`,
         },
       },
     });
   } catch (error) {
-    console.error('Failed to parse tasks:', error);
-    res.status(500).json({ success: false, error: 'Failed to parse tasks' });
+    console.error('Failed to parse todos:', error);
+    res.status(500).json({ success: false, error: 'Failed to parse todos' });
   }
 });
 
 /**
- * POST /api/smart-tasks/clarify
- * Provide clarification for ambiguous tasks
+ * POST /api/smart-todos/clarify
+ * Provide clarification for ambiguous todos
  */
 router.post('/clarify', async (req: Request, res: Response) => {
   try {
@@ -125,7 +125,7 @@ router.post('/clarify', async (req: Request, res: Response) => {
 
     console.log(`💬 Processing clarification for session ${sessionId}`);
 
-    const result = await provideTaskClarification(sessionId, clarification.trim());
+    const result = await provideTodoClarification(sessionId, clarification.trim());
 
     if (!result.success) {
       return res.status(result.error.includes('not found') ? 404 : 500).json({
@@ -134,8 +134,8 @@ router.post('/clarify', async (req: Request, res: Response) => {
       });
     }
 
-    const routableTasks = getRoutableTasks(result.data);
-    const tasksNeedingClarification = getTasksNeedingClarification(result.data);
+    const routableTodos = getRoutableTodos(result.data);
+    const todosNeedingClarification = getTodosNeedingClarification(result.data);
 
     res.json({
       success: true,
@@ -143,9 +143,9 @@ router.post('/clarify', async (req: Request, res: Response) => {
         ...result.data,
         needsClarification: result.needsClarification,
         summary: {
-          totalTasks: result.data.tasks.length,
-          routableCount: routableTasks.length,
-          needsClarificationCount: tasksNeedingClarification.length,
+          totalTodos: result.data.todos.length,
+          routableCount: routableTodos.length,
+          needsClarificationCount: todosNeedingClarification.length,
           estimatedCost: `$${result.cost.toFixed(4)}`,
         },
       },
@@ -157,7 +157,7 @@ router.post('/clarify', async (req: Request, res: Response) => {
 });
 
 /**
- * GET /api/smart-tasks/session/:sessionId
+ * GET /api/smart-todos/session/:sessionId
  * Get the current state of a parsing session
  */
 router.get('/session/:sessionId', (req: Request, res: Response) => {
@@ -171,21 +171,21 @@ router.get('/session/:sessionId', (req: Request, res: Response) => {
       });
     }
 
-    const routableTasks = getRoutableTasks(session.tasks);
-    const tasksNeedingClarification = getTasksNeedingClarification(session.tasks);
+    const routableTodos = getRoutableTodos(session.todos);
+    const todosNeedingClarification = getTodosNeedingClarification(session.todos);
 
     res.json({
       success: true,
       data: {
         sessionId: session.sessionId,
         input: session.input,
-        tasks: session.tasks,
+        todos: session.todos,
         clarificationRound: session.clarificationRound,
         createdAt: session.createdAt.toISOString(),
         summary: {
-          totalTasks: session.tasks.tasks.length,
-          routableCount: routableTasks.length,
-          needsClarificationCount: tasksNeedingClarification.length,
+          totalTodos: session.todos.todos.length,
+          routableCount: routableTodos.length,
+          needsClarificationCount: todosNeedingClarification.length,
         },
       },
     });
@@ -196,7 +196,7 @@ router.get('/session/:sessionId', (req: Request, res: Response) => {
 });
 
 /**
- * DELETE /api/smart-tasks/session/:sessionId
+ * DELETE /api/smart-todos/session/:sessionId
  * Clear a parsing session
  */
 router.delete('/session/:sessionId', (req: Request, res: Response) => {
@@ -215,38 +215,38 @@ router.delete('/session/:sessionId', (req: Request, res: Response) => {
 });
 
 /**
- * POST /api/smart-tasks/validate
- * Validate that tasks are ready for routing
+ * POST /api/smart-todos/validate
+ * Validate that todos are ready for routing
  */
 router.post('/validate', (req: Request, res: Response) => {
   try {
-    const { tasks } = req.body as { tasks: ParsedTasksResponse };
+    const { todos } = req.body as { todos: ParsedTodosResponse };
 
-    if (!tasks || !tasks.tasks || !Array.isArray(tasks.tasks)) {
+    if (!todos || !todos.todos || !Array.isArray(todos.todos)) {
       return res.status(400).json({
         success: false,
-        error: 'tasks object with tasks array is required',
+        error: 'todos object with todos array is required',
       });
     }
 
-    const validation = validateTasksForRouting(tasks);
+    const validation = validateTodosForRouting(todos);
 
     res.json({
       success: true,
       data: {
         valid: validation.valid,
         issues: validation.issues,
-        routableTasks: getRoutableTasks(tasks),
+        routableTodos: getRoutableTodos(todos),
       },
     });
   } catch (error) {
-    console.error('Failed to validate tasks:', error);
-    res.status(500).json({ success: false, error: 'Failed to validate tasks' });
+    console.error('Failed to validate todos:', error);
+    res.status(500).json({ success: false, error: 'Failed to validate todos' });
   }
 });
 
 /**
- * POST /api/smart-tasks/validate-path
+ * POST /api/smart-todos/validate-path
  * Validate a filesystem path for cloning
  */
 router.post('/validate-path', (req: Request, res: Response) => {
@@ -273,7 +273,7 @@ router.post('/validate-path', (req: Request, res: Response) => {
 });
 
 /**
- * POST /api/smart-tasks/expand-path
+ * POST /api/smart-todos/expand-path
  * Expand a path (e.g., ~ to home directory) for display
  */
 router.post('/expand-path', (req: Request, res: Response) => {
@@ -372,12 +372,12 @@ async function createInstanceHelper(
 }
 
 /**
- * POST /api/smart-tasks/setup-project
+ * POST /api/smart-todos/setup-project
  * Clone a repository and create an instance for it
  */
 router.post('/setup-project', async (req: Request, res: Response) => {
   try {
-    const { sessionId, taskId, action, gitRepoUrl, targetPath, instanceName } = req.body as SetupProjectRequest;
+    const { sessionId, todoId, action, gitRepoUrl, targetPath, instanceName } = req.body as SetupProjectRequest;
 
     // Validate required fields
     if (!sessionId || typeof sessionId !== 'string') {
@@ -411,7 +411,7 @@ router.post('/setup-project', async (req: Request, res: Response) => {
     console.log(`🚀 Setting up project from ${gitRepoUrl} to ${targetPath}`);
 
     const result = await setupProject(
-      { sessionId, taskId, action, gitRepoUrl, targetPath, instanceName },
+      { sessionId, todoId, action, gitRepoUrl, targetPath, instanceName },
       createInstanceHelper
     );
 
@@ -434,12 +434,12 @@ router.post('/setup-project', async (req: Request, res: Response) => {
 });
 
 /**
- * POST /api/smart-tasks/create-and-dispatch
- * Create tasks and dispatch them to instances in one operation
+ * POST /api/smart-todos/create-and-dispatch
+ * Create todos and dispatch them to instances in one operation
  */
 router.post('/create-and-dispatch', async (req: Request, res: Response) => {
   try {
-    const { sessionId, tasks } = req.body as CreateAndDispatchRequest;
+    const { sessionId, todos } = req.body as CreateAndDispatchRequest;
 
     // Validate required fields
     if (!sessionId || typeof sessionId !== 'string') {
@@ -449,37 +449,37 @@ router.post('/create-and-dispatch', async (req: Request, res: Response) => {
       });
     }
 
-    if (!tasks || !Array.isArray(tasks) || tasks.length === 0) {
+    if (!todos || !Array.isArray(todos) || todos.length === 0) {
       return res.status(400).json({
         success: false,
-        error: 'tasks array is required and must not be empty',
+        error: 'todos array is required and must not be empty',
       });
     }
 
-    console.log(`🚀 Creating and dispatching ${tasks.length} tasks`);
+    console.log(`🚀 Creating and dispatching ${todos.length} todos`);
 
     const results: CreateAndDispatchResult[] = [];
     const newInstances: Array<{ id: string; name: string }> = [];
     let createdCount = 0;
     let dispatchedCount = 0;
 
-    for (const taskData of tasks) {
+    for (const todoData of todos) {
       try {
-        // Get project info for the task text
-        const project = getProject(taskData.projectId);
+        // Get project info for the todo text
+        const project = getProject(todoData.projectId);
         const projectName = project?.name || 'Unknown';
 
-        // Create the global task
-        const task = createTask(taskData.text);
+        // Create the global todo
+        const todo = createTodo(todoData.text);
         createdCount++;
 
         // Handle dispatch based on target type
-        const target = taskData.dispatchTarget;
+        const target = todoData.dispatchTarget;
 
         if (target.type === 'none') {
-          // Just create the task, don't dispatch
+          // Just create the todo, don't dispatch
           results.push({
-            taskId: task.id,
+            todoId: todo.id,
             status: 'created',
           });
           continue;
@@ -487,7 +487,7 @@ router.post('/create-and-dispatch', async (req: Request, res: Response) => {
 
         if (target.type === 'new-instance') {
           // Create a new instance first
-          const instanceName = target.newInstanceName || `${projectName}-task`;
+          const instanceName = target.newInstanceName || `${projectName}-todo`;
           const workingDir = target.workingDir || project?.path || '~';
 
           try {
@@ -495,23 +495,23 @@ router.post('/create-and-dispatch', async (req: Request, res: Response) => {
             newInstances.push(newInstance);
 
             // Link instance to project if we have one
-            if (taskData.projectId) {
-              linkInstanceToProject(taskData.projectId, newInstance.id);
+            if (todoData.projectId) {
+              linkInstanceToProject(todoData.projectId, newInstance.id);
             }
 
             // Dispatch to the new instance
-            await dispatchToInstance(task.id, newInstance.id, taskData.text);
+            await dispatchToInstance(todo.id, newInstance.id, todoData.text);
             dispatchedCount++;
 
             results.push({
-              taskId: task.id,
+              todoId: todo.id,
               status: 'dispatched',
               instanceId: newInstance.id,
             });
           } catch (instanceError) {
-            console.error(`Failed to create instance for task ${task.id}:`, instanceError);
+            console.error(`Failed to create instance for todo ${todo.id}:`, instanceError);
             results.push({
-              taskId: task.id,
+              todoId: todo.id,
               status: 'error',
               error: `Failed to create instance: ${instanceError instanceof Error ? instanceError.message : 'Unknown error'}`,
             });
@@ -522,18 +522,18 @@ router.post('/create-and-dispatch', async (req: Request, res: Response) => {
         if (target.type === 'instance' && target.instanceId) {
           // Dispatch to existing instance
           try {
-            await dispatchToInstance(task.id, target.instanceId, taskData.text);
+            await dispatchToInstance(todo.id, target.instanceId, todoData.text);
             dispatchedCount++;
 
             results.push({
-              taskId: task.id,
+              todoId: todo.id,
               status: 'dispatched',
               instanceId: target.instanceId,
             });
           } catch (dispatchError) {
-            console.error(`Failed to dispatch task ${task.id}:`, dispatchError);
+            console.error(`Failed to dispatch todo ${todo.id}:`, dispatchError);
             results.push({
-              taskId: task.id,
+              todoId: todo.id,
               status: 'error',
               error: `Failed to dispatch: ${dispatchError instanceof Error ? dispatchError.message : 'Unknown error'}`,
             });
@@ -543,15 +543,15 @@ router.post('/create-and-dispatch', async (req: Request, res: Response) => {
 
         // Fallback: just mark as created
         results.push({
-          taskId: task.id,
+          todoId: todo.id,
           status: 'created',
         });
-      } catch (taskError) {
-        console.error(`Failed to create task:`, taskError);
+      } catch (todoError) {
+        console.error(`Failed to create todo:`, todoError);
         results.push({
-          taskId: '',
+          todoId: '',
           status: 'error',
-          error: `Failed to create task: ${taskError instanceof Error ? taskError.message : 'Unknown error'}`,
+          error: `Failed to create todo: ${todoError instanceof Error ? todoError.message : 'Unknown error'}`,
         });
       }
     }
@@ -563,27 +563,27 @@ router.post('/create-and-dispatch', async (req: Request, res: Response) => {
       results,
     };
 
-    console.log(`✅ Created ${createdCount} tasks, dispatched ${dispatchedCount}, created ${newInstances.length} new instances`);
+    console.log(`✅ Created ${createdCount} todos, dispatched ${dispatchedCount}, created ${newInstances.length} new instances`);
 
     res.json({
       success: true,
       data: response,
     });
   } catch (error) {
-    console.error('Failed to create and dispatch tasks:', error);
-    res.status(500).json({ success: false, error: 'Failed to create and dispatch tasks' });
+    console.error('Failed to create and dispatch todos:', error);
+    res.status(500).json({ success: false, error: 'Failed to create and dispatch todos' });
   }
 });
 
 /**
- * Helper function to dispatch a task to an instance
+ * Helper function to dispatch a todo to an instance
  */
-async function dispatchToInstance(taskId: string, instanceId: string, taskText: string): Promise<void> {
-  // Update task status via tasks service
-  dispatchTask(taskId, instanceId);
+async function dispatchToInstance(todoId: string, instanceId: string, todoText: string): Promise<void> {
+  // Update todo status via todos service
+  dispatchTodo(todoId, instanceId);
 
-  // Write the task text to the terminal
-  terminalManager.write(instanceId, taskText + '\n');
+  // Write the todo text to the terminal
+  terminalManager.write(instanceId, todoText + '\n');
 }
 
 export default router;

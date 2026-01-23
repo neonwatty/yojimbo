@@ -630,7 +630,7 @@ function SettingsDrawer({
                   className="flex flex-col items-center justify-center gap-1 py-3 bg-surface-600 rounded-xl active:scale-[0.98] transition-transform"
                 >
                   <Icons.tasks />
-                  <span className="text-[10px] text-theme-primary">Tasks</span>
+                  <span className="text-[10px] text-theme-primary">Todos</span>
                 </button>
 
                 {/* Unlock Keychain button - only on macOS with remote instances */}

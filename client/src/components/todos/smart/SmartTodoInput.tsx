@@ -82,7 +82,7 @@ export function SmartTodoInput({ onCancel, onParsed }: SmartTodoInputProps) {
           setProjects(projectsRes.data);
         }
       } catch (err) {
-        setAvailability(false, 'Failed to check Smart Tasks availability');
+        setAvailability(false, 'Failed to check Smart Todos availability');
       } finally {
         setHasCheckedStatus(true);
       }
@@ -137,7 +137,7 @@ export function SmartTodoInput({ onCancel, onParsed }: SmartTodoInputProps) {
     return (
       <div className="flex flex-col items-center justify-center py-12">
         <div className="animate-spin w-6 h-6 border-2 border-accent border-t-transparent rounded-full" />
-        <p className="mt-3 text-sm text-theme-muted">Checking Smart Tasks availability...</p>
+        <p className="mt-3 text-sm text-theme-muted">Checking Smart Todos availability...</p>
       </div>
     );
   }
@@ -146,7 +146,7 @@ export function SmartTodoInput({ onCancel, onParsed }: SmartTodoInputProps) {
     return (
       <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
         <div className="text-4xl mb-4">🤖</div>
-        <h3 className="text-lg font-medium text-theme-primary mb-2">Smart Tasks Unavailable</h3>
+        <h3 className="text-lg font-medium text-theme-primary mb-2">Smart Todos Unavailable</h3>
         <p className="text-sm text-theme-muted max-w-md">{availabilityMessage}</p>
         <button
           onClick={onCancel}
@@ -267,7 +267,7 @@ export function SmartTodoInput({ onCancel, onParsed }: SmartTodoInputProps) {
             ) : (
               <>
                 <Icons.sparkles />
-                Parse Tasks
+                Parse Todos
               </>
             )}
           </button>

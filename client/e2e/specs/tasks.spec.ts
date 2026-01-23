@@ -230,7 +230,7 @@ test.describe('Global Todos', () => {
       await taskRow.hover();
 
       // Click dispatch button
-      const dispatchButton = taskRow.locator('button[title="Dispatch todo"]');
+      const dispatchButton = taskRow.locator('button[title="Dispatch to instance"]');
       await dispatchButton.click();
 
       // Dropdown should be visible with Copy option
@@ -252,7 +252,7 @@ test.describe('Global Todos', () => {
       // Hover and click dispatch on the task item
       const taskItem = basePage.page.locator('div.group').filter({ hasText: 'CopyTaskTest' });
       await taskItem.hover();
-      const dispatchButton = taskItem.locator('button[title="Dispatch todo"]');
+      const dispatchButton = taskItem.locator('button[title="Dispatch to instance"]');
       await dispatchButton.click();
 
       // Click copy to clipboard - the dropdown should close after clicking
@@ -278,7 +278,7 @@ test.describe('Global Todos', () => {
       // Hover and click dispatch on the task item
       const taskItem = basePage.page.locator('div.group').filter({ hasText: 'TaskForDropdown' });
       await taskItem.hover();
-      const dispatchButton = taskItem.locator('button[title="Dispatch todo"]');
+      const dispatchButton = taskItem.locator('button[title="Dispatch to instance"]');
       await dispatchButton.click();
 
       // Should show the instance in the dropdown (check within the dispatch dropdown)
@@ -300,7 +300,7 @@ test.describe('Global Todos', () => {
       // Hover and click dispatch
       const taskRow = basePage.page.locator('div').filter({ hasText: 'Task to dispatch' }).first();
       await taskRow.hover();
-      const dispatchButton = taskRow.locator('button[title="Dispatch todo"]');
+      const dispatchButton = taskRow.locator('button[title="Dispatch to instance"]');
       await dispatchButton.click();
 
       // Should show create new instance option
@@ -339,7 +339,7 @@ test.describe('Global Todos', () => {
       // Hover and click dispatch on the task item
       const taskItem = basePage.page.locator('div.group').filter({ hasText: 'UIDispatchTask' });
       await taskItem.hover();
-      const dispatchButton = taskItem.locator('button[title="Dispatch todo"]');
+      const dispatchButton = taskItem.locator('button[title="Dispatch to instance"]');
       await dispatchButton.click();
 
       // Click on the instance in the dropdown (use the dispatch dropdown with shadow-xl)
@@ -367,7 +367,7 @@ test.describe('Global Todos', () => {
       // Hover and click dispatch
       const taskItem = basePage.page.locator('div.group').filter({ hasText: 'Task for new instance' });
       await taskItem.hover();
-      const dispatchButton = taskItem.locator('button[title="Dispatch todo"]');
+      const dispatchButton = taskItem.locator('button[title="Dispatch to instance"]');
       await dispatchButton.click();
 
       // Click "Create new instance"
@@ -390,7 +390,7 @@ test.describe('Global Todos', () => {
       // Hover and click dispatch
       const taskItem = basePage.page.locator('div.group').filter({ hasText: 'Task for Claude Code' });
       await taskItem.hover();
-      const dispatchButton = taskItem.locator('button[title="Dispatch todo"]');
+      const dispatchButton = taskItem.locator('button[title="Dispatch to instance"]');
       await dispatchButton.click();
 
       // Click "Create new instance"
@@ -419,7 +419,7 @@ test.describe('Global Todos', () => {
       // Hover and click dispatch
       const taskItem = basePage.page.locator('div.group').filter({ hasText: 'ClipboardTaskNewInstance' });
       await taskItem.hover();
-      const dispatchButton = taskItem.locator('button[title="Dispatch todo"]');
+      const dispatchButton = taskItem.locator('button[title="Dispatch to instance"]');
       await dispatchButton.click({ force: true });
 
       // Click "Create new instance"

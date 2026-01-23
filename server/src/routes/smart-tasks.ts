@@ -1,6 +1,12 @@
 import { Router, Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
-import type { ParsedTasksResponse, SetupProjectRequest } from '@cc-orchestrator/shared';
+import type {
+  ParsedTasksResponse,
+  SetupProjectRequest,
+  CreateAndDispatchRequest,
+  CreateAndDispatchResponse,
+  CreateAndDispatchResult,
+} from '@cc-orchestrator/shared';
 import {
   parseTaskInput,
   provideTaskClarification,
@@ -17,6 +23,8 @@ import { checkClaudeCliAvailable } from '../services/claude-cli.service.js';
 import { getDatabase } from '../db/connection.js';
 import { terminalManager } from '../services/terminal-manager.service.js';
 import { broadcast } from '../websocket/server.js';
+import { createTask, dispatchTask } from '../services/tasks.service.js';
+import { getProject, linkInstanceToProject } from '../services/projects.service.js';
 
 const router = Router();
 
@@ -424,5 +432,158 @@ router.post('/setup-project', async (req: Request, res: Response) => {
     res.status(500).json({ success: false, error: 'Failed to setup project' });
   }
 });
+
+/**
+ * POST /api/smart-tasks/create-and-dispatch
+ * Create tasks and dispatch them to instances in one operation
+ */
+router.post('/create-and-dispatch', async (req: Request, res: Response) => {
+  try {
+    const { sessionId, tasks } = req.body as CreateAndDispatchRequest;
+
+    // Validate required fields
+    if (!sessionId || typeof sessionId !== 'string') {
+      return res.status(400).json({
+        success: false,
+        error: 'sessionId is required',
+      });
+    }
+
+    if (!tasks || !Array.isArray(tasks) || tasks.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'tasks array is required and must not be empty',
+      });
+    }
+
+    console.log(`🚀 Creating and dispatching ${tasks.length} tasks`);
+
+    const results: CreateAndDispatchResult[] = [];
+    const newInstances: Array<{ id: string; name: string }> = [];
+    let createdCount = 0;
+    let dispatchedCount = 0;
+
+    for (const taskData of tasks) {
+      try {
+        // Get project info for the task text
+        const project = getProject(taskData.projectId);
+        const projectName = project?.name || 'Unknown';
+
+        // Create the global task
+        const task = createTask(taskData.text);
+        createdCount++;
+
+        // Handle dispatch based on target type
+        const target = taskData.dispatchTarget;
+
+        if (target.type === 'none') {
+          // Just create the task, don't dispatch
+          results.push({
+            taskId: task.id,
+            status: 'created',
+          });
+          continue;
+        }
+
+        if (target.type === 'new-instance') {
+          // Create a new instance first
+          const instanceName = target.newInstanceName || `${projectName}-task`;
+          const workingDir = target.workingDir || project?.path || '~';
+
+          try {
+            const newInstance = await createInstanceHelper(instanceName, workingDir);
+            newInstances.push(newInstance);
+
+            // Link instance to project if we have one
+            if (taskData.projectId) {
+              linkInstanceToProject(taskData.projectId, newInstance.id);
+            }
+
+            // Dispatch to the new instance
+            await dispatchToInstance(task.id, newInstance.id, taskData.text);
+            dispatchedCount++;
+
+            results.push({
+              taskId: task.id,
+              status: 'dispatched',
+              instanceId: newInstance.id,
+            });
+          } catch (instanceError) {
+            console.error(`Failed to create instance for task ${task.id}:`, instanceError);
+            results.push({
+              taskId: task.id,
+              status: 'error',
+              error: `Failed to create instance: ${instanceError instanceof Error ? instanceError.message : 'Unknown error'}`,
+            });
+          }
+          continue;
+        }
+
+        if (target.type === 'instance' && target.instanceId) {
+          // Dispatch to existing instance
+          try {
+            await dispatchToInstance(task.id, target.instanceId, taskData.text);
+            dispatchedCount++;
+
+            results.push({
+              taskId: task.id,
+              status: 'dispatched',
+              instanceId: target.instanceId,
+            });
+          } catch (dispatchError) {
+            console.error(`Failed to dispatch task ${task.id}:`, dispatchError);
+            results.push({
+              taskId: task.id,
+              status: 'error',
+              error: `Failed to dispatch: ${dispatchError instanceof Error ? dispatchError.message : 'Unknown error'}`,
+            });
+          }
+          continue;
+        }
+
+        // Fallback: just mark as created
+        results.push({
+          taskId: task.id,
+          status: 'created',
+        });
+      } catch (taskError) {
+        console.error(`Failed to create task:`, taskError);
+        results.push({
+          taskId: '',
+          status: 'error',
+          error: `Failed to create task: ${taskError instanceof Error ? taskError.message : 'Unknown error'}`,
+        });
+      }
+    }
+
+    const response: CreateAndDispatchResponse = {
+      created: createdCount,
+      dispatched: dispatchedCount,
+      newInstances,
+      results,
+    };
+
+    console.log(`✅ Created ${createdCount} tasks, dispatched ${dispatchedCount}, created ${newInstances.length} new instances`);
+
+    res.json({
+      success: true,
+      data: response,
+    });
+  } catch (error) {
+    console.error('Failed to create and dispatch tasks:', error);
+    res.status(500).json({ success: false, error: 'Failed to create and dispatch tasks' });
+  }
+});
+
+/**
+ * Helper function to dispatch a task to an instance
+ */
+async function dispatchToInstance(taskId: string, instanceId: string, taskText: string): Promise<void> {
+  // Update task status via tasks service
+  dispatchTask(taskId, instanceId);
+
+  // Write the task text to the terminal
+  terminalManager.write(instanceId, taskText + '\n');
+}
 
 export default router;

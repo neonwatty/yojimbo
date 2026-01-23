@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import type { Project, ApiResponse } from '@cc-orchestrator/shared';
+import type { Project, ApiResponse, ProjectInstanceInfo } from '@cc-orchestrator/shared';
 import {
   createProject,
   getProject,
@@ -8,8 +8,10 @@ import {
   updateProject,
   deleteProject,
   ensureProjectExists,
+  getProjectInstances,
 } from '../services/projects.service.js';
 import { getGitRemoteInfo } from '../services/context-gathering.service.js';
+import { getDatabase } from '../db/connection.js';
 
 const router = Router();
 
@@ -170,6 +172,88 @@ router.delete('/:id', (req: Request, res: Response) => {
   } catch (error) {
     console.error('Failed to delete project:', error);
     res.status(500).json({ success: false, error: 'Failed to delete project' });
+  }
+});
+
+/**
+ * GET /api/projects/:id/instances
+ * Get instances linked to a project with status info
+ */
+router.get('/:id/instances', (req: Request, res: Response) => {
+  try {
+    const project = getProject(req.params.id);
+    if (!project) {
+      return res.status(404).json({ success: false, error: 'Project not found' });
+    }
+
+    const db = getDatabase();
+
+    // Get instances linked via project_instances table
+    const linkedInstanceIds = getProjectInstances(req.params.id);
+
+    // Also find instances matching the project's working directory
+    interface InstanceRow {
+      id: string;
+      name: string;
+      status: string;
+      working_dir: string;
+    }
+
+    // Get all instances that are either linked or match the project path
+    const instances: ProjectInstanceInfo[] = [];
+    const seenIds = new Set<string>();
+
+    // First, get linked instances
+    if (linkedInstanceIds.length > 0) {
+      const placeholders = linkedInstanceIds.map(() => '?').join(',');
+      const linkedInstances = db.prepare(`
+        SELECT id, name, status, working_dir
+        FROM instances
+        WHERE id IN (${placeholders}) AND closed_at IS NULL
+        ORDER BY display_order ASC
+      `).all(...linkedInstanceIds) as InstanceRow[];
+
+      for (const row of linkedInstances) {
+        if (!seenIds.has(row.id)) {
+          seenIds.add(row.id);
+          instances.push({
+            id: row.id,
+            name: row.name,
+            status: row.status as ProjectInstanceInfo['status'],
+            workingDir: row.working_dir,
+          });
+        }
+      }
+    }
+
+    // Then, get instances matching the project's working directory
+    const dirMatches = db.prepare(`
+      SELECT id, name, status, working_dir
+      FROM instances
+      WHERE working_dir = ? AND closed_at IS NULL
+      ORDER BY display_order ASC
+    `).all(project.path) as InstanceRow[];
+
+    for (const row of dirMatches) {
+      if (!seenIds.has(row.id)) {
+        seenIds.add(row.id);
+        instances.push({
+          id: row.id,
+          name: row.name,
+          status: row.status as ProjectInstanceInfo['status'],
+          workingDir: row.working_dir,
+        });
+      }
+    }
+
+    const response: ApiResponse<{ instances: ProjectInstanceInfo[] }> = {
+      success: true,
+      data: { instances },
+    };
+    res.json(response);
+  } catch (error) {
+    console.error('Failed to get project instances:', error);
+    res.status(500).json({ success: false, error: 'Failed to get project instances' });
   }
 });
 

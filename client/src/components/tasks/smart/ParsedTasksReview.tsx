@@ -1,11 +1,12 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Icons } from '../../common/Icons';
 import { useSmartTasksStore, selectTasksNeedingClarification, selectRoutableTasks, getEffectiveClarity } from '../../../store/smartTasksStore';
-import { smartTasksApi, tasksApi } from '../../../api/client';
+import { smartTasksApi, projectsApi } from '../../../api/client';
 import { toast } from '../../../store/toastStore';
 import { CloneSetupModal } from './CloneSetupModal';
 import { ProjectSelector } from './ProjectSelector';
-import type { ParsedTask } from '@cc-orchestrator/shared';
+import { DispatchTargetSelector } from './DispatchTargetSelector';
+import type { ParsedTask, CreateAndDispatchRequest } from '@cc-orchestrator/shared';
 
 interface ParsedTasksReviewProps {
   onBack: () => void;
@@ -25,6 +26,16 @@ export function ParsedTasksReview({ onBack, onComplete }: ParsedTasksReviewProps
     startClarifying,
     setParsedResult,
     setError,
+    // Dispatch state
+    dispatchTargets,
+    projectInstancesCache,
+    dispatchState,
+    setDispatchTarget,
+    setProjectInstances,
+    computeSmartDefaults,
+    startDispatching,
+    setDispatchComplete,
+    setDispatchError,
   } = useSmartTasksStore();
 
   const [clarificationInputs, setClarificationInputs] = useState<Record<string, string>>({});
@@ -33,9 +44,40 @@ export function ParsedTasksReview({ onBack, onComplete }: ParsedTasksReviewProps
   const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
   const [showCloneModal, setShowCloneModal] = useState(false);
   const [cloneRepoInfo, setCloneRepoInfo] = useState<{ url: string; name: string } | null>(null);
+  const [instancesFetched, setInstancesFetched] = useState(false);
 
   const tasksNeedingClarification = selectTasksNeedingClarification(useSmartTasksStore.getState());
   const routableTasks = selectRoutableTasks(useSmartTasksStore.getState());
+
+  // Fetch project instances and compute smart defaults
+  useEffect(() => {
+    async function fetchProjectInstances() {
+      // Get unique project IDs from tasks
+      const projectIds = [...new Set(parsedTasks.map((t) => t.projectId).filter(Boolean))] as string[];
+
+      // Fetch instances for each project
+      for (const projectId of projectIds) {
+        if (!projectInstancesCache[projectId]) {
+          try {
+            const response = await projectsApi.getInstances(projectId);
+            if (response.data?.instances) {
+              setProjectInstances(projectId, response.data.instances);
+            }
+          } catch (err) {
+            console.error(`Failed to fetch instances for project ${projectId}:`, err);
+          }
+        }
+      }
+
+      // Compute smart defaults after fetching
+      computeSmartDefaults();
+      setInstancesFetched(true);
+    }
+
+    if (parsedTasks.length > 0 && !instancesFetched) {
+      fetchProjectInstances();
+    }
+  }, [parsedTasks, instancesFetched, projectInstancesCache, setProjectInstances, computeSmartDefaults]);
 
   // Detect GitHub repos mentioned in clarification questions
   const detectedGitHubRepo = useMemo(() => {
@@ -86,6 +128,32 @@ export function ParsedTasksReview({ onBack, onComplete }: ParsedTasksReviewProps
     return aIndex - bIndex;
   });
 
+  // Calculate dispatch summary
+  const dispatchSummary = useMemo(() => {
+    const tasksToDispatch = routableTasks.filter(
+      (t) => dispatchTargets[t.id]?.type !== 'none'
+    );
+    const existingInstanceIds = new Set<string>();
+    let newInstanceCount = 0;
+
+    for (const task of tasksToDispatch) {
+      const target = dispatchTargets[task.id];
+      if (target?.type === 'instance' && target.instanceId) {
+        existingInstanceIds.add(target.instanceId);
+      } else if (target?.type === 'new-instance') {
+        newInstanceCount++;
+      }
+    }
+
+    return {
+      totalTasks: tasksToDispatch.length,
+      existingInstances: existingInstanceIds.size,
+      newInstances: newInstanceCount,
+      totalInstances: existingInstanceIds.size + newInstanceCount,
+      saveOnly: routableTasks.length - tasksToDispatch.length,
+    };
+  }, [routableTasks, dispatchTargets]);
+
   const handleClarificationSubmit = async () => {
     if (!sessionId) return;
 
@@ -125,10 +193,12 @@ export function ParsedTasksReview({ onBack, onComplete }: ParsedTasksReviewProps
     }
   };
 
-  const handleCreateTasks = async () => {
+  const handleCreateAndDispatch = async () => {
+    if (!sessionId) return;
+
     // Create tasks from all clear, routable parsed tasks
     const tasksToCreate = parsedTasks.filter(
-      t => t.clarity === 'clear' && t.projectId !== null
+      (t) => getEffectiveClarity(t) === 'clear' && t.projectId !== null
     );
 
     if (tasksToCreate.length === 0) {
@@ -137,21 +207,47 @@ export function ParsedTasksReview({ onBack, onComplete }: ParsedTasksReviewProps
     }
 
     setIsCreatingTasks(true);
+    startDispatching();
 
     try {
-      // Create each task (include type and project info in the text for now)
-      for (const parsedTask of tasksToCreate) {
-        const projectName = getProjectName(parsedTask.projectId);
-        const taskText = `[${parsedTask.type}] ${parsedTask.title}${projectName !== 'Unknown' ? ` (${projectName})` : ''}`;
-        await tasksApi.create({
-          text: taskText,
-        });
-      }
+      // Build the request with dispatch targets
+      const request: CreateAndDispatchRequest = {
+        sessionId,
+        tasks: tasksToCreate.map((parsedTask) => {
+          const projectName = getProjectName(parsedTask.projectId);
+          const taskText = `[${parsedTask.type}] ${parsedTask.title}${projectName !== 'Unknown' ? ` (${projectName})` : ''}`;
+          const target = dispatchTargets[parsedTask.id] || { type: 'none' };
 
-      toast.success(`Created ${tasksToCreate.length} task${tasksToCreate.length > 1 ? 's' : ''}`);
-      onComplete();
+          return {
+            parsedTaskId: parsedTask.id,
+            text: taskText,
+            projectId: parsedTask.projectId!,
+            dispatchTarget: target,
+          };
+        }),
+      };
+
+      const response = await smartTasksApi.createAndDispatch(request);
+
+      if (response.data) {
+        const { created, dispatched, newInstances } = response.data;
+
+        // Build success message
+        let message = `Created ${created} task${created !== 1 ? 's' : ''}`;
+        if (dispatched > 0) {
+          message += `, dispatched ${dispatched}`;
+        }
+        if (newInstances.length > 0) {
+          message += ` (${newInstances.length} new instance${newInstances.length !== 1 ? 's' : ''})`;
+        }
+
+        setDispatchComplete();
+        toast.success(message);
+        onComplete();
+      }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to create tasks');
+      setDispatchError(err instanceof Error ? err.message : 'Failed to create and dispatch tasks');
+      toast.error(err instanceof Error ? err.message : 'Failed to create and dispatch tasks');
     } finally {
       setIsCreatingTasks(false);
     }
@@ -274,6 +370,15 @@ export function ParsedTasksReview({ onBack, onComplete }: ParsedTasksReviewProps
                       projects={projects}
                       onSelect={(projectId) => selectProjectForTask(task.id, projectId)}
                     />
+                    <DispatchTargetSelector
+                      task={task}
+                      projectId={task.projectId}
+                      availableInstances={task.projectId ? (projectInstancesCache[task.projectId] || []) : []}
+                      currentTarget={dispatchTargets[task.id]}
+                      onSelect={(target) => setDispatchTarget(task.id, target)}
+                      projectName={getProjectName(task.projectId)}
+                      projectPath={projects.find((p) => p.id === task.projectId)?.path}
+                    />
                   </div>
                 </div>
 
@@ -365,7 +470,27 @@ export function ParsedTasksReview({ onBack, onComplete }: ParsedTasksReviewProps
       </div>
 
       {/* Footer Actions */}
-      <div className="px-6 py-4 border-t border-surface-600 shrink-0">
+      <div className="px-6 py-4 border-t border-surface-600 shrink-0 space-y-3">
+        {/* Dispatch Summary */}
+        {routableTasks.length > 0 && instancesFetched && (
+          <div className="flex items-center gap-3 px-3 py-2 bg-frost-200/10 rounded-lg text-xs text-frost-200">
+            <Icons.computer />
+            {dispatchSummary.totalTasks > 0 ? (
+              <span>
+                Will dispatch <strong>{dispatchSummary.totalTasks} task{dispatchSummary.totalTasks !== 1 ? 's' : ''}</strong> to{' '}
+                <strong>{dispatchSummary.totalInstances} instance{dispatchSummary.totalInstances !== 1 ? 's' : ''}</strong>
+                {dispatchSummary.newInstances > 0 && (
+                  <span className="text-accent"> ({dispatchSummary.newInstances} new)</span>
+                )}
+              </span>
+            ) : (
+              <span>
+                Will save <strong>{dispatchSummary.saveOnly} task{dispatchSummary.saveOnly !== 1 ? 's' : ''}</strong> without dispatching
+              </span>
+            )}
+          </div>
+        )}
+
         <div className="flex items-center justify-between">
           <button
             onClick={onBack}
@@ -402,19 +527,19 @@ export function ParsedTasksReview({ onBack, onComplete }: ParsedTasksReviewProps
             )}
 
             <button
-              onClick={handleCreateTasks}
+              onClick={handleCreateAndDispatch}
               disabled={isCreatingTasks || routableTasks.length === 0}
               className="px-4 py-2 bg-accent text-surface-900 rounded-lg font-medium text-sm hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
             >
               {isCreatingTasks ? (
                 <>
                   <div className="animate-spin w-4 h-4 border-2 border-surface-900 border-t-transparent rounded-full" />
-                  Creating...
+                  {dispatchState === 'dispatching' ? 'Dispatching...' : 'Creating...'}
                 </>
               ) : (
                 <>
-                  <Icons.check className="w-4 h-4" />
-                  Create {routableTasks.length} Task{routableTasks.length !== 1 ? 's' : ''}
+                  <Icons.send className="w-4 h-4" />
+                  Create & Dispatch {routableTasks.length} Task{routableTasks.length !== 1 ? 's' : ''}
                 </>
               )}
             </button>

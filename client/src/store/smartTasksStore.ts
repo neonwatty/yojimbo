@@ -1,7 +1,8 @@
 import { create } from 'zustand';
-import type { ParsedTask, ParsedTasksResponse, Project } from '@cc-orchestrator/shared';
+import type { ParsedTask, ParsedTasksResponse, Project, DispatchTarget, ProjectInstanceInfo } from '@cc-orchestrator/shared';
 
 export type SmartTasksState = 'idle' | 'parsing' | 'parsed' | 'clarifying' | 'error';
+export type DispatchState = 'idle' | 'dispatching' | 'complete' | 'error';
 
 interface SmartTasksStoreState {
   // Feature availability
@@ -32,6 +33,11 @@ interface SmartTasksStoreState {
   // Projects for matching
   projects: Project[];
 
+  // Dispatch state (new)
+  dispatchTargets: Record<string, DispatchTarget>;      // taskId → target
+  projectInstancesCache: Record<string, ProjectInstanceInfo[]>; // projectId → instances
+  dispatchState: DispatchState;
+
   // Actions
   setAvailability: (available: boolean, message: string) => void;
   setRawInput: (input: string) => void;
@@ -49,6 +55,14 @@ interface SmartTasksStoreState {
   selectProjectForTask: (taskId: string, projectId: string) => void;
   setProjects: (projects: Project[]) => void;
   reset: () => void;
+
+  // Dispatch actions (new)
+  setDispatchTarget: (taskId: string, target: DispatchTarget) => void;
+  setProjectInstances: (projectId: string, instances: ProjectInstanceInfo[]) => void;
+  computeSmartDefaults: () => void;
+  startDispatching: () => void;
+  setDispatchComplete: () => void;
+  setDispatchError: (message: string) => void;
 }
 
 const initialState = {
@@ -63,6 +77,10 @@ const initialState = {
   needsClarification: false,
   summary: null,
   projects: [],
+  // Dispatch state (new)
+  dispatchTargets: {} as Record<string, DispatchTarget>,
+  projectInstancesCache: {} as Record<string, ProjectInstanceInfo[]>,
+  dispatchState: 'idle' as DispatchState,
 };
 
 export const useSmartTasksStore = create<SmartTasksStoreState>()((set) => ({
@@ -135,6 +153,82 @@ export const useSmartTasksStore = create<SmartTasksStoreState>()((set) => ({
   setProjects: (projects) => set({ projects }),
 
   reset: () => set(initialState),
+
+  // Dispatch actions (new)
+  setDispatchTarget: (taskId, target) =>
+    set((state) => ({
+      dispatchTargets: {
+        ...state.dispatchTargets,
+        [taskId]: target,
+      },
+    })),
+
+  setProjectInstances: (projectId, instances) =>
+    set((state) => ({
+      projectInstancesCache: {
+        ...state.projectInstancesCache,
+        [projectId]: instances,
+      },
+    })),
+
+  computeSmartDefaults: () =>
+    set((state) => {
+      const newTargets: Record<string, DispatchTarget> = {};
+
+      for (const task of state.parsedTasks) {
+        // Skip tasks that already have a dispatch target set
+        if (state.dispatchTargets[task.id]) {
+          newTargets[task.id] = state.dispatchTargets[task.id];
+          continue;
+        }
+
+        // Skip tasks without a project
+        if (!task.projectId) {
+          newTargets[task.id] = { type: 'none' };
+          continue;
+        }
+
+        // Get instances for this project
+        const instances = state.projectInstancesCache[task.projectId] || [];
+
+        // Find an idle instance first (preferred)
+        const idleInstance = instances.find((i) => i.status === 'idle');
+        if (idleInstance) {
+          newTargets[task.id] = {
+            type: 'instance',
+            instanceId: idleInstance.id,
+          };
+          continue;
+        }
+
+        // Fall back to first busy instance (will queue)
+        const busyInstance = instances.find((i) => i.status === 'working');
+        if (busyInstance) {
+          newTargets[task.id] = {
+            type: 'instance',
+            instanceId: busyInstance.id,
+          };
+          continue;
+        }
+
+        // No instances available - default to create new
+        const project = state.projects.find((p) => p.id === task.projectId);
+        newTargets[task.id] = {
+          type: 'new-instance',
+          newInstanceName: `${project?.name || 'project'}-task`,
+          workingDir: project?.path,
+        };
+      }
+
+      return { dispatchTargets: newTargets };
+    }),
+
+  startDispatching: () => set({ dispatchState: 'dispatching' }),
+
+  setDispatchComplete: () => set({ dispatchState: 'complete' }),
+
+  setDispatchError: (message) =>
+    set({ dispatchState: 'error', errorMessage: message }),
 }));
 
 // Helper to derive effective clarity from task state

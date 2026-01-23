@@ -179,7 +179,7 @@ describe('smartTodosStore', () => {
 
       useSmartTodosStore.getState().updateTodo('1', { title: 'Updated' });
 
-      expect(useSmartTodosStore.getState().parsedTodos[1].title).toBe('Task 2');
+      expect(useSmartTodosStore.getState().parsedTodos[1].title).toBe('Todo 2');
     });
 
     it('can update multiple fields at once', () => {
@@ -210,7 +210,7 @@ describe('smartTodosStore', () => {
 
       useSmartTodosStore.getState().updateTodo('nonexistent', { title: 'Nope' });
 
-      expect(useSmartTodosStore.getState().parsedTodos[0].title).toBe('Task 1');
+      expect(useSmartTodosStore.getState().parsedTodos[0].title).toBe('Todo 1');
     });
   });
 

@@ -39,16 +39,16 @@ interface ApiClient {
   markAllEventsAsRead(): Promise<{ count: number }>;
   clearFeedEvents(): Promise<{ count: number }>;
   createTestEvent(instanceId: string, instanceName: string, eventType: string, message: string): Promise<void>;
-  // Tasks API
-  listTasks(): Promise<GlobalTodo[]>;
-  createTask(text: string): Promise<GlobalTodo>;
-  getTask(id: string): Promise<GlobalTodo>;
-  updateTask(id: string, data: { text?: string; status?: string }): Promise<GlobalTodo>;
-  deleteTask(id: string): Promise<void>;
-  markTaskDone(id: string): Promise<GlobalTodo>;
-  dispatchTask(taskId: string, instanceId: string): Promise<GlobalTodo>;
-  getTaskStats(): Promise<{ total: number; captured: number; inProgress: number; done: number }>;
-  cleanupAllTasks(): Promise<void>;
+  // Todos API
+  listTodos(): Promise<GlobalTodo[]>;
+  createTodo(text: string): Promise<GlobalTodo>;
+  getTodo(id: string): Promise<GlobalTodo>;
+  updateTodo(id: string, data: { text?: string; status?: string }): Promise<GlobalTodo>;
+  deleteTodo(id: string): Promise<void>;
+  markTodoDone(id: string): Promise<GlobalTodo>;
+  dispatchTodo(todoId: string, instanceId: string): Promise<GlobalTodo>;
+  getTodoStats(): Promise<{ total: number; captured: number; inProgress: number; done: number }>;
+  cleanupAllTodos(): Promise<void>;
 }
 
 function createApiClient(): ApiClient {
@@ -153,15 +153,15 @@ function createApiClient(): ApiClient {
       });
     },
 
-    // Tasks API implementations
-    async listTasks() {
-      const response = await fetch(`${API_BASE}/tasks`);
+    // Todos API implementations
+    async listTodos() {
+      const response = await fetch(`${API_BASE}/todos`);
       const data = await response.json();
       return data.data || [];
     },
 
-    async createTask(text: string) {
-      const response = await fetch(`${API_BASE}/tasks`, {
+    async createTodo(text: string) {
+      const response = await fetch(`${API_BASE}/todos`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text }),
@@ -170,14 +170,14 @@ function createApiClient(): ApiClient {
       return data.data;
     },
 
-    async getTask(id: string) {
-      const response = await fetch(`${API_BASE}/tasks/${id}`);
+    async getTodo(id: string) {
+      const response = await fetch(`${API_BASE}/todos/${id}`);
       const data = await response.json();
       return data.data;
     },
 
-    async updateTask(id: string, updates: { text?: string; status?: string }) {
-      const response = await fetch(`${API_BASE}/tasks/${id}`, {
+    async updateTodo(id: string, updates: { text?: string; status?: string }) {
+      const response = await fetch(`${API_BASE}/todos/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updates),
@@ -186,22 +186,22 @@ function createApiClient(): ApiClient {
       return data.data;
     },
 
-    async deleteTask(id: string) {
-      await fetch(`${API_BASE}/tasks/${id}`, {
+    async deleteTodo(id: string) {
+      await fetch(`${API_BASE}/todos/${id}`, {
         method: 'DELETE',
       });
     },
 
-    async markTaskDone(id: string) {
-      const response = await fetch(`${API_BASE}/tasks/${id}/done`, {
+    async markTodoDone(id: string) {
+      const response = await fetch(`${API_BASE}/todos/${id}/done`, {
         method: 'POST',
       });
       const data = await response.json();
       return data.data;
     },
 
-    async dispatchTask(taskId: string, instanceId: string) {
-      const response = await fetch(`${API_BASE}/tasks/${taskId}/dispatch`, {
+    async dispatchTodo(todoId: string, instanceId: string) {
+      const response = await fetch(`${API_BASE}/todos/${todoId}/dispatch`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ instanceId, copyToClipboard: false }),
@@ -210,16 +210,16 @@ function createApiClient(): ApiClient {
       return data.data;
     },
 
-    async getTaskStats() {
-      const response = await fetch(`${API_BASE}/tasks/stats`);
+    async getTodoStats() {
+      const response = await fetch(`${API_BASE}/todos/stats`);
       const data = await response.json();
       return data.data;
     },
 
-    async cleanupAllTasks() {
-      const tasks = await this.listTasks();
-      for (const task of tasks) {
-        await this.deleteTask(task.id);
+    async cleanupAllTodos() {
+      const todos = await this.listTodos();
+      for (const todo of todos) {
+        await this.deleteTodo(todo.id);
       }
     },
   };

@@ -1,7 +1,7 @@
 import { test, expect, Page } from '@playwright/test';
 
 /**
- * Smart Tasks Project Matching E2E Tests
+ * Smart Todos Project Matching E2E Tests
  *
  * Tests the multi-project matching feature including:
  * - ProjectSelector dropdown showing top 3 matches
@@ -14,22 +14,22 @@ import { test, expect, Page } from '@playwright/test';
 // The Vite dev server proxies /api/* to the backend
 
 // Mock availability response
-const mockSmartTasksStatus = {
+const mockSmartTodosStatus = {
   success: true,
   data: {
     available: true,
-    message: 'Smart Tasks is ready',
+    message: 'Smart Todos is ready',
   },
 };
 
-// Mock parsed tasks with multiple project matches
+// Mock parsed todos with multiple project matches
 const mockParsedTodosWithMatches = {
   success: true,
   data: {
     sessionId: 'test-session-123',
-    tasks: [
+    todos: [
       {
-        id: 'task-1',
+        id: 'todo-1',
         originalText: 'Check open PRs on bugdrop',
         title: 'Check open pull requests',
         type: 'other',
@@ -43,7 +43,7 @@ const mockParsedTodosWithMatches = {
         clarity: 'clear',
       },
       {
-        id: 'task-2',
+        id: 'todo-2',
         originalText: 'Check issues in yojimbo',
         title: 'Check open issues status',
         type: 'other',
@@ -55,10 +55,10 @@ const mockParsedTodosWithMatches = {
         clarity: 'clear',
       },
     ],
-    suggestedOrder: ['task-1', 'task-2'],
+    suggestedOrder: ['todo-1', 'todo-2'],
     needsClarification: false,
     summary: {
-      totalTasks: 2,
+      totalTodos: 2,
       routableCount: 2,
       needsClarificationCount: 0,
       estimatedCost: '$0.0015',
@@ -66,14 +66,14 @@ const mockParsedTodosWithMatches = {
   },
 };
 
-// Mock parsed tasks with unknown project
+// Mock parsed todos with unknown project
 const mockParsedTodosWithUnknownProject = {
   success: true,
   data: {
     sessionId: 'test-session-456',
-    tasks: [
+    todos: [
       {
-        id: 'task-1',
+        id: 'todo-1',
         originalText: 'Fix bug in unknown-repo',
         title: 'Fix bug in unknown-repo',
         type: 'bug',
@@ -86,7 +86,7 @@ const mockParsedTodosWithUnknownProject = {
         },
       },
       {
-        id: 'task-2',
+        id: 'todo-2',
         originalText: 'Check yojimbo status',
         title: 'Check status',
         type: 'other',
@@ -98,10 +98,10 @@ const mockParsedTodosWithUnknownProject = {
         clarity: 'clear',
       },
     ],
-    suggestedOrder: ['task-1', 'task-2'],
+    suggestedOrder: ['todo-1', 'todo-2'],
     needsClarification: true,
     summary: {
-      totalTasks: 2,
+      totalTodos: 2,
       routableCount: 1,
       needsClarificationCount: 1,
       estimatedCost: '$0.0012',
@@ -120,15 +120,15 @@ const mockProjects = {
   ],
 };
 
-// Helper to set up all Smart Tasks API mocks
+// Helper to set up all Smart Todos API mocks
 // Uses regex patterns to reliably intercept requests regardless of how URLs are formatted
-async function setupSmartTasksMocks(page: Page, parseResponse = mockParsedTodosWithMatches) {
+async function setupSmartTodosMocks(page: Page, parseResponse = mockParsedTodosWithMatches) {
   // Mock availability check
-  await page.route(/\/api\/smart-tasks\/status/, async (route) => {
+  await page.route(/\/api\/smart-todos\/status/, async (route) => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify(mockSmartTasksStatus),
+      body: JSON.stringify(mockSmartTodosStatus),
     });
   });
 
@@ -142,7 +142,7 @@ async function setupSmartTasksMocks(page: Page, parseResponse = mockParsedTodosW
   });
 
   // Mock parse API
-  await page.route(/\/api\/smart-tasks\/parse/, async (route) => {
+  await page.route(/\/api\/smart-todos\/parse/, async (route) => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -151,7 +151,7 @@ async function setupSmartTasksMocks(page: Page, parseResponse = mockParsedTodosW
   });
 
   // Mock path validation
-  await page.route(/\/api\/smart-tasks\/validate-path/, async (route) => {
+  await page.route(/\/api\/smart-todos\/validate-path/, async (route) => {
     const body = await route.request().postDataJSON();
     const expandedPath = body.path.replace('~', '/Users/test');
     await route.fulfill({
@@ -170,47 +170,47 @@ async function setupSmartTasksMocks(page: Page, parseResponse = mockParsedTodosW
   });
 }
 
-test.describe('Smart Tasks Project Matching', () => {
+test.describe('Smart Todos Project Matching', () => {
   test.describe('Smart Button Availability', () => {
-    test('shows Smart button in Tasks modal', async ({ page }) => {
+    test('shows Smart button in Todos modal', async ({ page }) => {
       await page.goto('/');
 
-      // Open Tasks modal
-      await page.locator('button:has-text("Tasks")').click();
-      await expect(page.locator('h2:has-text("Global Tasks")')).toBeVisible();
+      // Open Todos modal
+      await page.locator('button:has-text("Todos")').click();
+      await expect(page.locator('h2:has-text("Global Todos")')).toBeVisible();
 
       // Smart button should be visible
       await expect(page.locator('button:has-text("Smart")')).toBeVisible();
     });
 
-    test('clicking Smart opens Smart Task Input modal', async ({ page }) => {
-      await setupSmartTasksMocks(page);
+    test('clicking Smart opens Smart Todo Input modal', async ({ page }) => {
+      await setupSmartTodosMocks(page);
       await page.goto('/');
 
-      // Open Tasks modal and click Smart
-      await page.locator('button:has-text("Tasks")').click();
+      // Open Todos modal and click Smart
+      await page.locator('button:has-text("Todos")').click();
       await page.locator('button:has-text("Smart")').click();
 
-      // Smart Task Input modal should be visible
-      await expect(page.locator('h2:has-text("Smart Task Input")')).toBeVisible();
+      // Smart Todo Input modal should be visible
+      await expect(page.locator('h2:has-text("Smart Todo Input")')).toBeVisible();
       await expect(page.locator('textarea')).toBeVisible();
-      await expect(page.locator('button:has-text("Parse Tasks")')).toBeVisible();
+      await expect(page.locator('button:has-text("Parse Todos")')).toBeVisible();
     });
   });
 
-  test.describe('Parsed Tasks Review UI', () => {
-    test('shows Ready badge for tasks with projectId', async ({ page }) => {
-      await setupSmartTasksMocks(page, mockParsedTodosWithMatches);
+  test.describe('Parsed Todos Review UI', () => {
+    test('shows Ready badge for todos with projectId', async ({ page }) => {
+      await setupSmartTodosMocks(page, mockParsedTodosWithMatches);
       await page.goto('/');
 
-      // Open Smart Tasks and parse
-      await page.locator('button:has-text("Tasks")').click();
+      // Open Smart Todos and parse
+      await page.locator('button:has-text("Todos")').click();
       await page.locator('button:has-text("Smart")').click();
       await page.locator('textarea').fill('Check open PRs on bugdrop');
-      await page.locator('button:has-text("Parse Tasks")').click();
+      await page.locator('button:has-text("Parse Todos")').click();
 
-      // Wait for Review Parsed Tasks modal
-      await expect(page.locator('h2:has-text("Review Parsed Tasks")')).toBeVisible();
+      // Wait for Review Parsed Todos modal
+      await expect(page.locator('h2:has-text("Review Parsed Todos")')).toBeVisible();
 
       // Should show Ready badge (green)
       await expect(page.locator('text=Ready').first()).toBeVisible();
@@ -219,18 +219,18 @@ test.describe('Smart Tasks Project Matching', () => {
       await expect(page.locator('text=bugdrop')).toBeVisible();
     });
 
-    test('shows Unknown project badge for tasks without projectId', async ({ page }) => {
-      await setupSmartTasksMocks(page, mockParsedTodosWithUnknownProject);
+    test('shows Unknown project badge for todos without projectId', async ({ page }) => {
+      await setupSmartTodosMocks(page, mockParsedTodosWithUnknownProject);
       await page.goto('/');
 
-      // Open Smart Tasks and parse
-      await page.locator('button:has-text("Tasks")').click();
+      // Open Smart Todos and parse
+      await page.locator('button:has-text("Todos")').click();
       await page.locator('button:has-text("Smart")').click();
       await page.locator('textarea').fill('Fix bug in unknown-repo');
-      await page.locator('button:has-text("Parse Tasks")').click();
+      await page.locator('button:has-text("Parse Todos")').click();
 
-      // Wait for Review Parsed Tasks modal
-      await expect(page.locator('h2:has-text("Review Parsed Tasks")')).toBeVisible();
+      // Wait for Review Parsed Todos modal
+      await expect(page.locator('h2:has-text("Review Parsed Todos")')).toBeVisible();
 
       // Should show Unknown project badge (yellow)
       await expect(page.locator('text=Unknown project')).toBeVisible();
@@ -239,90 +239,90 @@ test.describe('Smart Tasks Project Matching', () => {
       await expect(page.locator('text=Should I clone')).toBeVisible();
     });
 
-    test('shows Clone & Create button when tasks have unknown projects', async ({ page }) => {
-      await setupSmartTasksMocks(page, mockParsedTodosWithUnknownProject);
+    test('shows Clone & Create button when todos have unknown projects', async ({ page }) => {
+      await setupSmartTodosMocks(page, mockParsedTodosWithUnknownProject);
       await page.goto('/');
 
-      // Open Smart Tasks and parse
-      await page.locator('button:has-text("Tasks")').click();
+      // Open Smart Todos and parse
+      await page.locator('button:has-text("Todos")').click();
       await page.locator('button:has-text("Smart")').click();
       await page.locator('textarea').fill('Fix bug in unknown-repo');
-      await page.locator('button:has-text("Parse Tasks")').click();
+      await page.locator('button:has-text("Parse Todos")').click();
 
-      // Wait for Review Parsed Tasks modal
-      await expect(page.locator('h2:has-text("Review Parsed Tasks")')).toBeVisible();
+      // Wait for Review Parsed Todos modal
+      await expect(page.locator('h2:has-text("Review Parsed Todos")')).toBeVisible();
 
       // Clone & Create button should be visible
       await expect(page.locator('button:has-text("Clone")')).toBeVisible();
     });
 
-    test('hides Clone & Create button when all tasks have known projects', async ({ page }) => {
-      await setupSmartTasksMocks(page, mockParsedTodosWithMatches);
+    test('hides Clone & Create button when all todos have known projects', async ({ page }) => {
+      await setupSmartTodosMocks(page, mockParsedTodosWithMatches);
       await page.goto('/');
 
-      // Open Smart Tasks and parse
-      await page.locator('button:has-text("Tasks")').click();
+      // Open Smart Todos and parse
+      await page.locator('button:has-text("Todos")').click();
       await page.locator('button:has-text("Smart")').click();
       await page.locator('textarea').fill('Check bugdrop PRs');
-      await page.locator('button:has-text("Parse Tasks")').click();
+      await page.locator('button:has-text("Parse Todos")').click();
 
-      // Wait for Review Parsed Tasks modal
-      await expect(page.locator('h2:has-text("Review Parsed Tasks")')).toBeVisible();
+      // Wait for Review Parsed Todos modal
+      await expect(page.locator('h2:has-text("Review Parsed Todos")')).toBeVisible();
 
       // Clone & Create button should NOT be visible
       await expect(page.locator('button:has-text("Clone")')).not.toBeVisible();
     });
 
     test('shows summary with routable and clarification counts', async ({ page }) => {
-      await setupSmartTasksMocks(page, mockParsedTodosWithUnknownProject);
+      await setupSmartTodosMocks(page, mockParsedTodosWithUnknownProject);
       await page.goto('/');
 
-      // Open Smart Tasks and parse
-      await page.locator('button:has-text("Tasks")').click();
+      // Open Smart Todos and parse
+      await page.locator('button:has-text("Todos")').click();
       await page.locator('button:has-text("Smart")').click();
-      await page.locator('textarea').fill('Test tasks');
-      await page.locator('button:has-text("Parse Tasks")').click();
+      await page.locator('textarea').fill('Test todos');
+      await page.locator('button:has-text("Parse Todos")').click();
 
-      // Wait for Review Parsed Tasks modal
-      await expect(page.locator('h2:has-text("Review Parsed Tasks")')).toBeVisible();
+      // Wait for Review Parsed Todos modal
+      await expect(page.locator('h2:has-text("Review Parsed Todos")')).toBeVisible();
 
-      // Should show task count summary
-      await expect(page.locator('text=2 tasks parsed')).toBeVisible();
+      // Should show todo count summary
+      await expect(page.locator('text=2 todos parsed')).toBeVisible();
       await expect(page.locator('text=1 ready to route')).toBeVisible();
       await expect(page.locator('text=1 needs clarification')).toBeVisible();
     });
   });
 
   test.describe('ProjectSelector Dropdown', () => {
-    test('shows project name for task with multiple matches', async ({ page }) => {
-      await setupSmartTasksMocks(page, mockParsedTodosWithMatches);
+    test('shows project name for todo with multiple matches', async ({ page }) => {
+      await setupSmartTodosMocks(page, mockParsedTodosWithMatches);
       await page.goto('/');
 
-      // Open Smart Tasks and parse
-      await page.locator('button:has-text("Tasks")').click();
+      // Open Smart Todos and parse
+      await page.locator('button:has-text("Todos")').click();
       await page.locator('button:has-text("Smart")').click();
       await page.locator('textarea').fill('Check bugdrop PRs');
-      await page.locator('button:has-text("Parse Tasks")').click();
+      await page.locator('button:has-text("Parse Todos")').click();
 
-      // Wait for Review Parsed Tasks modal
-      await expect(page.locator('h2:has-text("Review Parsed Tasks")')).toBeVisible();
+      // Wait for Review Parsed Todos modal
+      await expect(page.locator('h2:has-text("Review Parsed Todos")')).toBeVisible();
 
       // Should show project name (bugdrop has multiple matches)
       await expect(page.locator('text=bugdrop')).toBeVisible();
     });
 
-    test('shows project name for task with single match', async ({ page }) => {
-      await setupSmartTasksMocks(page, mockParsedTodosWithMatches);
+    test('shows project name for todo with single match', async ({ page }) => {
+      await setupSmartTodosMocks(page, mockParsedTodosWithMatches);
       await page.goto('/');
 
-      // Open Smart Tasks and parse
-      await page.locator('button:has-text("Tasks")').click();
+      // Open Smart Todos and parse
+      await page.locator('button:has-text("Todos")').click();
       await page.locator('button:has-text("Smart")').click();
       await page.locator('textarea').fill('Check bugdrop PRs');
-      await page.locator('button:has-text("Parse Tasks")').click();
+      await page.locator('button:has-text("Parse Todos")').click();
 
-      // Wait for Review Parsed Tasks modal
-      await expect(page.locator('h2:has-text("Review Parsed Tasks")')).toBeVisible();
+      // Wait for Review Parsed Todos modal
+      await expect(page.locator('h2:has-text("Review Parsed Todos")')).toBeVisible();
 
       // Should show yojimbo (single match) - use specific locator to avoid matching header
       await expect(page.locator('text=Project: yojimbo')).toBeVisible();
@@ -331,17 +331,17 @@ test.describe('Smart Tasks Project Matching', () => {
 
   test.describe('Clone & Create Modal', () => {
     test('opens Clone & Create modal when clicking Clone button', async ({ page }) => {
-      await setupSmartTasksMocks(page, mockParsedTodosWithUnknownProject);
+      await setupSmartTodosMocks(page, mockParsedTodosWithUnknownProject);
       await page.goto('/');
 
-      // Open Smart Tasks and parse
-      await page.locator('button:has-text("Tasks")').click();
+      // Open Smart Todos and parse
+      await page.locator('button:has-text("Todos")').click();
       await page.locator('button:has-text("Smart")').click();
       await page.locator('textarea').fill('Fix bug in unknown-repo');
-      await page.locator('button:has-text("Parse Tasks")').click();
+      await page.locator('button:has-text("Parse Todos")').click();
 
-      // Wait for Review Parsed Tasks modal
-      await expect(page.locator('h2:has-text("Review Parsed Tasks")')).toBeVisible();
+      // Wait for Review Parsed Todos modal
+      await expect(page.locator('h2:has-text("Review Parsed Todos")')).toBeVisible();
 
       // Click Clone & Create button
       await page.locator('button:has-text("Clone")').click();
@@ -354,17 +354,17 @@ test.describe('Smart Tasks Project Matching', () => {
     });
 
     test('auto-populates fields when URL is entered', async ({ page }) => {
-      await setupSmartTasksMocks(page, mockParsedTodosWithUnknownProject);
+      await setupSmartTodosMocks(page, mockParsedTodosWithUnknownProject);
       await page.goto('/');
 
-      // Open Smart Tasks and parse
-      await page.locator('button:has-text("Tasks")').click();
+      // Open Smart Todos and parse
+      await page.locator('button:has-text("Todos")').click();
       await page.locator('button:has-text("Smart")').click();
       await page.locator('textarea').fill('Fix bug in unknown-repo');
-      await page.locator('button:has-text("Parse Tasks")').click();
+      await page.locator('button:has-text("Parse Todos")').click();
 
       // Wait and click Clone
-      await expect(page.locator('h2:has-text("Review Parsed Tasks")')).toBeVisible();
+      await expect(page.locator('h2:has-text("Review Parsed Todos")')).toBeVisible();
       await page.locator('button:has-text("Clone")').click();
 
       // Enter a GitHub URL
@@ -380,45 +380,45 @@ test.describe('Smart Tasks Project Matching', () => {
   });
 
   test.describe('Navigation', () => {
-    test('Back to input returns to Smart Task Input', async ({ page }) => {
-      await setupSmartTasksMocks(page, mockParsedTodosWithMatches);
+    test('Back to input returns to Smart Todo Input', async ({ page }) => {
+      await setupSmartTodosMocks(page, mockParsedTodosWithMatches);
       await page.goto('/');
 
-      // Open Smart Tasks and parse
-      await page.locator('button:has-text("Tasks")').click();
+      // Open Smart Todos and parse
+      await page.locator('button:has-text("Todos")').click();
       await page.locator('button:has-text("Smart")').click();
       await page.locator('textarea').fill('Check bugdrop PRs');
-      await page.locator('button:has-text("Parse Tasks")').click();
+      await page.locator('button:has-text("Parse Todos")').click();
 
-      // Wait for Review Parsed Tasks modal
-      await expect(page.locator('h2:has-text("Review Parsed Tasks")')).toBeVisible();
+      // Wait for Review Parsed Todos modal
+      await expect(page.locator('h2:has-text("Review Parsed Todos")')).toBeVisible();
 
       // Click Back to input
       await page.locator('button:has-text("Back to input")').click();
 
-      // Should return to Smart Task Input
-      await expect(page.locator('h2:has-text("Smart Task Input")')).toBeVisible();
+      // Should return to Smart Todo Input
+      await expect(page.locator('h2:has-text("Smart Todo Input")')).toBeVisible();
 
       // Previous input should be preserved
       await expect(page.locator('textarea')).toHaveValue('Check bugdrop PRs');
     });
 
-    test('Escape key closes Smart Task Input modal', async ({ page }) => {
-      await setupSmartTasksMocks(page);
+    test('Escape key closes Smart Todo Input modal', async ({ page }) => {
+      await setupSmartTodosMocks(page);
       await page.goto('/');
 
-      // Open Smart Tasks
-      await page.locator('button:has-text("Tasks")').click();
+      // Open Smart Todos
+      await page.locator('button:has-text("Todos")').click();
       await page.locator('button:has-text("Smart")').click();
 
       // Verify modal is open
-      await expect(page.locator('h2:has-text("Smart Task Input")')).toBeVisible();
+      await expect(page.locator('h2:has-text("Smart Todo Input")')).toBeVisible();
 
       // Press Escape
       await page.keyboard.press('Escape');
 
       // Modal should be closed
-      await expect(page.locator('h2:has-text("Smart Task Input")')).not.toBeVisible();
+      await expect(page.locator('h2:has-text("Smart Todo Input")')).not.toBeVisible();
     });
   });
 });

@@ -1,7 +1,7 @@
 import { test, expect, Page } from '@playwright/test';
 
 /**
- * Smart Tasks Clone & Create Flow E2E Tests
+ * Smart Todos Clone & Create Flow E2E Tests
  *
  * Tests the clone and create instance flow including:
  * - Clone modal opening for unknown projects
@@ -11,22 +11,22 @@ import { test, expect, Page } from '@playwright/test';
  */
 
 // Mock availability response
-const mockSmartTasksStatus = {
+const mockSmartTodosStatus = {
   success: true,
   data: {
     available: true,
-    message: 'Smart Tasks is ready',
+    message: 'Smart Todos is ready',
   },
 };
 
-// Mock parsed tasks with unknown project (needs clone)
+// Mock parsed todos with unknown project (needs clone)
 const mockParsedTodosWithUnknownProject = {
   success: true,
   data: {
     sessionId: 'test-session-clone-123',
-    tasks: [
+    todos: [
       {
-        id: 'task-1',
+        id: 'todo-1',
         originalText: 'Fix bug in bugdrop',
         title: 'Fix bug in bugdrop',
         type: 'bug',
@@ -39,10 +39,10 @@ const mockParsedTodosWithUnknownProject = {
         },
       },
     ],
-    suggestedOrder: ['task-1'],
+    suggestedOrder: ['todo-1'],
     needsClarification: true,
     summary: {
-      totalTasks: 1,
+      totalTodos: 1,
       routableCount: 0,
       needsClarificationCount: 1,
       estimatedCost: '$0.0012',
@@ -50,14 +50,14 @@ const mockParsedTodosWithUnknownProject = {
   },
 };
 
-// Mock parsed tasks with all known projects (no clone needed)
+// Mock parsed todos with all known projects (no clone needed)
 const mockParsedTodosAllKnown = {
   success: true,
   data: {
     sessionId: 'test-session-known-123',
-    tasks: [
+    todos: [
       {
-        id: 'task-1',
+        id: 'todo-1',
         originalText: 'Check PRs on bugdrop',
         title: 'Check open pull requests',
         type: 'other',
@@ -69,10 +69,10 @@ const mockParsedTodosAllKnown = {
         clarity: 'clear',
       },
     ],
-    suggestedOrder: ['task-1'],
+    suggestedOrder: ['todo-1'],
     needsClarification: false,
     summary: {
-      totalTasks: 1,
+      totalTodos: 1,
       routableCount: 1,
       needsClarificationCount: 0,
       estimatedCost: '$0.0010',
@@ -139,8 +139,8 @@ const mockSetupProjectError = {
   error: 'Failed to clone repository: Repository not found',
 };
 
-// Helper to set up all Smart Tasks API mocks
-async function setupSmartTasksMocks(
+// Helper to set up all Smart Todos API mocks
+async function setupSmartTodosMocks(
   page: Page,
   options: {
     parseResponse?: typeof mockParsedTodosWithUnknownProject;
@@ -155,11 +155,11 @@ async function setupSmartTasksMocks(
   } = options;
 
   // Mock availability check
-  await page.route(/\/api\/smart-tasks\/status/, async (route) => {
+  await page.route(/\/api\/smart-todos\/status/, async (route) => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify(mockSmartTasksStatus),
+      body: JSON.stringify(mockSmartTodosStatus),
     });
   });
 
@@ -173,7 +173,7 @@ async function setupSmartTasksMocks(
   });
 
   // Mock parse API
-  await page.route(/\/api\/smart-tasks\/parse/, async (route) => {
+  await page.route(/\/api\/smart-todos\/parse/, async (route) => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -182,7 +182,7 @@ async function setupSmartTasksMocks(
   });
 
   // Mock path validation
-  await page.route(/\/api\/smart-tasks\/validate-path/, async (route) => {
+  await page.route(/\/api\/smart-todos\/validate-path/, async (route) => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -191,7 +191,7 @@ async function setupSmartTasksMocks(
   });
 
   // Mock setup project
-  await page.route(/\/api\/smart-tasks\/setup-project/, async (route) => {
+  await page.route(/\/api\/smart-todos\/setup-project/, async (route) => {
     // Add a small delay to simulate the setup process
     await new Promise((resolve) => setTimeout(resolve, 100));
     await route.fulfill({
@@ -202,24 +202,24 @@ async function setupSmartTasksMocks(
   });
 }
 
-// Helper to navigate to parsed tasks review
+// Helper to navigate to parsed todos review
 async function navigateToParsedTodosReview(page: Page, inputText = 'Fix bug in bugdrop') {
   await page.goto('/');
-  await page.locator('button:has-text("Tasks")').click();
+  await page.locator('button:has-text("Todos")').click();
   await page.locator('button:has-text("Smart")').click();
-  // Wait for Smart Task Input modal to be visible
-  await expect(page.locator('h2:has-text("Smart Task Input")')).toBeVisible();
-  // Use a more specific selector for the Smart Task textarea (the placeholder text is unique)
-  const smartTaskTextarea = page.locator('textarea[placeholder*="Fix the auth bug"]');
-  await smartTaskTextarea.fill(inputText);
-  await page.locator('button:has-text("Parse Tasks")').click();
-  await expect(page.locator('h2:has-text("Review Parsed Tasks")')).toBeVisible();
+  // Wait for Smart Todo Input modal to be visible
+  await expect(page.locator('h2:has-text("Smart Todo Input")')).toBeVisible();
+  // Use a more specific selector for the Smart Todo textarea (the placeholder text is unique)
+  const smartTodoTextarea = page.locator('textarea[placeholder*="Fix the auth bug"]');
+  await smartTodoTextarea.fill(inputText);
+  await page.locator('button:has-text("Parse Todos")').click();
+  await expect(page.locator('h2:has-text("Review Parsed Todos")')).toBeVisible();
 }
 
-test.describe('Smart Tasks Clone & Create Flow', () => {
+test.describe('Smart Todos Clone & Create Flow', () => {
   test.describe('Clone Setup Modal', () => {
-    test('should not show clone button when no tasks need cloning', async ({ page }) => {
-      await setupSmartTasksMocks(page, { parseResponse: mockParsedTodosAllKnown });
+    test('should not show clone button when no todos need cloning', async ({ page }) => {
+      await setupSmartTodosMocks(page, { parseResponse: mockParsedTodosAllKnown });
       await navigateToParsedTodosReview(page, 'Check PRs on bugdrop');
 
       // Clone button should NOT be visible when all projects are known
@@ -230,7 +230,7 @@ test.describe('Smart Tasks Clone & Create Flow', () => {
     });
 
     test('should show clone modal when clicking Clone & Create button', async ({ page }) => {
-      await setupSmartTasksMocks(page);
+      await setupSmartTodosMocks(page);
       await navigateToParsedTodosReview(page);
 
       // Click the clone button
@@ -244,7 +244,7 @@ test.describe('Smart Tasks Clone & Create Flow', () => {
     });
 
     test('should close clone modal when clicking cancel', async ({ page }) => {
-      await setupSmartTasksMocks(page);
+      await setupSmartTodosMocks(page);
       await navigateToParsedTodosReview(page);
 
       // Open clone modal
@@ -259,7 +259,7 @@ test.describe('Smart Tasks Clone & Create Flow', () => {
     });
 
     test('should auto-populate instance name from GitHub URL', async ({ page }) => {
-      await setupSmartTasksMocks(page);
+      await setupSmartTodosMocks(page);
       await navigateToParsedTodosReview(page);
 
       // Open clone modal
@@ -278,7 +278,7 @@ test.describe('Smart Tasks Clone & Create Flow', () => {
     });
 
     test('should support SSH URLs', async ({ page }) => {
-      await setupSmartTasksMocks(page);
+      await setupSmartTodosMocks(page);
       await navigateToParsedTodosReview(page);
 
       // Open clone modal
@@ -299,7 +299,7 @@ test.describe('Smart Tasks Clone & Create Flow', () => {
 
   test.describe('Path Validation UI', () => {
     test('should show green checkmark for valid new path', async ({ page }) => {
-      await setupSmartTasksMocks(page, { pathValidationResponse: mockValidPathResponse });
+      await setupSmartTodosMocks(page, { pathValidationResponse: mockValidPathResponse });
       await navigateToParsedTodosReview(page);
 
       // Open clone modal
@@ -320,7 +320,7 @@ test.describe('Smart Tasks Clone & Create Flow', () => {
     });
 
     test('should show warning for existing directory', async ({ page }) => {
-      await setupSmartTasksMocks(page, { pathValidationResponse: mockExistingPathResponse });
+      await setupSmartTodosMocks(page, { pathValidationResponse: mockExistingPathResponse });
       await navigateToParsedTodosReview(page);
 
       // Open clone modal
@@ -338,7 +338,7 @@ test.describe('Smart Tasks Clone & Create Flow', () => {
     });
 
     test('should show error for missing parent directory', async ({ page }) => {
-      await setupSmartTasksMocks(page, { pathValidationResponse: mockInvalidParentPathResponse });
+      await setupSmartTodosMocks(page, { pathValidationResponse: mockInvalidParentPathResponse });
       await navigateToParsedTodosReview(page);
 
       // Open clone modal
@@ -359,11 +359,11 @@ test.describe('Smart Tasks Clone & Create Flow', () => {
   test.describe('Setup Progress', () => {
     test('should show progress or completion when setup runs', async ({ page }) => {
       // Add a longer delay to the mock to catch progress state
-      await page.route(/\/api\/smart-tasks\/status/, async (route) => {
+      await page.route(/\/api\/smart-todos\/status/, async (route) => {
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
-          body: JSON.stringify(mockSmartTasksStatus),
+          body: JSON.stringify(mockSmartTodosStatus),
         });
       });
       await page.route(/\/api\/projects$/, async (route) => {
@@ -373,14 +373,14 @@ test.describe('Smart Tasks Clone & Create Flow', () => {
           body: JSON.stringify(mockProjects),
         });
       });
-      await page.route(/\/api\/smart-tasks\/parse/, async (route) => {
+      await page.route(/\/api\/smart-todos\/parse/, async (route) => {
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
           body: JSON.stringify(mockParsedTodosWithUnknownProject),
         });
       });
-      await page.route(/\/api\/smart-tasks\/validate-path/, async (route) => {
+      await page.route(/\/api\/smart-todos\/validate-path/, async (route) => {
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -388,7 +388,7 @@ test.describe('Smart Tasks Clone & Create Flow', () => {
         });
       });
       // Longer delay to catch progress state
-      await page.route(/\/api\/smart-tasks\/setup-project/, async (route) => {
+      await page.route(/\/api\/smart-todos\/setup-project/, async (route) => {
         await new Promise((resolve) => setTimeout(resolve, 500));
         await route.fulfill({
           status: 200,
@@ -423,7 +423,7 @@ test.describe('Smart Tasks Clone & Create Flow', () => {
     });
 
     test('should show success state on completion', async ({ page }) => {
-      await setupSmartTasksMocks(page, { setupResponse: mockSetupProjectSuccess });
+      await setupSmartTodosMocks(page, { setupResponse: mockSetupProjectSuccess });
       await navigateToParsedTodosReview(page);
 
       // Open clone modal - URL is auto-detected from clarification question
@@ -447,7 +447,7 @@ test.describe('Smart Tasks Clone & Create Flow', () => {
     });
 
     test('should show error state on failure', async ({ page }) => {
-      await setupSmartTasksMocks(page, { setupResponse: mockSetupProjectError });
+      await setupSmartTodosMocks(page, { setupResponse: mockSetupProjectError });
       await navigateToParsedTodosReview(page);
 
       // Open clone modal - URL is auto-detected from clarification question
@@ -470,8 +470,8 @@ test.describe('Smart Tasks Clone & Create Flow', () => {
   });
 
   test.describe('Unknown Project Indicator', () => {
-    test('should show Unknown project badge for tasks needing clone', async ({ page }) => {
-      await setupSmartTasksMocks(page);
+    test('should show Unknown project badge for todos needing clone', async ({ page }) => {
+      await setupSmartTodosMocks(page);
       await navigateToParsedTodosReview(page);
 
       // Should show Unknown project badge
@@ -479,15 +479,15 @@ test.describe('Smart Tasks Clone & Create Flow', () => {
     });
 
     test('should show clarification question for unknown projects', async ({ page }) => {
-      await setupSmartTasksMocks(page);
+      await setupSmartTodosMocks(page);
       await navigateToParsedTodosReview(page);
 
       // Should show the clarification question from the parse response
       await expect(page.locator('text=Should I clone')).toBeVisible();
     });
 
-    test('should show task count with clarification needed', async ({ page }) => {
-      await setupSmartTasksMocks(page);
+    test('should show todo count with clarification needed', async ({ page }) => {
+      await setupSmartTodosMocks(page);
       await navigateToParsedTodosReview(page);
 
       // Should show summary indicating clarification needed

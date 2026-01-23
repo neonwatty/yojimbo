@@ -652,3 +652,42 @@ export interface SetupProgressEvent {
   sessionId?: string;
   error?: string;
 }
+
+// Smart Tasks: Auto-Dispatch types
+export interface DispatchTarget {
+  type: 'instance' | 'new-instance' | 'none';
+  instanceId?: string;
+  newInstanceName?: string;
+  workingDir?: string;
+}
+
+export interface CreateAndDispatchRequest {
+  sessionId: string;
+  tasks: Array<{
+    parsedTaskId: string;
+    text: string;
+    projectId: string;
+    dispatchTarget: DispatchTarget;
+  }>;
+}
+
+export interface CreateAndDispatchResult {
+  taskId: string;
+  status: 'created' | 'dispatched' | 'error';
+  error?: string;
+  instanceId?: string;
+}
+
+export interface CreateAndDispatchResponse {
+  created: number;
+  dispatched: number;
+  newInstances: Array<{ id: string; name: string }>;
+  results: CreateAndDispatchResult[];
+}
+
+export interface ProjectInstanceInfo {
+  id: string;
+  name: string;
+  status: InstanceStatus;
+  workingDir: string;
+}

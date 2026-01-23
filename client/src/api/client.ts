@@ -40,6 +40,9 @@ import type {
   SetupProjectRequest,
   SetupProjectResponse,
   ValidatePathResponse,
+  ProjectInstanceInfo,
+  CreateAndDispatchRequest,
+  CreateAndDispatchResponse,
 } from '@cc-orchestrator/shared';
 import { toast } from '../store/toastStore';
 
@@ -508,6 +511,9 @@ export const projectsApi = {
     request<ApiResponse<void>>(`/projects/${id}`, {
       method: 'DELETE',
     }),
+
+  getInstances: (projectId: string) =>
+    request<ApiResponse<{ instances: ProjectInstanceInfo[] }>>(`/projects/${projectId}/instances`),
 };
 
 // Smart Tasks API response types
@@ -589,6 +595,12 @@ export const smartTasksApi = {
 
   setupProject: (data: SetupProjectRequest) =>
     request<ApiResponse<SetupProjectResponse>>('/smart-tasks/setup-project', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  createAndDispatch: (data: CreateAndDispatchRequest) =>
+    request<ApiResponse<CreateAndDispatchResponse>>('/smart-tasks/create-and-dispatch', {
       method: 'POST',
       body: JSON.stringify(data),
     }),

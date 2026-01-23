@@ -1,16 +1,16 @@
 import { create } from 'zustand';
-import type { ParsedTask, ParsedTasksResponse, Project, DispatchTarget, ProjectInstanceInfo } from '@cc-orchestrator/shared';
+import type { ParsedTodo, ParsedTodosResponse, Project, DispatchTarget, ProjectInstanceInfo } from '@cc-orchestrator/shared';
 
-export type SmartTasksState = 'idle' | 'parsing' | 'parsed' | 'clarifying' | 'error';
+export type SmartTodosState = 'idle' | 'parsing' | 'parsed' | 'clarifying' | 'error';
 export type DispatchState = 'idle' | 'dispatching' | 'complete' | 'error';
 
-interface SmartTasksStoreState {
+interface SmartTodosStoreState {
   // Feature availability
   isAvailable: boolean;
   availabilityMessage: string;
 
   // Current state
-  state: SmartTasksState;
+  state: SmartTodosState;
   errorMessage: string | null;
 
   // Input
@@ -18,13 +18,13 @@ interface SmartTasksStoreState {
 
   // Parsed results
   sessionId: string | null;
-  parsedTasks: ParsedTask[];
+  parsedTodos: ParsedTodo[];
   suggestedOrder: string[];
   needsClarification: boolean;
 
   // Summary info
   summary: {
-    totalTasks: number;
+    totalTodos: number;
     routableCount: number;
     needsClarificationCount: number;
     estimatedCost: string;
@@ -33,8 +33,8 @@ interface SmartTasksStoreState {
   // Projects for matching
   projects: Project[];
 
-  // Dispatch state (new)
-  dispatchTargets: Record<string, DispatchTarget>;      // taskId → target
+  // Dispatch state
+  dispatchTargets: Record<string, DispatchTarget>;      // todoId → target
   projectInstancesCache: Record<string, ProjectInstanceInfo[]>; // projectId → instances
   dispatchState: DispatchState;
 
@@ -44,20 +44,20 @@ interface SmartTasksStoreState {
   startParsing: () => void;
   setParsedResult: (
     sessionId: string,
-    tasks: ParsedTasksResponse,
+    todos: ParsedTodosResponse,
     needsClarification: boolean,
-    summary: SmartTasksStoreState['summary']
+    summary: SmartTodosStoreState['summary']
   ) => void;
   startClarifying: () => void;
   setError: (message: string) => void;
-  updateTask: (taskId: string, updates: Partial<ParsedTask>) => void;
-  removeTask: (taskId: string) => void;
-  selectProjectForTask: (taskId: string, projectId: string) => void;
+  updateTodo: (todoId: string, updates: Partial<ParsedTodo>) => void;
+  removeTodo: (todoId: string) => void;
+  selectProjectForTodo: (todoId: string, projectId: string) => void;
   setProjects: (projects: Project[]) => void;
   reset: () => void;
 
-  // Dispatch actions (new)
-  setDispatchTarget: (taskId: string, target: DispatchTarget) => void;
+  // Dispatch actions
+  setDispatchTarget: (todoId: string, target: DispatchTarget) => void;
   setProjectInstances: (projectId: string, instances: ProjectInstanceInfo[]) => void;
   computeSmartDefaults: () => void;
   startDispatching: () => void;
@@ -68,22 +68,22 @@ interface SmartTasksStoreState {
 const initialState = {
   isAvailable: false,
   availabilityMessage: 'Checking availability...',
-  state: 'idle' as SmartTasksState,
+  state: 'idle' as SmartTodosState,
   errorMessage: null,
   rawInput: '',
   sessionId: null,
-  parsedTasks: [],
+  parsedTodos: [],
   suggestedOrder: [],
   needsClarification: false,
   summary: null,
   projects: [],
-  // Dispatch state (new)
+  // Dispatch state
   dispatchTargets: {} as Record<string, DispatchTarget>,
   projectInstancesCache: {} as Record<string, ProjectInstanceInfo[]>,
   dispatchState: 'idle' as DispatchState,
 };
 
-export const useSmartTasksStore = create<SmartTasksStoreState>()((set) => ({
+export const useSmartTodosStore = create<SmartTodosStoreState>()((set) => ({
   ...initialState,
 
   setAvailability: (available, message) =>
@@ -94,12 +94,12 @@ export const useSmartTasksStore = create<SmartTasksStoreState>()((set) => ({
   startParsing: () =>
     set({ state: 'parsing', errorMessage: null }),
 
-  setParsedResult: (sessionId, tasks, needsClarification, summary) =>
+  setParsedResult: (sessionId, todos, needsClarification, summary) =>
     set({
       state: 'parsed',
       sessionId,
-      parsedTasks: tasks.tasks,
-      suggestedOrder: tasks.suggestedOrder,
+      parsedTodos: todos.todos,
+      suggestedOrder: todos.suggestedOrder,
       needsClarification,
       summary,
       errorMessage: null,
@@ -110,42 +110,42 @@ export const useSmartTasksStore = create<SmartTasksStoreState>()((set) => ({
   setError: (message) =>
     set({ state: 'error', errorMessage: message }),
 
-  updateTask: (taskId, updates) =>
+  updateTodo: (todoId, updates) =>
     set((state) => ({
-      parsedTasks: state.parsedTasks.map((task) =>
-        task.id === taskId ? { ...task, ...updates } : task
+      parsedTodos: state.parsedTodos.map((todo) =>
+        todo.id === todoId ? { ...todo, ...updates } : todo
       ),
     })),
 
-  removeTask: (taskId) =>
+  removeTodo: (todoId) =>
     set((state) => ({
-      parsedTasks: state.parsedTasks.filter((task) => task.id !== taskId),
-      suggestedOrder: state.suggestedOrder.filter((id) => id !== taskId),
+      parsedTodos: state.parsedTodos.filter((todo) => todo.id !== todoId),
+      suggestedOrder: state.suggestedOrder.filter((id) => id !== todoId),
     })),
 
-  selectProjectForTask: (taskId, projectId) =>
+  selectProjectForTodo: (todoId, projectId) =>
     set((state) => ({
-      parsedTasks: state.parsedTasks.map((task) => {
-        if (task.id !== taskId) return task;
+      parsedTodos: state.parsedTodos.map((todo) => {
+        if (todo.id !== todoId) return todo;
 
         // Find confidence from projectMatches if available
-        const match = task.projectMatches?.find((m) => m.projectId === projectId);
-        const newConfidence = match?.confidence ?? task.projectConfidence;
+        const match = todo.projectMatches?.find((m) => m.projectId === projectId);
+        const newConfidence = match?.confidence ?? todo.projectConfidence;
 
         // Update clarity: if new confidence >= 0.7 and we have a project, it's clear
         const newClarity = newConfidence >= 0.7 && projectId
           ? 'clear'
-          : task.clarity === 'unknown_project' && projectId
+          : todo.clarity === 'unknown_project' && projectId
             ? 'clear'
-            : task.clarity;
+            : todo.clarity;
 
         return {
-          ...task,
+          ...todo,
           projectId,
           projectConfidence: newConfidence,
           clarity: newClarity,
           // Clear clarification if now clear
-          clarificationNeeded: newClarity === 'clear' ? undefined : task.clarificationNeeded,
+          clarificationNeeded: newClarity === 'clear' ? undefined : todo.clarificationNeeded,
         };
       }),
     })),
@@ -154,12 +154,12 @@ export const useSmartTasksStore = create<SmartTasksStoreState>()((set) => ({
 
   reset: () => set(initialState),
 
-  // Dispatch actions (new)
-  setDispatchTarget: (taskId, target) =>
+  // Dispatch actions
+  setDispatchTarget: (todoId, target) =>
     set((state) => ({
       dispatchTargets: {
         ...state.dispatchTargets,
-        [taskId]: target,
+        [todoId]: target,
       },
     })),
 
@@ -175,26 +175,26 @@ export const useSmartTasksStore = create<SmartTasksStoreState>()((set) => ({
     set((state) => {
       const newTargets: Record<string, DispatchTarget> = {};
 
-      for (const task of state.parsedTasks) {
-        // Skip tasks that already have a dispatch target set
-        if (state.dispatchTargets[task.id]) {
-          newTargets[task.id] = state.dispatchTargets[task.id];
+      for (const todo of state.parsedTodos) {
+        // Skip todos that already have a dispatch target set
+        if (state.dispatchTargets[todo.id]) {
+          newTargets[todo.id] = state.dispatchTargets[todo.id];
           continue;
         }
 
-        // Skip tasks without a project
-        if (!task.projectId) {
-          newTargets[task.id] = { type: 'none' };
+        // Skip todos without a project
+        if (!todo.projectId) {
+          newTargets[todo.id] = { type: 'none' };
           continue;
         }
 
         // Get instances for this project
-        const instances = state.projectInstancesCache[task.projectId] || [];
+        const instances = state.projectInstancesCache[todo.projectId] || [];
 
         // Find an idle instance first (preferred)
         const idleInstance = instances.find((i) => i.status === 'idle');
         if (idleInstance) {
-          newTargets[task.id] = {
+          newTargets[todo.id] = {
             type: 'instance',
             instanceId: idleInstance.id,
           };
@@ -204,7 +204,7 @@ export const useSmartTasksStore = create<SmartTasksStoreState>()((set) => ({
         // Fall back to first busy instance (will queue)
         const busyInstance = instances.find((i) => i.status === 'working');
         if (busyInstance) {
-          newTargets[task.id] = {
+          newTargets[todo.id] = {
             type: 'instance',
             instanceId: busyInstance.id,
           };
@@ -212,10 +212,10 @@ export const useSmartTasksStore = create<SmartTasksStoreState>()((set) => ({
         }
 
         // No instances available - default to create new
-        const project = state.projects.find((p) => p.id === task.projectId);
-        newTargets[task.id] = {
+        const project = state.projects.find((p) => p.id === todo.projectId);
+        newTargets[todo.id] = {
           type: 'new-instance',
-          newInstanceName: `${project?.name || 'project'}-task`,
+          newInstanceName: `${project?.name || 'project'}-todo`,
           workingDir: project?.path,
         };
       }
@@ -231,31 +231,31 @@ export const useSmartTasksStore = create<SmartTasksStoreState>()((set) => ({
     set({ dispatchState: 'error', errorMessage: message }),
 }));
 
-// Helper to derive effective clarity from task state
+// Helper to derive effective clarity from todo state
 // This ensures we don't trust the parser blindly - if projectId is null, it's unknown_project
-export const getEffectiveClarity = (task: ParsedTask): ParsedTask['clarity'] => {
+export const getEffectiveClarity = (todo: ParsedTodo): ParsedTodo['clarity'] => {
   // If no project is assigned, it's always unknown_project regardless of what parser said
-  if (task.projectId === null) {
+  if (todo.projectId === null) {
     return 'unknown_project';
   }
   // If we have a project but low confidence, it's ambiguous
-  if (task.projectConfidence < 0.7) {
+  if (todo.projectConfidence < 0.7) {
     return 'ambiguous';
   }
   // Otherwise trust the parser's clarity (could be 'clear' or 'ambiguous')
-  return task.clarity;
+  return todo.clarity;
 };
 
 // Selectors
-export const selectTasksNeedingClarification = (state: SmartTasksStoreState) =>
-  state.parsedTasks.filter(
-    (task) => getEffectiveClarity(task) !== 'clear' || task.clarificationNeeded
+export const selectTodosNeedingClarification = (state: SmartTodosStoreState) =>
+  state.parsedTodos.filter(
+    (todo) => getEffectiveClarity(todo) !== 'clear' || todo.clarificationNeeded
   );
 
-export const selectRoutableTasks = (state: SmartTasksStoreState) =>
-  state.parsedTasks.filter(
-    (task) => getEffectiveClarity(task) === 'clear' && task.projectId !== null
+export const selectRoutableTodos = (state: SmartTodosStoreState) =>
+  state.parsedTodos.filter(
+    (todo) => getEffectiveClarity(todo) === 'clear' && todo.projectId !== null
   );
 
-export const selectTaskById = (state: SmartTasksStoreState, taskId: string) =>
-  state.parsedTasks.find((task) => task.id === taskId);
+export const selectTodoById = (state: SmartTodosStoreState, todoId: string) =>
+  state.parsedTodos.find((todo) => todo.id === todoId);

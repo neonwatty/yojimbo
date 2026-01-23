@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
 import { Icons } from '../../common/Icons';
-import type { ParsedTask, DispatchTarget, ProjectInstanceInfo } from '@cc-orchestrator/shared';
+import type { ParsedTodo, DispatchTarget, ProjectInstanceInfo } from '@cc-orchestrator/shared';
 
 interface DispatchTargetSelectorProps {
-  task: ParsedTask;
+  todo: ParsedTodo;
   projectId: string | null;
   availableInstances: ProjectInstanceInfo[];
   currentTarget: DispatchTarget | undefined;
@@ -13,7 +13,7 @@ interface DispatchTargetSelectorProps {
 }
 
 export function DispatchTargetSelector({
-  task: _task,
+  todo: _todo,
   projectId,
   availableInstances,
   currentTarget,

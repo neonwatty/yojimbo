@@ -6,12 +6,12 @@ import { useInstancesStore } from '../../store/instancesStore';
 import { useSettingsStore } from '../../store/settingsStore';
 // Activity tab temporarily disabled
 // import { useFeedStore } from '../../store/feedStore';
-import { useTasksStore } from '../../store/tasksStore';
+import { useTodosStore } from '../../store/todosStore';
 import { Icons } from '../common/Icons';
 import Tooltip from '../common/Tooltip';
 import { ConnectionStatus } from '../common/ConnectionStatus';
 import { SummaryModal } from '../modals/SummaryModal';
-import { GlobalTasksPanel } from '../tasks/GlobalTasksPanel';
+import { GlobalTodosPanel } from '../todos/GlobalTodosPanel';
 import { toast } from '../../store/toastStore';
 import { generateShortName } from '../../utils/strings';
 import type { SummaryType, GenerateSummaryResponse, CommandExecution, SummarySSEEvent } from '@cc-orchestrator/shared';
@@ -54,7 +54,7 @@ export default function Header() {
   const setShowTasksPanel = useUIStore((state) => state.setShowTasksPanel);
   const queueModeActive = useUIStore((state) => state.queueModeActive);
   const setQueueModeActive = useUIStore((state) => state.setQueueModeActive);
-  const pendingTaskCount = useTasksStore((state) => state.stats.captured + state.stats.inProgress);
+  const pendingTaskCount = useTodosStore((state) => state.stats.captured + state.stats.inProgress);
 
   // Close summary menu when clicking outside
   useEffect(() => {
@@ -442,7 +442,7 @@ export default function Header() {
       />
 
       {/* Global Tasks Panel */}
-      <GlobalTasksPanel
+      <GlobalTodosPanel
         isOpen={showTasksPanel}
         onClose={() => setShowTasksPanel(false)}
         onOpenNewInstance={(options) => {

@@ -119,13 +119,13 @@ export interface ReorderInstancesRequest {
   instanceIds: string[];
 }
 
-// Global Task types
-export type TaskStatus = 'captured' | 'in_progress' | 'done' | 'archived';
+// Global Todo types
+export type TodoStatus = 'captured' | 'in_progress' | 'done' | 'archived';
 
-export interface GlobalTask {
+export interface GlobalTodo {
   id: string;
   text: string;
-  status: TaskStatus;
+  status: TodoStatus;
   dispatchedInstanceId: string | null;
   dispatchedAt: string | null;
   completedAt: string | null;
@@ -135,26 +135,26 @@ export interface GlobalTask {
   updatedAt: string;
 }
 
-export interface CreateTaskRequest {
+export interface CreateTodoRequest {
   text: string;
 }
 
-export interface UpdateTaskRequest {
+export interface UpdateTodoRequest {
   text?: string;
-  status?: TaskStatus;
+  status?: TodoStatus;
   dispatchedInstanceId?: string | null;
 }
 
-export interface DispatchTaskRequest {
+export interface DispatchTodoRequest {
   instanceId: string;
   copyToClipboard?: boolean;
 }
 
-export interface ReorderTasksRequest {
-  taskIds: string[];
+export interface ReorderTodosRequest {
+  todoIds: string[];
 }
 
-export interface TaskStats {
+export interface TodoStats {
   total: number;
   captured: number;
   inProgress: number;
@@ -286,12 +286,12 @@ export type WSServerMessageType =
   | 'machine:updated'
   | 'machine:deleted'
   | 'machine:status'
-  | 'task:created'
-  | 'task:updated'
-  | 'task:deleted'
+  | 'todo:created'
+  | 'todo:updated'
+  | 'todo:deleted'
   | 'log:status'
   | 'keychain:unlock-failed'
-  | 'smart-task:progress'
+  | 'smart-todo:progress'
   | 'setup:progress'
   | 'error';
 
@@ -319,8 +319,8 @@ export interface WSServerMessage {
   machine?: RemoteMachine;
   machineId?: string;
   machineStatus?: { machineId: string; status: MachineStatus };
-  task?: GlobalTask;
-  taskId?: string;
+  todo?: GlobalTodo;
+  todoId?: string;
   error?: string;
   // Keychain unlock failure fields
   keychainError?: string;
@@ -345,8 +345,8 @@ export interface WSServerMessage {
   thresholdMs?: number;
   fileCheckResult?: 'working' | 'idle';
   action?: 'reset' | 'extend' | 'skip';
-  // Smart task progress fields
-  smartTaskProgress?: {
+  // Smart todo progress fields
+  smartTodoProgress?: {
     step: 'started' | 'parsing' | 'tool-call' | 'tool-result' | 'completed' | 'error';
     message: string;
     toolName?: string;
@@ -546,9 +546,9 @@ export interface UpdateProjectRequest {
   repoName?: string;
 }
 
-// Smart Task Parsing types
-export type ParsedTaskType = 'bug' | 'feature' | 'enhancement' | 'refactor' | 'docs' | 'other';
-export type TaskClarity = 'clear' | 'ambiguous' | 'unknown_project';
+// Smart Todo Parsing types
+export type ParsedTodoType = 'bug' | 'feature' | 'enhancement' | 'refactor' | 'docs' | 'other';
+export type TodoClarity = 'clear' | 'ambiguous' | 'unknown_project';
 
 export interface ProjectMatch {
   projectId: string;
@@ -556,37 +556,37 @@ export interface ProjectMatch {
   reason?: string;  // Why this project matched (optional, for UI tooltip)
 }
 
-export interface ParsedTask {
+export interface ParsedTodo {
   id: string;
   originalText: string;
   title: string;
-  type: ParsedTaskType;
+  type: ParsedTodoType;
   // Primary selection (backwards compatible)
   projectId: string | null;
   projectConfidence: number;
   // Top matches (up to 3) for user selection
   projectMatches?: ProjectMatch[];
-  clarity: TaskClarity;
+  clarity: TodoClarity;
   clarificationNeeded?: {
     question: string;
   };
 }
 
-export interface ParsedTasksResponse {
-  tasks: ParsedTask[];
+export interface ParsedTodosResponse {
+  todos: ParsedTodo[];
   suggestedOrder: string[];
 }
 
-export interface ParseTasksRequest {
+export interface ParseTodosRequest {
   input: string;
 }
 
-export interface ClarifyTaskRequest {
+export interface ClarifyTodoRequest {
   sessionId: string;
   clarification: string;
 }
 
-// Context types for task parsing
+// Context types for todo parsing
 export interface InstanceContext {
   id: string;
   name: string;
@@ -611,12 +611,12 @@ export interface ProjectContext {
   gitState?: GitStateContext;
 }
 
-// Smart Tasks: Clone and Setup types
+// Smart Todos: Clone and Setup types
 export type SetupProjectAction = 'clone-and-create' | 'associate-existing';
 
 export interface SetupProjectRequest {
   sessionId: string;
-  taskId?: string;
+  todoId?: string;
   action: SetupProjectAction;
   gitRepoUrl: string;           // e.g., "git@github.com:owner/repo.git"
   targetPath: string;           // e.g., "~/Desktop/repo-name"
@@ -653,7 +653,7 @@ export interface SetupProgressEvent {
   error?: string;
 }
 
-// Smart Tasks: Auto-Dispatch types
+// Smart Todos: Auto-Dispatch types
 export interface DispatchTarget {
   type: 'instance' | 'new-instance' | 'none';
   instanceId?: string;
@@ -663,8 +663,8 @@ export interface DispatchTarget {
 
 export interface CreateAndDispatchRequest {
   sessionId: string;
-  tasks: Array<{
-    parsedTaskId: string;
+  todos: Array<{
+    parsedTodoId: string;
     text: string;
     projectId: string;
     dispatchTarget: DispatchTarget;
@@ -672,7 +672,7 @@ export interface CreateAndDispatchRequest {
 }
 
 export interface CreateAndDispatchResult {
-  taskId: string;
+  todoId: string;
   status: 'created' | 'dispatched' | 'error';
   error?: string;
   instanceId?: string;

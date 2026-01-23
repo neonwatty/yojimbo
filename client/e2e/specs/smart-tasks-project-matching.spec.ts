@@ -23,7 +23,7 @@ const mockSmartTasksStatus = {
 };
 
 // Mock parsed tasks with multiple project matches
-const mockParsedTasksWithMatches = {
+const mockParsedTodosWithMatches = {
   success: true,
   data: {
     sessionId: 'test-session-123',
@@ -67,7 +67,7 @@ const mockParsedTasksWithMatches = {
 };
 
 // Mock parsed tasks with unknown project
-const mockParsedTasksWithUnknownProject = {
+const mockParsedTodosWithUnknownProject = {
   success: true,
   data: {
     sessionId: 'test-session-456',
@@ -122,7 +122,7 @@ const mockProjects = {
 
 // Helper to set up all Smart Tasks API mocks
 // Uses regex patterns to reliably intercept requests regardless of how URLs are formatted
-async function setupSmartTasksMocks(page: Page, parseResponse = mockParsedTasksWithMatches) {
+async function setupSmartTasksMocks(page: Page, parseResponse = mockParsedTodosWithMatches) {
   // Mock availability check
   await page.route(/\/api\/smart-tasks\/status/, async (route) => {
     await route.fulfill({
@@ -200,7 +200,7 @@ test.describe('Smart Tasks Project Matching', () => {
 
   test.describe('Parsed Tasks Review UI', () => {
     test('shows Ready badge for tasks with projectId', async ({ page }) => {
-      await setupSmartTasksMocks(page, mockParsedTasksWithMatches);
+      await setupSmartTasksMocks(page, mockParsedTodosWithMatches);
       await page.goto('/');
 
       // Open Smart Tasks and parse
@@ -220,7 +220,7 @@ test.describe('Smart Tasks Project Matching', () => {
     });
 
     test('shows Unknown project badge for tasks without projectId', async ({ page }) => {
-      await setupSmartTasksMocks(page, mockParsedTasksWithUnknownProject);
+      await setupSmartTasksMocks(page, mockParsedTodosWithUnknownProject);
       await page.goto('/');
 
       // Open Smart Tasks and parse
@@ -240,7 +240,7 @@ test.describe('Smart Tasks Project Matching', () => {
     });
 
     test('shows Clone & Create button when tasks have unknown projects', async ({ page }) => {
-      await setupSmartTasksMocks(page, mockParsedTasksWithUnknownProject);
+      await setupSmartTasksMocks(page, mockParsedTodosWithUnknownProject);
       await page.goto('/');
 
       // Open Smart Tasks and parse
@@ -257,7 +257,7 @@ test.describe('Smart Tasks Project Matching', () => {
     });
 
     test('hides Clone & Create button when all tasks have known projects', async ({ page }) => {
-      await setupSmartTasksMocks(page, mockParsedTasksWithMatches);
+      await setupSmartTasksMocks(page, mockParsedTodosWithMatches);
       await page.goto('/');
 
       // Open Smart Tasks and parse
@@ -274,7 +274,7 @@ test.describe('Smart Tasks Project Matching', () => {
     });
 
     test('shows summary with routable and clarification counts', async ({ page }) => {
-      await setupSmartTasksMocks(page, mockParsedTasksWithUnknownProject);
+      await setupSmartTasksMocks(page, mockParsedTodosWithUnknownProject);
       await page.goto('/');
 
       // Open Smart Tasks and parse
@@ -295,7 +295,7 @@ test.describe('Smart Tasks Project Matching', () => {
 
   test.describe('ProjectSelector Dropdown', () => {
     test('shows project name for task with multiple matches', async ({ page }) => {
-      await setupSmartTasksMocks(page, mockParsedTasksWithMatches);
+      await setupSmartTasksMocks(page, mockParsedTodosWithMatches);
       await page.goto('/');
 
       // Open Smart Tasks and parse
@@ -312,7 +312,7 @@ test.describe('Smart Tasks Project Matching', () => {
     });
 
     test('shows project name for task with single match', async ({ page }) => {
-      await setupSmartTasksMocks(page, mockParsedTasksWithMatches);
+      await setupSmartTasksMocks(page, mockParsedTodosWithMatches);
       await page.goto('/');
 
       // Open Smart Tasks and parse
@@ -331,7 +331,7 @@ test.describe('Smart Tasks Project Matching', () => {
 
   test.describe('Clone & Create Modal', () => {
     test('opens Clone & Create modal when clicking Clone button', async ({ page }) => {
-      await setupSmartTasksMocks(page, mockParsedTasksWithUnknownProject);
+      await setupSmartTasksMocks(page, mockParsedTodosWithUnknownProject);
       await page.goto('/');
 
       // Open Smart Tasks and parse
@@ -354,7 +354,7 @@ test.describe('Smart Tasks Project Matching', () => {
     });
 
     test('auto-populates fields when URL is entered', async ({ page }) => {
-      await setupSmartTasksMocks(page, mockParsedTasksWithUnknownProject);
+      await setupSmartTasksMocks(page, mockParsedTodosWithUnknownProject);
       await page.goto('/');
 
       // Open Smart Tasks and parse
@@ -381,7 +381,7 @@ test.describe('Smart Tasks Project Matching', () => {
 
   test.describe('Navigation', () => {
     test('Back to input returns to Smart Task Input', async ({ page }) => {
-      await setupSmartTasksMocks(page, mockParsedTasksWithMatches);
+      await setupSmartTasksMocks(page, mockParsedTodosWithMatches);
       await page.goto('/');
 
       // Open Smart Tasks and parse

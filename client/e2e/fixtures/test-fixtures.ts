@@ -14,7 +14,7 @@ interface ActivityEvent {
   readAt: string | null;
 }
 
-interface GlobalTask {
+interface GlobalTodo {
   id: string;
   text: string;
   status: 'captured' | 'in_progress' | 'done' | 'archived';
@@ -40,13 +40,13 @@ interface ApiClient {
   clearFeedEvents(): Promise<{ count: number }>;
   createTestEvent(instanceId: string, instanceName: string, eventType: string, message: string): Promise<void>;
   // Tasks API
-  listTasks(): Promise<GlobalTask[]>;
-  createTask(text: string): Promise<GlobalTask>;
-  getTask(id: string): Promise<GlobalTask>;
-  updateTask(id: string, data: { text?: string; status?: string }): Promise<GlobalTask>;
+  listTasks(): Promise<GlobalTodo[]>;
+  createTask(text: string): Promise<GlobalTodo>;
+  getTask(id: string): Promise<GlobalTodo>;
+  updateTask(id: string, data: { text?: string; status?: string }): Promise<GlobalTodo>;
   deleteTask(id: string): Promise<void>;
-  markTaskDone(id: string): Promise<GlobalTask>;
-  dispatchTask(taskId: string, instanceId: string): Promise<GlobalTask>;
+  markTaskDone(id: string): Promise<GlobalTodo>;
+  dispatchTask(taskId: string, instanceId: string): Promise<GlobalTodo>;
   getTaskStats(): Promise<{ total: number; captured: number; inProgress: number; done: number }>;
   cleanupAllTasks(): Promise<void>;
 }

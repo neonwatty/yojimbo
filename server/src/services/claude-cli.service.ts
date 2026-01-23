@@ -1,14 +1,14 @@
 import { spawn } from 'child_process';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import type { ParsedTasksResponse } from '@cc-orchestrator/shared';
+import type { ParsedTodosResponse } from '@cc-orchestrator/shared';
 import { broadcast } from '../websocket/server.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 /**
- * Broadcast smart task progress to connected clients
+ * Broadcast smart todo progress to connected clients
  */
 function broadcastProgress(
   step: 'started' | 'parsing' | 'tool-call' | 'tool-result' | 'completed' | 'error',
@@ -16,8 +16,8 @@ function broadcastProgress(
   extra?: { toolName?: string; toolInput?: string; toolOutput?: string }
 ): void {
   broadcast({
-    type: 'smart-task:progress',
-    smartTaskProgress: {
+    type: 'smart-todo:progress',
+    smartTodoProgress: {
       step,
       message,
       ...extra,
@@ -26,24 +26,24 @@ function broadcastProgress(
 }
 
 /**
- * JSON Schema for ParsedTasksResponse
+ * JSON Schema for ParsedTodosResponse
  * Used with --json-schema flag to enforce structured output
  */
-const PARSED_TASKS_SCHEMA = {
+const PARSED_TODOS_SCHEMA = {
   type: 'object',
   properties: {
-    tasks: {
+    todos: {
       type: 'array',
       items: {
         type: 'object',
         properties: {
-          id: { type: 'string', description: 'Unique identifier for this task (UUID format)' },
-          originalText: { type: 'string', description: 'The portion of the original input this task came from' },
-          title: { type: 'string', description: 'Clean, actionable task title' },
+          id: { type: 'string', description: 'Unique identifier for this todo (UUID format)' },
+          originalText: { type: 'string', description: 'The portion of the original input this todo came from' },
+          title: { type: 'string', description: 'Clean, actionable todo title' },
           type: {
             type: 'string',
             enum: ['bug', 'feature', 'enhancement', 'refactor', 'docs', 'other'],
-            description: 'Task type category',
+            description: 'Todo type category',
           },
           projectId: {
             type: ['string', 'null'],
@@ -58,7 +58,7 @@ const PARSED_TASKS_SCHEMA = {
           clarity: {
             type: 'string',
             enum: ['clear', 'ambiguous', 'unknown_project'],
-            description: 'How clear the task is',
+            description: 'How clear the todo is',
           },
           clarificationNeeded: {
             type: 'object',
@@ -74,10 +74,10 @@ const PARSED_TASKS_SCHEMA = {
     suggestedOrder: {
       type: 'array',
       items: { type: 'string' },
-      description: 'Task IDs in recommended execution order',
+      description: 'Todo IDs in recommended execution order',
     },
   },
-  required: ['tasks', 'suggestedOrder'],
+  required: ['todos', 'suggestedOrder'],
 };
 
 /**
@@ -86,31 +86,31 @@ const PARSED_TASKS_SCHEMA = {
 interface ClaudeCliResponse {
   session_id: string;
   result: string;
-  structured_output?: ParsedTasksResponse;
+  structured_output?: ParsedTodosResponse;
   total_cost_usd: number;
   duration_ms: number;
   num_turns: number;
 }
 
 /**
- * Get the path to the task parser system prompt file
+ * Get the path to the todo parser system prompt file
  */
 function getPromptFilePath(): string {
   // The prompt file will be in server/prompts/
-  return path.resolve(__dirname, '../../prompts/task-parser.txt');
+  return path.resolve(__dirname, '../../prompts/todo-parser.txt');
 }
 
 /**
- * Invoke the Claude CLI to parse tasks
+ * Invoke the Claude CLI to parse todos
  *
- * @param userInput - The raw task input from the user
+ * @param userInput - The raw todo input from the user
  * @param contextPrompt - Pre-gathered context formatted as a string
- * @returns Parsed tasks response or error
+ * @returns Parsed todos response or error
  */
-export async function parseTasks(
+export async function parseTodos(
   userInput: string,
   contextPrompt: string
-): Promise<{ success: true; data: ParsedTasksResponse; sessionId: string; cost: number } | { success: false; error: string }> {
+): Promise<{ success: true; data: ParsedTodosResponse; sessionId: string; cost: number } | { success: false; error: string }> {
   return new Promise((resolve) => {
     const promptFilePath = getPromptFilePath();
     const fullPrompt = `${contextPrompt}\n\n---\n\n## User Input\n\n${userInput}`;
@@ -120,16 +120,16 @@ export async function parseTasks(
       '--append-system-prompt-file', promptFilePath,
       '--output-format', 'stream-json',  // Use streaming for real-time progress
       '--verbose',  // Required for stream-json
-      '--json-schema', JSON.stringify(PARSED_TASKS_SCHEMA),
+      '--json-schema', JSON.stringify(PARSED_TODOS_SCHEMA),
       '--max-turns', '6',  // Allow turns for GitHub repo lookups via Bash
       '--allowedTools', 'Bash',  // Enable Bash for gh commands
       '--print',  // Non-interactive mode
     ];
 
-    console.log('🤖 Invoking Claude CLI for task parsing (with GitHub lookup enabled)...');
+    console.log('🤖 Invoking Claude CLI for todo parsing (with GitHub lookup enabled)...');
     console.log('📋 Input:', userInput.substring(0, 100));
     console.log('📋 Context prompt length:', contextPrompt.length, 'chars');
-    broadcastProgress('started', 'Starting task parsing...');
+    broadcastProgress('started', 'Starting todo parsing...');
 
     // After a short delay, show that Claude is working
     setTimeout(() => {
@@ -232,13 +232,13 @@ export async function parseTasks(
           console.log('Response turns:', response.num_turns);
 
           if (response.structured_output) {
-            const taskCount = response.structured_output.tasks.length;
+            const todoCount = response.structured_output.todos.length;
             const turnsUsed = response.num_turns;
-            console.log(`✅ Task parsing complete. ${taskCount} tasks parsed in ${turnsUsed} turn(s). Cost: $${response.total_cost_usd.toFixed(4)}`);
+            console.log(`✅ Todo parsing complete. ${todoCount} todos parsed in ${turnsUsed} turn(s). Cost: $${response.total_cost_usd.toFixed(4)}`);
 
             broadcastProgress(
               'completed',
-              `Parsed ${taskCount} task${taskCount !== 1 ? 's' : ''}${turnsUsed > 1 ? ` (used ${turnsUsed} turns with tool calls)` : ''}`
+              `Parsed ${todoCount} todo${todoCount !== 1 ? 's' : ''}${turnsUsed > 1 ? ` (used ${turnsUsed} turns with tool calls)` : ''}`
             );
 
             resolve({
@@ -295,18 +295,18 @@ export async function parseTasks(
  *
  * @param sessionId - The session ID from a previous call
  * @param clarification - The user's clarification response
- * @returns Updated parsed tasks
+ * @returns Updated parsed todos
  */
-export async function clarifyTasks(
+export async function clarifyTodos(
   sessionId: string,
   clarification: string
-): Promise<{ success: true; data: ParsedTasksResponse; cost: number } | { success: false; error: string }> {
+): Promise<{ success: true; data: ParsedTodosResponse; cost: number } | { success: false; error: string }> {
   return new Promise((resolve) => {
     const args = [
       '--resume', sessionId,
-      '-p', `User clarification: ${clarification}\n\nPlease update the task parsing based on this clarification and return the complete updated ParsedTasksResponse.`,
+      '-p', `User clarification: ${clarification}\n\nPlease update the todo parsing based on this clarification and return the complete updated ParsedTodosResponse.`,
       '--output-format', 'json',
-      '--json-schema', JSON.stringify(PARSED_TASKS_SCHEMA),
+      '--json-schema', JSON.stringify(PARSED_TODOS_SCHEMA),
       '--max-turns', '6',  // Allow turns for GitHub repo lookups via Bash
       '--allowedTools', 'Bash',  // Enable Bash for gh commands
       '--print',
@@ -404,4 +404,4 @@ export async function checkClaudeCliAvailable(): Promise<boolean> {
   });
 }
 
-export { PARSED_TASKS_SCHEMA };
+export { PARSED_TODOS_SCHEMA };

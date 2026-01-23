@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Icons } from '../../common/Icons';
-import { smartTasksApi } from '../../../api/client';
+import { smartTodosApi } from '../../../api/client';
 import { toast } from '../../../store/toastStore';
 import type { SetupProgressEvent } from '@cc-orchestrator/shared';
 
@@ -106,7 +106,7 @@ export function CloneSetupModal({
 
     setIsValidating(true);
     try {
-      const response = await smartTasksApi.validatePath(path);
+      const response = await smartTodosApi.validatePath(path);
       if (response.data) {
         setValidationResult(response.data);
       }
@@ -191,7 +191,7 @@ export function CloneSetupModal({
     setError(null);
 
     try {
-      const response = await smartTasksApi.setupProject({
+      const response = await smartTodosApi.setupProject({
         sessionId,
         action: 'clone-and-create',
         gitRepoUrl: editableUrl,

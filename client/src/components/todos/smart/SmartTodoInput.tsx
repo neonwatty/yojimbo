@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Icons } from '../../common/Icons';
-import { useSmartTasksStore } from '../../../store/smartTasksStore';
-import { smartTasksApi, projectsApi } from '../../../api/client';
+import { useSmartTodosStore } from '../../../store/smartTodosStore';
+import { smartTodosApi, projectsApi } from '../../../api/client';
 import { useWebSocket } from '../../../hooks/useWebSocket';
 import { getWsUrl } from '../../../config';
 
@@ -12,12 +12,12 @@ interface ProgressStep {
   timestamp: number;
 }
 
-interface SmartTaskInputProps {
+interface SmartTodoInputProps {
   onCancel: () => void;
   onParsed: () => void;
 }
 
-export function SmartTaskInput({ onCancel, onParsed }: SmartTaskInputProps) {
+export function SmartTodoInput({ onCancel, onParsed }: SmartTodoInputProps) {
   const {
     isAvailable,
     availabilityMessage,
@@ -29,7 +29,7 @@ export function SmartTaskInput({ onCancel, onParsed }: SmartTaskInputProps) {
     setError,
     setAvailability,
     setProjects,
-  } = useSmartTasksStore();
+  } = useSmartTodosStore();
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [hasCheckedStatus, setHasCheckedStatus] = useState(false);
@@ -42,21 +42,21 @@ export function SmartTaskInput({ onCancel, onParsed }: SmartTaskInputProps) {
   useEffect(() => {
     if (!isConnected) return;
 
-    const unsubscribe = subscribe('smart-task:progress', (data: unknown) => {
-      const { smartTaskProgress } = data as {
-        smartTaskProgress?: {
+    const unsubscribe = subscribe('smart-todo:progress', (data: unknown) => {
+      const { smartTodoProgress } = data as {
+        smartTodoProgress?: {
           step: string;
           message: string;
           toolName?: string;
         };
       };
-      if (smartTaskProgress) {
+      if (smartTodoProgress) {
         setProgressLog((prev) => [
           ...prev,
           {
-            step: smartTaskProgress.step,
-            message: smartTaskProgress.message,
-            toolName: smartTaskProgress.toolName,
+            step: smartTodoProgress.step,
+            message: smartTodoProgress.message,
+            toolName: smartTodoProgress.toolName,
             timestamp: Date.now(),
           },
         ]);
@@ -71,7 +71,7 @@ export function SmartTaskInput({ onCancel, onParsed }: SmartTaskInputProps) {
     const checkStatus = async () => {
       try {
         const [statusRes, projectsRes] = await Promise.all([
-          smartTasksApi.status(),
+          smartTodosApi.status(),
           projectsApi.list(),
         ]);
 
@@ -106,19 +106,19 @@ export function SmartTaskInput({ onCancel, onParsed }: SmartTaskInputProps) {
     startParsing();
 
     try {
-      const response = await smartTasksApi.parse(rawInput.trim());
+      const response = await smartTodosApi.parse(rawInput.trim());
 
       if (response.data) {
         setParsedResult(
           response.data.sessionId,
-          { tasks: response.data.tasks, suggestedOrder: response.data.suggestedOrder },
+          { todos: response.data.todos, suggestedOrder: response.data.suggestedOrder },
           response.data.needsClarification,
           response.data.summary
         );
         onParsed();
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to parse tasks');
+      setError(err instanceof Error ? err.message : 'Failed to parse todos');
     }
   };
 
@@ -231,7 +231,7 @@ export function SmartTaskInput({ onCancel, onParsed }: SmartTaskInputProps) {
             </div>
             <div>
               <p className="text-sm font-medium text-red-400">Failed to parse tasks</p>
-              <p className="text-xs text-red-400/70">{useSmartTasksStore.getState().errorMessage}</p>
+              <p className="text-xs text-red-400/70">{useSmartTodosStore.getState().errorMessage}</p>
             </div>
           </div>
         </div>

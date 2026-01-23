@@ -62,11 +62,11 @@ vi.mock('../services/context-gathering.service.js', () => ({
 // Mock claude-cli service
 vi.mock('../services/claude-cli.service.js', () => ({
   checkClaudeCliAvailable: vi.fn().mockResolvedValue(true),
-  parseTasks: vi.fn(),
-  clarifyTasks: vi.fn(),
+  parseTodos: vi.fn(),
+  clarifyTodos: vi.fn(),
 }));
 
-describe('Smart Tasks Setup Endpoints', () => {
+describe('Smart Todos Setup Endpoints', () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
@@ -75,7 +75,7 @@ describe('Smart Tasks Setup Endpoints', () => {
     mockExtractRepoName.mockReturnValue('owner/repo');
   });
 
-  describe('POST /api/smart-tasks/validate-path', () => {
+  describe('POST /api/smart-todos/validate-path', () => {
     it('should return validation result for valid path', async () => {
       mockValidateClonePath.mockReturnValue({
         valid: true,
@@ -84,7 +84,7 @@ describe('Smart Tasks Setup Endpoints', () => {
         expandedPath: '/home/user/Desktop/new-repo',
       });
 
-      const { default: router } = await import('../routes/smart-tasks.js');
+      const { default: router } = await import('../routes/smart-todos.js');
 
       const mockReq = {
         body: { path: '~/Desktop/new-repo' },
@@ -116,7 +116,7 @@ describe('Smart Tasks Setup Endpoints', () => {
     });
 
     it('should return 400 for missing path', async () => {
-      const { default: router } = await import('../routes/smart-tasks.js');
+      const { default: router } = await import('../routes/smart-todos.js');
 
       const mockReq = {
         body: {},
@@ -144,11 +144,11 @@ describe('Smart Tasks Setup Endpoints', () => {
     });
   });
 
-  describe('POST /api/smart-tasks/expand-path', () => {
+  describe('POST /api/smart-todos/expand-path', () => {
     it('should return expanded path', async () => {
       mockExpandPath.mockReturnValue('/home/user/Desktop/repo');
 
-      const { default: router } = await import('../routes/smart-tasks.js');
+      const { default: router } = await import('../routes/smart-todos.js');
 
       const mockReq = {
         body: { path: '~/Desktop/repo' },
@@ -175,7 +175,7 @@ describe('Smart Tasks Setup Endpoints', () => {
     });
   });
 
-  describe('POST /api/smart-tasks/setup-project', () => {
+  describe('POST /api/smart-todos/setup-project', () => {
     // Store sessions for testing
     const sessions = new Map();
 
@@ -184,14 +184,14 @@ describe('Smart Tasks Setup Endpoints', () => {
       sessions.set('test-session', {
         sessionId: 'test-session',
         input: 'test input',
-        tasks: { tasks: [], suggestedOrder: [] },
+        todos: { todos: [], suggestedOrder: [] },
         clarificationRound: 0,
         createdAt: new Date(),
       });
     });
 
     it('should return 400 for missing sessionId', async () => {
-      const { default: router } = await import('../routes/smart-tasks.js');
+      const { default: router } = await import('../routes/smart-todos.js');
 
       const mockReq = {
         body: {
@@ -223,7 +223,7 @@ describe('Smart Tasks Setup Endpoints', () => {
     });
 
     it('should return 400 for missing gitRepoUrl', async () => {
-      const { default: router } = await import('../routes/smart-tasks.js');
+      const { default: router } = await import('../routes/smart-todos.js');
 
       const mockReq = {
         body: {
@@ -255,7 +255,7 @@ describe('Smart Tasks Setup Endpoints', () => {
     });
 
     it('should return 400 for missing targetPath', async () => {
-      const { default: router } = await import('../routes/smart-tasks.js');
+      const { default: router } = await import('../routes/smart-todos.js');
 
       const mockReq = {
         body: {
@@ -287,7 +287,7 @@ describe('Smart Tasks Setup Endpoints', () => {
     });
 
     it('should return 400 for unsupported action', async () => {
-      const { default: router } = await import('../routes/smart-tasks.js');
+      const { default: router } = await import('../routes/smart-todos.js');
 
       const mockReq = {
         body: {

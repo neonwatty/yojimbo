@@ -1,24 +1,24 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { tasksApi } from '../../api/client';
-import { useTasksStore } from '../../store/tasksStore';
+import { todosApi } from '../../api/client';
+import { useTodosStore } from '../../store/todosStore';
 import { useInstancesStore } from '../../store/instancesStore';
 import { Icons } from '../common/Icons';
 import { toast } from '../../store/toastStore';
-import type { GlobalTask, Instance } from '@cc-orchestrator/shared';
+import type { GlobalTodo, Instance } from '@cc-orchestrator/shared';
 
 interface MobileTasksViewProps {
   onTopGesture: () => void;
   onBottomGesture: () => void;
-  onOpenNewInstance?: (options?: { taskText?: string }) => void;
+  onOpenNewInstance?: (options?: { todoText?: string }) => void;
 }
 
 export function MobileTasksView({ onTopGesture, onBottomGesture, onOpenNewInstance }: MobileTasksViewProps) {
-  const { tasks, setTasks, isLoading, setIsLoading } = useTasksStore();
+  const { todos, setTodos, isLoading, setIsLoading } = useTodosStore();
   const { instances } = useInstancesStore();
-  const [newTaskText, setNewTaskText] = useState('');
-  const [swipingTaskId, setSwipingTaskId] = useState<string | null>(null);
+  const [newTodoText, setNewTodoText] = useState('');
+  const [swipingTodoId, setSwipingTodoId] = useState<string | null>(null);
   const [swipeOffset, setSwipeOffset] = useState(0);
-  const [dispatchTask, setDispatchTask] = useState<GlobalTask | null>(null);
+  const [dispatchTodo, setDispatchTodo] = useState<GlobalTodo | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const touchRef = useRef({ startY: 0, zone: null as string | null });
@@ -51,63 +51,63 @@ export function MobileTasksView({ onTopGesture, onBottomGesture, onOpenNewInstan
     }
   }, [onTopGesture, onBottomGesture]);
 
-  const fetchTasks = useCallback(async () => {
+  const fetchTodos = useCallback(async () => {
     setIsLoading(true);
     try {
-      const response = await tasksApi.list();
+      const response = await todosApi.list();
       if (response.data) {
-        setTasks(response.data);
+        setTodos(response.data);
       }
     } catch {
       // Error toast shown by API layer
     } finally {
       setIsLoading(false);
     }
-  }, [setTasks, setIsLoading]);
+  }, [setTodos, setIsLoading]);
 
   useEffect(() => {
-    fetchTasks();
-  }, [fetchTasks]);
+    fetchTodos();
+  }, [fetchTodos]);
 
-  const handleCreateTask = async (e: React.FormEvent) => {
+  const handleCreateTodo = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newTaskText.trim()) return;
+    if (!newTodoText.trim()) return;
 
     try {
-      await tasksApi.create({ text: newTaskText.trim() });
-      setNewTaskText('');
+      await todosApi.create({ text: newTodoText.trim() });
+      setNewTodoText('');
       inputRef.current?.blur();
     } catch {
       // Error toast shown by API layer
     }
   };
 
-  const handleToggleDone = async (task: GlobalTask) => {
+  const handleToggleDone = async (todo: GlobalTodo) => {
     try {
-      if (task.status === 'done') {
-        await tasksApi.update(task.id, { status: 'captured' });
+      if (todo.status === 'done') {
+        await todosApi.update(todo.id, { status: 'captured' });
       } else {
-        await tasksApi.markDone(task.id);
+        await todosApi.markDone(todo.id);
       }
     } catch {
       // Error toast shown by API layer
     }
   };
 
-  const handleDeleteTask = async (taskId: string) => {
+  const handleDeleteTodo = async (todoId: string) => {
     try {
-      await tasksApi.delete(taskId);
+      await todosApi.delete(todoId);
     } catch {
       // Error toast shown by API layer
     }
   };
 
-  const handleDispatch = async (task: GlobalTask, instanceId: string | 'copy' | 'new') => {
-    setDispatchTask(null);
+  const handleDispatch = async (todo: GlobalTodo, instanceId: string | 'copy' | 'new') => {
+    setDispatchTodo(null);
 
     if (instanceId === 'copy') {
       try {
-        await navigator.clipboard.writeText(task.text);
+        await navigator.clipboard.writeText(todo.text);
         toast.success('Copied to clipboard');
       } catch {
         toast.error('Failed to copy');
@@ -116,37 +116,37 @@ export function MobileTasksView({ onTopGesture, onBottomGesture, onOpenNewInstan
     }
 
     if (instanceId === 'new') {
-      // Copy task text to clipboard so it's ready to paste in the new instance
+      // Copy todo text to clipboard so it's ready to paste in the new instance
       try {
-        await navigator.clipboard.writeText(task.text);
-        toast.success('Task copied to clipboard');
+        await navigator.clipboard.writeText(todo.text);
+        toast.success('Todo copied to clipboard');
       } catch {
         // Continue even if clipboard fails
       }
-      onOpenNewInstance?.({ taskText: task.text });
+      onOpenNewInstance?.({ todoText: todo.text });
       return;
     }
 
     try {
-      await tasksApi.dispatch(task.id, { instanceId, copyToClipboard: false });
+      await todosApi.dispatch(todo.id, { instanceId, copyToClipboard: false });
       toast.success('Dispatched');
     } catch {
       // Error toast shown by API layer
     }
   };
 
-  const activeInstances = instances.filter((i) => !i.closedAt);
-  const activeTasks = tasks.filter((t) => t.status !== 'archived');
+  const activeInstances = instances.filter((i: Instance) => !i.closedAt);
+  const activeTodos = todos.filter((t: GlobalTodo) => t.status !== 'archived');
 
-  const getStatusIcon = (task: GlobalTask) => {
-    if (task.status === 'done') {
+  const getStatusIcon = (todo: GlobalTodo) => {
+    if (todo.status === 'done') {
       return (
         <div className="w-6 h-6 rounded-lg bg-green-500 flex items-center justify-center">
           <Icons.check className="w-4 h-4 text-white" />
         </div>
       );
     }
-    if (task.status === 'in_progress') {
+    if (todo.status === 'in_progress') {
       return (
         <div className="w-6 h-6 rounded-lg border-2 border-yellow-500 flex items-center justify-center">
           <div className="w-2.5 h-2.5 bg-yellow-500 rounded-full" />
@@ -156,9 +156,9 @@ export function MobileTasksView({ onTopGesture, onBottomGesture, onOpenNewInstan
     return <div className="w-6 h-6 rounded-lg border-2 border-surface-500" />;
   };
 
-  const linkedInstance = (task: GlobalTask): Instance | undefined => {
-    return task.dispatchedInstanceId
-      ? instances.find((i) => i.id === task.dispatchedInstanceId)
+  const linkedInstance = (todo: GlobalTodo): Instance | undefined => {
+    return todo.dispatchedInstanceId
+      ? instances.find((i: Instance) => i.id === todo.dispatchedInstanceId)
       : undefined;
   };
 
@@ -181,29 +181,29 @@ export function MobileTasksView({ onTopGesture, onBottomGesture, onOpenNewInstan
         {/* Header */}
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <h1 className="text-xl font-semibold text-theme-primary">Tasks</h1>
-            {activeTasks.filter((t) => t.status === 'captured' || t.status === 'in_progress').length > 0 && (
+            <h1 className="text-xl font-semibold text-theme-primary">Todos</h1>
+            {activeTodos.filter((t: GlobalTodo) => t.status === 'captured' || t.status === 'in_progress').length > 0 && (
               <span className="px-2 py-0.5 text-xs font-medium bg-accent/20 text-accent rounded-full">
-                {activeTasks.filter((t) => t.status === 'captured' || t.status === 'in_progress').length} pending
+                {activeTodos.filter((t: GlobalTodo) => t.status === 'captured' || t.status === 'in_progress').length} pending
               </span>
             )}
           </div>
         </div>
 
         {/* Quick Add Input */}
-        <form onSubmit={handleCreateTask} className="mb-4">
+        <form onSubmit={handleCreateTodo} className="mb-4">
           <div className="flex gap-2">
             <input
               ref={inputRef}
               type="text"
-              value={newTaskText}
-              onChange={(e) => setNewTaskText(e.target.value)}
-              placeholder="Add a task..."
+              value={newTodoText}
+              onChange={(e) => setNewTodoText(e.target.value)}
+              placeholder="Add a todo..."
               className="flex-1 px-4 py-3 bg-surface-800 border border-surface-600 rounded-lg text-theme-primary placeholder:text-theme-muted focus:outline-none focus:border-accent text-sm"
             />
             <button
               type="submit"
-              disabled={!newTaskText.trim()}
+              disabled={!newTodoText.trim()}
               className="px-4 py-3 bg-accent text-surface-900 rounded-lg font-medium text-sm active:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               Add
@@ -212,7 +212,7 @@ export function MobileTasksView({ onTopGesture, onBottomGesture, onOpenNewInstan
         </form>
 
         {/* Loading state */}
-        {isLoading && tasks.length === 0 && (
+        {isLoading && todos.length === 0 && (
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
               <div key={i} className="bg-surface-800 rounded-lg p-4 animate-pulse">
@@ -222,66 +222,66 @@ export function MobileTasksView({ onTopGesture, onBottomGesture, onOpenNewInstan
           </div>
         )}
 
-        {/* Tasks List */}
-        {(!isLoading || tasks.length > 0) && (
+        {/* Todos List */}
+        {(!isLoading || todos.length > 0) && (
           <div
             className="flex-1 overflow-auto mobile-scroll space-y-2"
-            data-testid="task-list"
+            data-testid="todo-list"
             onClick={(e) => {
-              // Close any revealed swipe actions when tapping outside task actions
-              if (swipingTaskId && !(e.target as HTMLElement).closest('button')) {
-                setSwipingTaskId(null);
+              // Close any revealed swipe actions when tapping outside todo actions
+              if (swipingTodoId && !(e.target as HTMLElement).closest('button')) {
+                setSwipingTodoId(null);
                 setSwipeOffset(0);
               }
             }}
           >
-            {activeTasks.map((task) => (
-              <SwipeableTaskItem
-                key={task.id}
-                task={task}
-                linkedInstance={linkedInstance(task)}
-                isSwiping={swipingTaskId === task.id}
-                swipeOffset={swipingTaskId === task.id ? swipeOffset : 0}
-                onSwipeStart={() => setSwipingTaskId(task.id)}
+            {activeTodos.map((todo: GlobalTodo) => (
+              <SwipeableTodoItem
+                key={todo.id}
+                todo={todo}
+                linkedInstance={linkedInstance(todo)}
+                isSwiping={swipingTodoId === todo.id}
+                swipeOffset={swipingTodoId === todo.id ? swipeOffset : 0}
+                onSwipeStart={() => setSwipingTodoId(todo.id)}
                 onSwipeMove={setSwipeOffset}
                 onSwipeEnd={() => {
-                  setSwipingTaskId(null);
+                  setSwipingTodoId(null);
                   setSwipeOffset(0);
                 }}
                 onToggleDone={() => {
-                  handleToggleDone(task);
-                  setSwipingTaskId(null);
+                  handleToggleDone(todo);
+                  setSwipingTodoId(null);
                   setSwipeOffset(0);
                 }}
                 onDispatch={() => {
-                  setDispatchTask(task);
-                  setSwipingTaskId(null);
+                  setDispatchTodo(todo);
+                  setSwipingTodoId(null);
                   setSwipeOffset(0);
                 }}
                 onDelete={() => {
-                  handleDeleteTask(task.id);
-                  setSwipingTaskId(null);
+                  handleDeleteTodo(todo.id);
+                  setSwipingTodoId(null);
                   setSwipeOffset(0);
                 }}
-                getStatusIcon={() => getStatusIcon(task)}
+                getStatusIcon={() => getStatusIcon(todo)}
               />
             ))}
           </div>
         )}
 
         {/* Empty state */}
-        {!isLoading && activeTasks.length === 0 && (
+        {!isLoading && activeTodos.length === 0 && (
           <div className="text-center py-12 text-theme-muted">
             <div className="text-4xl mb-3">📋</div>
-            <p className="text-sm">No tasks yet</p>
+            <p className="text-sm">No todos yet</p>
             <p className="text-xs mt-2 opacity-70">
-              Add tasks above to get started
+              Add todos above to get started
             </p>
           </div>
         )}
 
         {/* Action hints */}
-        {activeTasks.length > 0 && (
+        {activeTodos.length > 0 && (
           <div className="mt-3 flex justify-center gap-6 text-[10px] text-theme-dim">
             <span>Swipe or tap ⋮ for actions</span>
           </div>
@@ -294,21 +294,21 @@ export function MobileTasksView({ onTopGesture, onBottomGesture, onOpenNewInstan
       </div>
 
       {/* Dispatch Bottom Sheet */}
-      {dispatchTask && (
-        <TaskDispatchSheet
-          task={dispatchTask}
+      {dispatchTodo && (
+        <TodoDispatchSheet
+          todo={dispatchTodo}
           instances={activeInstances}
-          onDispatch={(instanceId) => handleDispatch(dispatchTask, instanceId)}
-          onClose={() => setDispatchTask(null)}
+          onDispatch={(instanceId) => handleDispatch(dispatchTodo, instanceId)}
+          onClose={() => setDispatchTodo(null)}
         />
       )}
     </div>
   );
 }
 
-// Swipeable task item with reveal actions
-interface SwipeableTaskItemProps {
-  task: GlobalTask;
+// Swipeable todo item with reveal actions
+interface SwipeableTodoItemProps {
+  todo: GlobalTodo;
   linkedInstance?: Instance;
   isSwiping: boolean;
   swipeOffset: number;
@@ -321,8 +321,8 @@ interface SwipeableTaskItemProps {
   getStatusIcon: () => React.ReactNode;
 }
 
-function SwipeableTaskItem({
-  task,
+function SwipeableTodoItem({
+  todo,
   linkedInstance,
   swipeOffset,
   onSwipeStart,
@@ -332,7 +332,7 @@ function SwipeableTaskItem({
   onDispatch,
   onDelete,
   getStatusIcon,
-}: SwipeableTaskItemProps) {
+}: SwipeableTodoItemProps) {
   const touchRef = useRef({ startX: 0, startY: 0, isHorizontal: false });
   const [showMenu, setShowMenu] = useState(false);
   const ACTION_THRESHOLD = 80;
@@ -377,7 +377,7 @@ function SwipeableTaskItem({
   const isRevealed = swipeOffset < -50;
 
   return (
-    <div className="relative overflow-hidden rounded-lg" data-testid="swipeable-task">
+    <div className="relative overflow-hidden rounded-lg" data-testid="swipeable-todo">
       {/* Action buttons revealed on swipe */}
       <div className="absolute right-0 top-0 bottom-0 flex items-stretch">
         <button
@@ -403,18 +403,18 @@ function SwipeableTaskItem({
         </button>
       </div>
 
-      {/* Main task content */}
+      {/* Main todo content */}
       <div
         className="relative bg-surface-800 p-4 transition-transform"
         style={{ transform: `translateX(${swipeOffset}px)` }}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
-        data-testid="task-content"
+        data-testid="todo-content"
       >
         <div className="flex items-start gap-3">
           {/* Checkbox */}
-          <button onClick={onToggleDone} className="shrink-0 mt-0.5" data-testid={`task-checkbox-${task.id}`}>
+          <button onClick={onToggleDone} className="shrink-0 mt-0.5" data-testid={`todo-checkbox-${todo.id}`}>
             {getStatusIcon()}
           </button>
 
@@ -422,10 +422,10 @@ function SwipeableTaskItem({
           <div className="flex-1 min-w-0">
             <p
               className={`text-sm break-words ${
-                task.status === 'done' ? 'text-theme-muted line-through' : 'text-theme-primary'
+                todo.status === 'done' ? 'text-theme-muted line-through' : 'text-theme-primary'
               }`}
             >
-              {task.text}
+              {todo.text}
             </p>
             {linkedInstance && (
               <div className="mt-2 inline-flex items-center gap-1.5 px-2 py-0.5 bg-yellow-500/20 rounded text-xs text-yellow-400">
@@ -443,8 +443,8 @@ function SwipeableTaskItem({
                 setShowMenu(!showMenu);
               }}
               className="shrink-0 p-1 -mr-1 text-theme-dim hover:text-theme-muted active:text-theme-primary transition-colors"
-              data-testid={`task-menu-${task.id}`}
-              aria-label="Task actions"
+              data-testid={`todo-menu-${todo.id}`}
+              aria-label="Todo actions"
             >
               <Icons.moreVertical className="w-4 h-4" />
             </button>
@@ -455,7 +455,7 @@ function SwipeableTaskItem({
         {showMenu && (
           <div
             className="absolute right-2 top-full mt-1 z-10 bg-surface-700 rounded-lg shadow-lg border border-surface-600 overflow-hidden"
-            data-testid={`task-menu-dropdown-${task.id}`}
+            data-testid={`todo-menu-dropdown-${todo.id}`}
           >
             <button
               onClick={() => {
@@ -475,7 +475,7 @@ function SwipeableTaskItem({
               className="w-full flex items-center gap-3 px-4 py-3 text-sm text-theme-primary hover:bg-surface-600 active:bg-surface-500 transition-colors"
             >
               <Icons.check className="w-4 h-4 text-green-500" />
-              {task.status === 'done' ? 'Mark pending' : 'Mark done'}
+              {todo.status === 'done' ? 'Mark pending' : 'Mark done'}
             </button>
             <button
               onClick={() => {
@@ -503,14 +503,14 @@ function SwipeableTaskItem({
 }
 
 // Dispatch bottom sheet
-interface TaskDispatchSheetProps {
-  task: GlobalTask;
+interface TodoDispatchSheetProps {
+  todo: GlobalTodo;
   instances: Instance[];
   onDispatch: (instanceId: string | 'copy' | 'new') => void;
   onClose: () => void;
 }
 
-function TaskDispatchSheet({ task, instances, onDispatch, onClose }: TaskDispatchSheetProps) {
+function TodoDispatchSheet({ todo, instances, onDispatch, onClose }: TodoDispatchSheetProps) {
   const sheetRef = useRef<HTMLDivElement>(null);
 
   // Handle backdrop click
@@ -537,8 +537,8 @@ function TaskDispatchSheet({ task, instances, onDispatch, onClose }: TaskDispatc
 
         {/* Header */}
         <div className="px-4 pb-4 border-b border-surface-600">
-          <h3 className="text-lg font-semibold text-theme-primary">Dispatch Task</h3>
-          <p className="text-sm text-theme-muted line-clamp-2 mt-1">{task.text}</p>
+          <h3 className="text-lg font-semibold text-theme-primary">Dispatch Todo</h3>
+          <p className="text-sm text-theme-muted line-clamp-2 mt-1">{todo.text}</p>
         </div>
 
         {/* Options */}

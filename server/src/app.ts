@@ -16,10 +16,10 @@ import machinesRouter from './routes/machines.js';
 import sshRouter from './routes/ssh.js';
 import portForwardsRouter from './routes/port-forwards.js';
 import keychainRouter from './routes/keychain.js';
-import tasksRouter from './routes/tasks.js';
+import todosRouter from './routes/todos.js';
 import releasesRouter from './routes/releases.js';
 import projectsRouter from './routes/projects.js';
-import smartTasksRouter from './routes/smart-tasks.js';
+import smartTodosRouter from './routes/smart-todos.js';
 // DISABLED: Debug routes are not currently being used
 // import debugRouter from './routes/debug.js';
 import CONFIG from './config/index.js';
@@ -63,10 +63,10 @@ app.use('/api/machines', machinesRouter);
 app.use('/api/ssh', sshRouter);
 app.use('/api/instances', portForwardsRouter);
 app.use('/api/keychain', keychainRouter);
-app.use('/api/tasks', tasksRouter);
+app.use('/api/todos', todosRouter);
 app.use('/api/releases', releasesRouter);
 app.use('/api/projects', projectsRouter);
-app.use('/api/smart-tasks', smartTasksRouter);
+app.use('/api/smart-todos', smartTodosRouter);
 // DISABLED: Debug routes are not currently being used
 // app.use('/api/debug', debugRouter);
 

@@ -881,11 +881,11 @@ export function MobileLayout() {
     }
   }, [navigate, setActiveInstanceId, instances]);
 
-  // Handle new instance (with optional task text for auto-generated name)
-  const handleNewInstance = useCallback((options?: { taskText?: string }) => {
+  // Handle new instance (with optional todo text for auto-generated name)
+  const handleNewInstance = useCallback((options?: { todoText?: string }) => {
     setBottomDrawerOpen(false);
     const existingNames = instances.map(i => i.name);
-    const suggestedName = options?.taskText ? generateShortName(options.taskText, existingNames) : undefined;
+    const suggestedName = options?.todoText ? generateShortName(options.todoText, existingNames) : undefined;
     openNewInstanceModal({ defaultMode: 'claude-code', suggestedName });
   }, [instances, openNewInstanceModal]);
 

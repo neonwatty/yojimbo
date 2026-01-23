@@ -1,63 +1,63 @@
 import { useEffect, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Icons } from '../common/Icons';
-import { useTasksStore } from '../../store/tasksStore';
+import { useTodosStore } from '../../store/todosStore';
 import { useInstancesStore } from '../../store/instancesStore';
-import { tasksApi } from '../../api/client';
+import { todosApi } from '../../api/client';
 import { toast } from '../../store/toastStore';
-import { SmartTasksModal } from './smart';
-import type { GlobalTask, Instance } from '@cc-orchestrator/shared';
+import { SmartTodosModal } from './smart';
+import type { GlobalTodo, Instance } from '@cc-orchestrator/shared';
 
-interface GlobalTasksPanelProps {
+interface GlobalTodosPanelProps {
   isOpen: boolean;
   onClose: () => void;
   onOpenNewInstance?: (options?: { taskText?: string }) => void;
 }
 
-export function GlobalTasksPanel({ isOpen, onClose, onOpenNewInstance }: GlobalTasksPanelProps) {
-  const { tasks, setTasks, setIsLoading, isLoading } = useTasksStore();
+export function GlobalTodosPanel({ isOpen, onClose, onOpenNewInstance }: GlobalTodosPanelProps) {
+  const { todos, setTodos, setIsLoading, isLoading } = useTodosStore();
   const { instances } = useInstancesStore();
-  const [newTaskText, setNewTaskText] = useState('');
-  const [dispatchingTaskId, setDispatchingTaskId] = useState<string | null>(null);
-  const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
-  const [dragOverTaskId, setDragOverTaskId] = useState<string | null>(null);
-  const [animatingTaskIds, setAnimatingTaskIds] = useState<Set<string>>(new Set());
-  const [isSmartTasksOpen, setIsSmartTasksOpen] = useState(false);
-  const prevTaskIdsRef = useRef<Set<string>>(new Set());
+  const [newTodoText, setNewTodoText] = useState('');
+  const [dispatchingTodoId, setDispatchingTodoId] = useState<string | null>(null);
+  const [draggedTodoId, setDraggedTodoId] = useState<string | null>(null);
+  const [dragOverTodoId, setDragOverTodoId] = useState<string | null>(null);
+  const [animatingTodoIds, setAnimatingTodoIds] = useState<Set<string>>(new Set());
+  const [isSmartTodosOpen, setIsSmartTodosOpen] = useState(false);
+  const prevTodoIdsRef = useRef<Set<string>>(new Set());
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Track new tasks for enter animations
+  // Track new todos for enter animations
   useEffect(() => {
-    const currentIds = new Set(tasks.map(t => t.id));
-    const prevIds = prevTaskIdsRef.current;
+    const currentIds = new Set(todos.map((t: GlobalTodo) => t.id));
+    const prevIds = prevTodoIdsRef.current;
 
-    // Find newly added tasks
-    const newTaskIds = new Set<string>();
-    currentIds.forEach(id => {
+    // Find newly added todos
+    const newTodoIds = new Set<string>();
+    currentIds.forEach((id: string) => {
       if (!prevIds.has(id)) {
-        newTaskIds.add(id);
+        newTodoIds.add(id);
       }
     });
 
-    if (newTaskIds.size > 0) {
-      setAnimatingTaskIds(prev => new Set([...prev, ...newTaskIds]));
+    if (newTodoIds.size > 0) {
+      setAnimatingTodoIds(prev => new Set([...prev, ...newTodoIds]));
       // Remove animation class after animation completes
       setTimeout(() => {
-        setAnimatingTaskIds(prev => {
+        setAnimatingTodoIds(prev => {
           const next = new Set(prev);
-          newTaskIds.forEach(id => next.delete(id));
+          newTodoIds.forEach((id: string) => next.delete(id));
           return next;
         });
       }, 300);
     }
 
-    prevTaskIdsRef.current = currentIds;
-  }, [tasks]);
+    prevTodoIdsRef.current = currentIds;
+  }, [todos]);
 
-  // Fetch tasks when panel opens
+  // Fetch todos when panel opens
   useEffect(() => {
     if (isOpen) {
-      fetchTasks();
+      fetchTodos();
       // Focus input
       setTimeout(() => inputRef.current?.focus(), 100);
     }
@@ -68,7 +68,7 @@ export function GlobalTasksPanel({ isOpen, onClose, onOpenNewInstance }: GlobalT
     if (!isOpen) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !dispatchingTaskId) {
+      if (e.key === 'Escape' && !dispatchingTodoId) {
         e.preventDefault();
         onClose();
       }
@@ -76,14 +76,14 @@ export function GlobalTasksPanel({ isOpen, onClose, onOpenNewInstance }: GlobalT
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose, dispatchingTaskId]);
+  }, [isOpen, onClose, dispatchingTodoId]);
 
-  const fetchTasks = async () => {
+  const fetchTodos = async () => {
     setIsLoading(true);
     try {
-      const response = await tasksApi.list();
+      const response = await todosApi.list();
       if (response.data) {
-        setTasks(response.data);
+        setTodos(response.data);
       }
     } catch {
       // Error toast shown by API layer
@@ -92,44 +92,44 @@ export function GlobalTasksPanel({ isOpen, onClose, onOpenNewInstance }: GlobalT
     }
   };
 
-  const handleCreateTask = async (e: React.FormEvent) => {
+  const handleCreateTodo = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newTaskText.trim()) return;
+    if (!newTodoText.trim()) return;
 
     try {
-      await tasksApi.create({ text: newTaskText.trim() });
-      setNewTaskText('');
+      await todosApi.create({ text: newTodoText.trim() });
+      setNewTodoText('');
       inputRef.current?.focus();
     } catch {
       // Error toast shown by API layer
     }
   };
 
-  const handleToggleDone = async (task: GlobalTask) => {
+  const handleToggleDone = async (todo: GlobalTodo) => {
     try {
-      if (task.status === 'done') {
+      if (todo.status === 'done') {
         // Unmark as done
-        await tasksApi.update(task.id, { status: 'captured' });
+        await todosApi.update(todo.id, { status: 'captured' });
       } else {
         // Mark as done
-        await tasksApi.markDone(task.id);
+        await todosApi.markDone(todo.id);
       }
     } catch {
       // Error toast shown by API layer
     }
   };
 
-  const handleDeleteTask = async (taskId: string) => {
+  const handleDeleteTodo = async (todoId: string) => {
     try {
-      await tasksApi.delete(taskId);
+      await todosApi.delete(todoId);
     } catch {
       // Error toast shown by API layer
     }
   };
 
-  const handleUpdateTask = async (taskId: string, newText: string) => {
+  const handleUpdateTodo = async (todoId: string, newText: string) => {
     try {
-      await tasksApi.update(taskId, { text: newText });
+      await todosApi.update(todoId, { text: newText });
     } catch {
       // Error toast shown by API layer
     }
@@ -138,34 +138,34 @@ export function GlobalTasksPanel({ isOpen, onClose, onOpenNewInstance }: GlobalT
   const handleReorder = async (fromId: string, toId: string) => {
     if (fromId === toId) return;
 
-    const filteredTasks = tasks.filter((t) => t.status !== 'archived');
-    const fromIndex = filteredTasks.findIndex((t) => t.id === fromId);
-    const toIndex = filteredTasks.findIndex((t) => t.id === toId);
+    const filteredTodos = todos.filter((t: GlobalTodo) => t.status !== 'archived');
+    const fromIndex = filteredTodos.findIndex((t: GlobalTodo) => t.id === fromId);
+    const toIndex = filteredTodos.findIndex((t: GlobalTodo) => t.id === toId);
 
     if (fromIndex === -1 || toIndex === -1) return;
 
     // Create new order
-    const newOrder = [...filteredTasks];
-    const [movedTask] = newOrder.splice(fromIndex, 1);
-    newOrder.splice(toIndex, 0, movedTask);
+    const newOrder = [...filteredTodos];
+    const [movedTodo] = newOrder.splice(fromIndex, 1);
+    newOrder.splice(toIndex, 0, movedTodo);
 
     // Optimistically update UI
-    setTasks(newOrder);
+    setTodos(newOrder);
 
     try {
-      await tasksApi.reorder({ taskIds: newOrder.map((t) => t.id) });
+      await todosApi.reorder({ todoIds: newOrder.map((t: GlobalTodo) => t.id) });
     } catch {
       // Revert on error - refetch to get correct order
-      fetchTasks();
+      fetchTodos();
     }
   };
 
-  const handleDispatch = async (task: GlobalTask, instanceId: string | 'copy' | 'new') => {
-    setDispatchingTaskId(null);
+  const handleDispatch = async (todo: GlobalTodo, instanceId: string | 'copy' | 'new') => {
+    setDispatchingTodoId(null);
 
     if (instanceId === 'copy') {
       try {
-        await navigator.clipboard.writeText(task.text);
+        await navigator.clipboard.writeText(todo.text);
         toast.success('Copied to clipboard');
       } catch {
         toast.error('Failed to copy to clipboard');
@@ -174,20 +174,20 @@ export function GlobalTasksPanel({ isOpen, onClose, onOpenNewInstance }: GlobalT
     }
 
     if (instanceId === 'new') {
-      // Copy task text to clipboard so it's ready to paste in the new instance
+      // Copy todo text to clipboard so it's ready to paste in the new instance
       try {
-        await navigator.clipboard.writeText(task.text);
-        toast.success('Task copied to clipboard');
+        await navigator.clipboard.writeText(todo.text);
+        toast.success('Todo copied to clipboard');
       } catch {
         // Continue even if clipboard fails
       }
-      onOpenNewInstance?.({ taskText: task.text });
+      onOpenNewInstance?.({ taskText: todo.text });
       return;
     }
 
     try {
-      await tasksApi.dispatch(task.id, { instanceId, copyToClipboard: false });
-      toast.success('Task dispatched to instance');
+      await todosApi.dispatch(todo.id, { instanceId, copyToClipboard: false });
+      toast.success('Todo dispatched to instance');
     } catch {
       // Error toast shown by API layer
     }
@@ -207,9 +207,9 @@ export function GlobalTasksPanel({ isOpen, onClose, onOpenNewInstance }: GlobalT
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-surface-600 shrink-0">
           <div className="flex items-center gap-3">
-            <h2 className="text-lg font-semibold text-theme-primary">Global Tasks</h2>
+            <h2 className="text-lg font-semibold text-theme-primary">Global Todos</h2>
             <span className="text-xs bg-accent/20 text-accent px-2 py-0.5 rounded-full">
-              {tasks.filter((t) => t.status !== 'archived').length} tasks
+              {todos.filter((t: GlobalTodo) => t.status !== 'archived').length} todos
             </span>
           </div>
           <button
@@ -220,29 +220,29 @@ export function GlobalTasksPanel({ isOpen, onClose, onOpenNewInstance }: GlobalT
           </button>
         </div>
 
-        {/* Task Input */}
-        <form onSubmit={handleCreateTask} className="px-6 py-4 border-b border-surface-600 shrink-0">
+        {/* Todo Input */}
+        <form onSubmit={handleCreateTodo} className="px-6 py-4 border-b border-surface-600 shrink-0">
           <div className="flex gap-2">
             <input
               ref={inputRef}
               type="text"
-              value={newTaskText}
-              onChange={(e) => setNewTaskText(e.target.value)}
-              placeholder="Add a new task..."
+              value={newTodoText}
+              onChange={(e) => setNewTodoText(e.target.value)}
+              placeholder="Add a new todo..."
               className="flex-1 px-3 py-2 bg-surface-800 border border-surface-600 rounded-lg text-theme-primary placeholder:text-theme-muted focus:outline-none focus:border-accent text-sm font-mono"
             />
             <button
               type="submit"
-              disabled={!newTaskText.trim()}
+              disabled={!newTodoText.trim()}
               className="px-4 py-2 bg-accent text-surface-900 rounded-lg font-medium text-sm hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               Add
             </button>
             <button
               type="button"
-              onClick={() => setIsSmartTasksOpen(true)}
+              onClick={() => setIsSmartTodosOpen(true)}
               className="px-3 py-2 bg-surface-600 text-theme-primary rounded-lg text-sm hover:bg-surface-500 transition-colors flex items-center gap-2"
-              title="Smart task input with AI parsing"
+              title="Smart todo input with AI parsing"
             >
               <Icons.sparkles />
               Smart
@@ -250,46 +250,46 @@ export function GlobalTasksPanel({ isOpen, onClose, onOpenNewInstance }: GlobalT
           </div>
         </form>
 
-        {/* Task List */}
+        {/* Todo List */}
         <div className="flex-1 overflow-auto px-6 py-4">
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
               <div className="animate-spin w-6 h-6 border-2 border-accent border-t-transparent rounded-full" />
             </div>
-          ) : tasks.length === 0 ? (
+          ) : todos.length === 0 ? (
             <div className="text-center py-12">
               <div className="text-4xl mb-3">📋</div>
-              <p className="text-theme-muted text-sm">No tasks yet. Add one above!</p>
+              <p className="text-theme-muted text-sm">No todos yet. Add one above!</p>
             </div>
           ) : (
             <div className="space-y-2">
-              {tasks
-                .filter((t) => t.status !== 'archived')
-                .map((task, index) => (
-                  <TaskItem
-                    key={task.id}
-                    task={task}
+              {todos
+                .filter((t: GlobalTodo) => t.status !== 'archived')
+                .map((todo: GlobalTodo, index: number) => (
+                  <TodoItem
+                    key={todo.id}
+                    todo={todo}
                     instances={activeInstances}
-                    isDispatchOpen={dispatchingTaskId === task.id}
-                    isDragging={draggedTaskId === task.id}
-                    isDragOver={dragOverTaskId === task.id && draggedTaskId !== task.id}
-                    isAnimatingIn={animatingTaskIds.has(task.id)}
+                    isDispatchOpen={dispatchingTodoId === todo.id}
+                    isDragging={draggedTodoId === todo.id}
+                    isDragOver={dragOverTodoId === todo.id && draggedTodoId !== todo.id}
+                    isAnimatingIn={animatingTodoIds.has(todo.id)}
                     animationDelay={index * 30}
-                    onToggleDone={() => handleToggleDone(task)}
-                    onDelete={() => handleDeleteTask(task.id)}
-                    onEdit={(newText) => handleUpdateTask(task.id, newText)}
-                    onOpenDispatch={() => setDispatchingTaskId(task.id)}
-                    onCloseDispatch={() => setDispatchingTaskId(null)}
-                    onDispatch={(instanceId) => handleDispatch(task, instanceId)}
-                    onDragStart={() => setDraggedTaskId(task.id)}
+                    onToggleDone={() => handleToggleDone(todo)}
+                    onDelete={() => handleDeleteTodo(todo.id)}
+                    onEdit={(newText) => handleUpdateTodo(todo.id, newText)}
+                    onOpenDispatch={() => setDispatchingTodoId(todo.id)}
+                    onCloseDispatch={() => setDispatchingTodoId(null)}
+                    onDispatch={(instanceId) => handleDispatch(todo, instanceId)}
+                    onDragStart={() => setDraggedTodoId(todo.id)}
                     onDragEnd={() => {
-                      if (draggedTaskId && dragOverTaskId && draggedTaskId !== dragOverTaskId) {
-                        handleReorder(draggedTaskId, dragOverTaskId);
+                      if (draggedTodoId && dragOverTodoId && draggedTodoId !== dragOverTodoId) {
+                        handleReorder(draggedTodoId, dragOverTodoId);
                       }
-                      setDraggedTaskId(null);
-                      setDragOverTaskId(null);
+                      setDraggedTodoId(null);
+                      setDragOverTodoId(null);
                     }}
-                    onDragOver={() => setDragOverTaskId(task.id)}
+                    onDragOver={() => setDragOverTodoId(todo.id)}
                   />
                 ))}
             </div>
@@ -308,21 +308,21 @@ export function GlobalTasksPanel({ isOpen, onClose, onOpenNewInstance }: GlobalT
         </div>
       </div>
 
-      {/* Smart Tasks Modal */}
-      <SmartTasksModal
-        isOpen={isSmartTasksOpen}
+      {/* Smart Todos Modal */}
+      <SmartTodosModal
+        isOpen={isSmartTodosOpen}
         onClose={() => {
-          setIsSmartTasksOpen(false);
-          // Refetch tasks in case new ones were created
-          fetchTasks();
+          setIsSmartTodosOpen(false);
+          // Refetch todos in case new ones were created
+          fetchTodos();
         }}
       />
     </div>
   );
 }
 
-interface TaskItemProps {
-  task: GlobalTask;
+interface TodoItemProps {
+  todo: GlobalTodo;
   instances: Instance[];
   isDispatchOpen: boolean;
   isDragging: boolean;
@@ -340,8 +340,8 @@ interface TaskItemProps {
   onDragOver: () => void;
 }
 
-function TaskItem({
-  task,
+function TodoItem({
+  todo,
   instances,
   isDispatchOpen,
   isDragging,
@@ -357,13 +357,13 @@ function TaskItem({
   onDragStart,
   onDragEnd,
   onDragOver,
-}: TaskItemProps) {
+}: TodoItemProps) {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const editInputRef = useRef<HTMLInputElement>(null);
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
   const [isEditing, setIsEditing] = useState(false);
-  const [editText, setEditText] = useState(task.text);
+  const [editText, setEditText] = useState(todo.text);
 
   // Focus input when entering edit mode
   useEffect(() => {
@@ -374,18 +374,18 @@ function TaskItem({
   }, [isEditing]);
 
   const handleStartEdit = () => {
-    setEditText(task.text);
+    setEditText(todo.text);
     setIsEditing(true);
   };
 
   const handleCancelEdit = () => {
-    setEditText(task.text);
+    setEditText(todo.text);
     setIsEditing(false);
   };
 
   const handleSaveEdit = () => {
     const trimmed = editText.trim();
-    if (trimmed && trimmed !== task.text) {
+    if (trimmed && trimmed !== todo.text) {
       onEdit(trimmed);
     }
     setIsEditing(false);
@@ -433,14 +433,14 @@ function TaskItem({
   }, [isDispatchOpen, onCloseDispatch]);
 
   const getStatusIcon = () => {
-    if (task.status === 'done') {
+    if (todo.status === 'done') {
       return (
         <div className="w-6 h-6 rounded-lg bg-green-500 flex items-center justify-center">
           <Icons.check className="w-4 h-4 text-white" />
         </div>
       );
     }
-    if (task.status === 'in_progress') {
+    if (todo.status === 'in_progress') {
       return (
         <div className="w-6 h-6 rounded-lg border-2 border-yellow-500 flex items-center justify-center">
           <div className="w-2.5 h-2.5 bg-yellow-500 rounded-full" />
@@ -450,8 +450,8 @@ function TaskItem({
     return <div className="w-6 h-6 rounded-lg border-2 border-surface-500" />;
   };
 
-  const linkedInstance = task.dispatchedInstanceId
-    ? instances.find((i) => i.id === task.dispatchedInstanceId)
+  const linkedInstance = todo.dispatchedInstanceId
+    ? instances.find((i) => i.id === todo.dispatchedInstanceId)
     : null;
 
   return (
@@ -506,11 +506,11 @@ function TaskItem({
             <p
               onDoubleClick={handleStartEdit}
               className={`text-sm font-mono break-words cursor-text ${
-                task.status === 'done' ? 'text-theme-muted line-through' : 'text-theme-primary'
+                todo.status === 'done' ? 'text-theme-muted line-through' : 'text-theme-primary'
               }`}
               title="Double-click to edit"
             >
-              {task.text}
+              {todo.text}
             </p>
             {linkedInstance && (
               <div className="mt-1.5 inline-flex items-center gap-1.5 px-2 py-0.5 bg-yellow-500/20 rounded text-xs text-yellow-400">
@@ -528,7 +528,7 @@ function TaskItem({
         <button
           onClick={handleStartEdit}
           className="p-1.5 rounded text-theme-muted hover:text-theme-primary hover:bg-surface-700 transition-colors"
-          title="Edit task"
+          title="Edit todo"
         >
           <Icons.edit className="w-4 h-4" />
         </button>
@@ -606,7 +606,7 @@ function TaskItem({
         <button
           onClick={onDelete}
           className="p-1.5 rounded text-theme-muted hover:text-red-400 hover:bg-surface-700 transition-colors"
-          title="Delete task"
+          title="Delete todo"
         >
           <Icons.trash className="w-4 h-4" />
         </button>

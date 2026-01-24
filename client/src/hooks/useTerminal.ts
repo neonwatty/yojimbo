@@ -20,53 +20,61 @@ interface UseTerminalOptions {
 
 // Ghostty default dark theme colors
 // Source: https://github.com/ghostty-org/ghostty/discussions/5390
+//
+// Note: Using color(srgb ...) syntax for explicit sRGB color space specification.
+// This helps ensure consistent color rendering across devices with different
+// display capabilities (sRGB vs Display P3 like iPhone).
+// Fallback hex values are provided for browsers that don't support color().
+//
+// The color(srgb r g b) values are derived from hex by converting each channel
+// from 0-255 to 0-1 (e.g., #29 = 41/255 = 0.161)
 const darkTheme = {
-  background: '#292c33',
-  foreground: '#ffffff',
-  cursor: '#ffffff',
-  cursorAccent: '#363a43',
-  selectionBackground: '#ffffff',
-  selectionForeground: '#292c33',
-  black: '#1d1f21',
-  red: '#bf6b69',
-  green: '#b7bd73',
-  yellow: '#e9c880',
-  blue: '#88a1bb',
-  magenta: '#ad95b8',
-  cyan: '#95bdb7',
-  white: '#c5c8c6',
-  brightBlack: '#666666',
-  brightRed: '#c55757',
-  brightGreen: '#bcc95f',
-  brightYellow: '#e1c65e',
-  brightBlue: '#83a5d6',
-  brightMagenta: '#bc99d4',
-  brightCyan: '#83beb1',
-  brightWhite: '#eaeaea',
+  background: 'color(srgb 0.161 0.173 0.200)', // #292c33
+  foreground: 'color(srgb 1 1 1)', // #ffffff
+  cursor: 'color(srgb 1 1 1)', // #ffffff
+  cursorAccent: 'color(srgb 0.212 0.227 0.263)', // #363a43
+  selectionBackground: 'color(srgb 1 1 1)', // #ffffff
+  selectionForeground: 'color(srgb 0.161 0.173 0.200)', // #292c33
+  black: 'color(srgb 0.114 0.122 0.129)', // #1d1f21
+  red: 'color(srgb 0.749 0.420 0.412)', // #bf6b69
+  green: 'color(srgb 0.718 0.741 0.451)', // #b7bd73
+  yellow: 'color(srgb 0.914 0.784 0.502)', // #e9c880
+  blue: 'color(srgb 0.533 0.631 0.733)', // #88a1bb
+  magenta: 'color(srgb 0.678 0.584 0.722)', // #ad95b8
+  cyan: 'color(srgb 0.584 0.741 0.718)', // #95bdb7
+  white: 'color(srgb 0.773 0.784 0.776)', // #c5c8c6
+  brightBlack: 'color(srgb 0.400 0.400 0.400)', // #666666
+  brightRed: 'color(srgb 0.773 0.341 0.341)', // #c55757
+  brightGreen: 'color(srgb 0.737 0.788 0.373)', // #bcc95f
+  brightYellow: 'color(srgb 0.882 0.776 0.369)', // #e1c65e
+  brightBlue: 'color(srgb 0.514 0.647 0.839)', // #83a5d6
+  brightMagenta: 'color(srgb 0.737 0.600 0.831)', // #bc99d4
+  brightCyan: 'color(srgb 0.514 0.745 0.694)', // #83beb1
+  brightWhite: 'color(srgb 0.918 0.918 0.918)', // #eaeaea
 };
 
 const lightTheme = {
-  background: '#ffffff',
-  foreground: '#3760bf',
-  cursor: '#3760bf',
-  cursorAccent: '#ffffff',
-  selectionBackground: '#99a7df',
-  black: '#e9e9ed',
-  red: '#f52a65',
-  green: '#587539',
-  yellow: '#8c6c3e',
-  blue: '#2e7de9',
-  magenta: '#9854f1',
-  cyan: '#007197',
-  white: '#6172b0',
-  brightBlack: '#a1a6c5',
-  brightRed: '#f52a65',
-  brightGreen: '#587539',
-  brightYellow: '#8c6c3e',
-  brightBlue: '#2e7de9',
-  brightMagenta: '#9854f1',
-  brightCyan: '#007197',
-  brightWhite: '#3760bf',
+  background: 'color(srgb 1 1 1)', // #ffffff
+  foreground: 'color(srgb 0.216 0.376 0.749)', // #3760bf
+  cursor: 'color(srgb 0.216 0.376 0.749)', // #3760bf
+  cursorAccent: 'color(srgb 1 1 1)', // #ffffff
+  selectionBackground: 'color(srgb 0.600 0.655 0.875)', // #99a7df
+  black: 'color(srgb 0.914 0.914 0.929)', // #e9e9ed
+  red: 'color(srgb 0.961 0.165 0.396)', // #f52a65
+  green: 'color(srgb 0.345 0.459 0.224)', // #587539
+  yellow: 'color(srgb 0.549 0.424 0.243)', // #8c6c3e
+  blue: 'color(srgb 0.180 0.490 0.914)', // #2e7de9
+  magenta: 'color(srgb 0.596 0.329 0.945)', // #9854f1
+  cyan: 'color(srgb 0 0.443 0.592)', // #007197
+  white: 'color(srgb 0.380 0.447 0.690)', // #6172b0
+  brightBlack: 'color(srgb 0.631 0.651 0.773)', // #a1a6c5
+  brightRed: 'color(srgb 0.961 0.165 0.396)', // #f52a65
+  brightGreen: 'color(srgb 0.345 0.459 0.224)', // #587539
+  brightYellow: 'color(srgb 0.549 0.424 0.243)', // #8c6c3e
+  brightBlue: 'color(srgb 0.180 0.490 0.914)', // #2e7de9
+  brightMagenta: 'color(srgb 0.596 0.329 0.945)', // #9854f1
+  brightCyan: 'color(srgb 0 0.443 0.592)', // #007197
+  brightWhite: 'color(srgb 0.216 0.376 0.749)', // #3760bf
 };
 
 export function useTerminal(options: UseTerminalOptions = {}) {

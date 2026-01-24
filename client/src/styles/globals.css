@@ -531,14 +531,17 @@ body {
    ═══════════════════════════════════════════════════════════════════════ */
 
 :root .terminal-panel {
-  background: #2e3440;
+  /* Use explicit sRGB color space for consistent rendering across display types (sRGB vs Display P3) */
+  background: #2e3440; /* Fallback for older browsers */
+  background: color(srgb 0.180 0.204 0.251);
   border: 1px solid var(--surface-500);
   border-radius: 6px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 :root .terminal-panel .terminal-text {
-  color: #eceff4;
+  color: #eceff4; /* Fallback */
+  color: color(srgb 0.925 0.937 0.957);
 }
 
 .dark .terminal-panel {

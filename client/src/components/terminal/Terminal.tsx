@@ -215,7 +215,8 @@ export const Terminal = forwardRef<TerminalRef, TerminalProps>(
           ref={containerRef}
           className="h-full w-full"
           style={{
-            backgroundColor: theme === 'dark' ? '#292c33' : '#ffffff',
+            // Use explicit sRGB color space for consistent rendering across display types (sRGB vs Display P3)
+            backgroundColor: theme === 'dark' ? 'color(srgb 0.161 0.173 0.200)' : 'color(srgb 1 1 1)',
             touchAction: 'pan-y',
           }}
         />

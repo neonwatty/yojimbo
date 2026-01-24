@@ -763,6 +763,7 @@ function MobileTerminalView({
             ref={terminalRef}
             instanceId={instanceId}
             theme={theme === 'dark' ? 'dark' : 'light'}
+            fontSize={10}
           />
         </ErrorBoundary>
       </div>

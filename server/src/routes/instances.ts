@@ -7,6 +7,7 @@ import { hookInstallerService } from '../services/hook-installer.service.js';
 import { reverseTunnelService } from '../services/reverse-tunnel.service.js';
 import { portDetectionService } from '../services/port-detection.service.js';
 import { htmlFilesService } from '../services/html-files.service.js';
+import { keychainStorageService } from '../services/keychain-storage.service.js';
 import { broadcast } from '../websocket/server.js';
 import type { Instance, CreateInstanceRequest, UpdateInstanceRequest, InstanceStatus, MachineType } from '@cc-orchestrator/shared';
 
@@ -118,12 +119,37 @@ router.post('/', async (req, res) => {
     // the initial resize event, which ensures the PTY has the correct dimensions before
     // starting interactive TUI programs like Claude Code.
     if (startupCommand) {
-      const delay = machineType === 'remote' ? 1500 : 100;
+      let keychainUnlockDelay = 0;
+
+      // Auto-unlock keychain for remote Claude Code instances
+      if (machineType === 'remote' && machineId && startupCommand.includes('claude')) {
+        const hasPassword = await keychainStorageService.hasPassword(machineId);
+        if (hasPassword) {
+          const passwordResult = await keychainStorageService.getPassword(machineId);
+          if (passwordResult.success && passwordResult.password) {
+            // Unlock keychain first (after initial shell setup delay)
+            setTimeout(() => {
+              if (terminalManager.has(id)) {
+                terminalManager.write(id, 'security unlock-keychain ~/Library/Keychains/login.keychain-db\n');
+                setTimeout(() => {
+                  if (terminalManager.has(id)) {
+                    terminalManager.write(id, passwordResult.password + '\n');
+                  }
+                }, 500);
+              }
+            }, 1000);
+            keychainUnlockDelay = 2500; // Wait for unlock before starting Claude
+            console.log(`🔐 Auto-unlocking keychain for remote Claude Code instance ${id}`);
+          }
+        }
+      }
+
+      const baseDelay = machineType === 'remote' ? 1500 : 100;
       setTimeout(() => {
         if (terminalManager.has(id)) {
           terminalManager.write(id, startupCommand + '\n');
         }
-      }, delay);
+      }, baseDelay + keychainUnlockDelay);
     }
 
     // Insert into database

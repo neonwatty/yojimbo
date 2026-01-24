@@ -51,6 +51,13 @@ vi.mock('../services/ssh-connection.service.js', () => ({
   },
 }));
 
+vi.mock('../services/keychain-storage.service.js', () => ({
+  keychainStorageService: {
+    hasPassword: vi.fn().mockResolvedValue(false),
+    getPassword: vi.fn().mockResolvedValue({ success: false }),
+  },
+}));
+
 describe('Instances Routes', () => {
   beforeEach(() => {
     vi.clearAllMocks();

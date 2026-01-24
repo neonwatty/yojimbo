@@ -297,6 +297,44 @@ router.post('/:id/test-tunnel', async (req, res) => {
   }
 });
 
+// GET /api/machines/:id/claude-status - Check if Claude Code is installed on remote machine
+router.get('/:id/claude-status', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const db = getDatabase();
+    const existing = db
+      .prepare('SELECT * FROM remote_machines WHERE id = ?')
+      .get(id) as RemoteMachineRow | undefined;
+
+    if (!existing) {
+      return res.status(404).json({ success: false, error: 'Machine not found' });
+    }
+
+    try {
+      // Check if claude is installed by running which claude && claude --version
+      const result = await sshConnectionService.executeCommand(id, 'which claude && claude --version');
+      const lines = result.stdout.trim().split('\n');
+      const path = lines[0] || null;
+      const version = lines[1]?.match(/v[\d.]+/)?.[0] || null;
+
+      res.json({
+        success: true,
+        data: { installed: true, path, version },
+      });
+    } catch {
+      // Claude not installed or command failed
+      res.json({
+        success: true,
+        data: { installed: false, path: null, version: null },
+      });
+    }
+  } catch (error) {
+    console.error('Error checking Claude status on remote machine:', error);
+    res.status(500).json({ success: false, error: 'Failed to check Claude status' });
+  }
+});
+
 // GET /api/machines/:id/directories - List directories on remote machine
 router.get('/:id/directories', async (req, res) => {
   try {

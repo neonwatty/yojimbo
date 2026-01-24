@@ -16,6 +16,7 @@ interface UseTerminalOptions {
   onData?: (data: string) => void;
   onResize?: (cols: number, rows: number) => void;
   theme?: 'light' | 'dark';
+  fontSize?: number;
 }
 
 // Ghostty default dark theme colors
@@ -78,7 +79,7 @@ const lightTheme = {
 };
 
 export function useTerminal(options: UseTerminalOptions = {}) {
-  const { onData, onResize, theme = 'dark' } = options;
+  const { onData, onResize, theme = 'dark', fontSize = 13 } = options;
 
   const terminalRef = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
@@ -98,7 +99,7 @@ export function useTerminal(options: UseTerminalOptions = {}) {
         cursorStyle: 'block',
         cursorInactiveStyle: 'outline',
         fontFamily: 'Menlo, Monaco, "Courier New", monospace',
-        fontSize: 13,
+        fontSize,
         lineHeight: 1.2,
         theme: theme === 'dark' ? darkTheme : lightTheme,
         allowProposedApi: true,
@@ -144,7 +145,7 @@ export function useTerminal(options: UseTerminalOptions = {}) {
 
         // Calculate lines to scroll based on delta
         // Use line height (fontSize * lineHeight) to determine scroll amount
-        const lineHeight = 13 * 1.2; // fontSize * lineHeight from terminal config
+        const lineHeight = fontSize * 1.2; // fontSize * lineHeight from terminal config
         const linesToScroll = Math.round(deltaY / lineHeight);
 
         if (linesToScroll !== 0 && terminalRef.current) {
@@ -186,7 +187,7 @@ export function useTerminal(options: UseTerminalOptions = {}) {
 
       isInitializedRef.current = true;
     },
-    [onData, onResize, theme]
+    [onData, onResize, theme, fontSize]
   );
 
   const write = useCallback((data: string) => {
@@ -262,6 +263,17 @@ export function useTerminal(options: UseTerminalOptions = {}) {
       terminalRef.current.refresh(0, terminalRef.current.rows - 1);
     }
   }, [theme]);
+
+  // Update font size when it changes
+  useEffect(() => {
+    if (terminalRef.current && isInitializedRef.current) {
+      terminalRef.current.options.fontSize = fontSize;
+      // Refit to recalculate columns/rows with new font size
+      if (fitAddonRef.current) {
+        fitAddonRef.current.fit();
+      }
+    }
+  }, [fontSize]);
 
   // Cleanup on unmount
   useEffect(() => {

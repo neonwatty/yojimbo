@@ -13,11 +13,12 @@ export interface TerminalRef {
 interface TerminalProps {
   instanceId: string;
   theme?: 'light' | 'dark';
+  fontSize?: number;
   onStatusChange?: (status: string) => void;
 }
 
 export const Terminal = forwardRef<TerminalRef, TerminalProps>(
-  ({ instanceId, theme = 'dark', onStatusChange }, ref) => {
+  ({ instanceId, theme = 'dark', fontSize = 13, onStatusChange }, ref) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const wrapperRef = useRef<HTMLDivElement>(null);
     const isSubscribedRef = useRef(false);
@@ -130,6 +131,7 @@ export const Terminal = forwardRef<TerminalRef, TerminalProps>(
       onData: handleData,
       onResize: handleResize,
       theme,
+      fontSize,
     });
 
     // Expose focus, fit, and refresh methods to parent via ref

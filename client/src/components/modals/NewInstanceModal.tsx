@@ -56,6 +56,8 @@ export function NewInstanceModal({ isOpen, onClose }: NewInstanceModalProps) {
   const [loadingRemoteDirs, setLoadingRemoteDirs] = useState(false);
   const [showRemoteBrowser, setShowRemoteBrowser] = useState(false);
   const remoteBrowserRef = useRef<HTMLDivElement>(null);
+  const [remoteClaudeStatus, setRemoteClaudeStatus] = useState<{ installed: boolean; path: string | null; version: string | null } | null>(null);
+  const [checkingRemoteClaude, setCheckingRemoteClaude] = useState(false);
 
   // Check Claude CLI status on mount
   useEffect(() => {
@@ -169,6 +171,20 @@ export function NewInstanceModal({ isOpen, onClose }: NewInstanceModalProps) {
       setCheckingClaude(false);
     }
   };
+
+  // Check Claude status on remote machine when one is selected
+  useEffect(() => {
+    if (machineType === 'remote' && selectedMachineId) {
+      setCheckingRemoteClaude(true);
+      setRemoteClaudeStatus(null);
+      machinesApi.checkClaudeStatus(selectedMachineId)
+        .then(res => setRemoteClaudeStatus(res.data ?? null))
+        .catch(() => setRemoteClaudeStatus({ installed: false, path: null, version: null }))
+        .finally(() => setCheckingRemoteClaude(false));
+    } else {
+      setRemoteClaudeStatus(null);
+    }
+  }, [machineType, selectedMachineId]);
 
   const handleCreate = async () => {
     if (!name.trim()) {
@@ -322,8 +338,6 @@ export function NewInstanceModal({ isOpen, onClose }: NewInstanceModalProps) {
                     setWorkingDir('~');
                     setName('');
                     setShowRemoteBrowser(false);
-                    // Force terminal mode for remote machines
-                    setMode('terminal');
                   }}
                   className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-colors
                     ${machineType === 'remote'
@@ -385,8 +399,15 @@ export function NewInstanceModal({ isOpen, onClose }: NewInstanceModalProps) {
               <button
                 type="button"
                 onClick={() => setMode('claude-code')}
-                disabled={machineType === 'remote' || (!claudeStatus?.installed && !checkingClaude)}
-                title={machineType === 'remote' ? 'Claude Code is only available for local machines' : undefined}
+                disabled={
+                  (machineType === 'local' && !claudeStatus?.installed && !checkingClaude) ||
+                  (machineType === 'remote' && selectedMachineId !== '' && !remoteClaudeStatus?.installed && !checkingRemoteClaude)
+                }
+                title={
+                  machineType === 'remote' && !remoteClaudeStatus?.installed && !checkingRemoteClaude
+                    ? 'Claude Code not found on this machine'
+                    : undefined
+                }
                 className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed
                   ${mode === 'claude-code'
                     ? 'bg-frost-4/30 text-frost-2 border border-frost-4/50'
@@ -394,11 +415,19 @@ export function NewInstanceModal({ isOpen, onClose }: NewInstanceModalProps) {
               >
                 <Icons.code />
                 Claude Code
+                {machineType === 'remote' && checkingRemoteClaude && (
+                  <Spinner size="sm" />
+                )}
               </button>
             </div>
-            {machineType === 'remote' && (
+            {machineType === 'remote' && selectedMachineId && !remoteClaudeStatus?.installed && !checkingRemoteClaude && (
               <p className="text-[10px] text-theme-dim mt-1">
-                Claude Code is only available for local machines. Use Terminal to run commands on remote machines.
+                Claude Code not found on this machine. Install: <code className="px-1 py-0.5 bg-surface-800 rounded">npm i -g @anthropic-ai/claude-code</code>
+              </p>
+            )}
+            {machineType === 'remote' && checkingRemoteClaude && (
+              <p className="text-[10px] text-theme-dim mt-1">
+                Checking Claude Code availability...
               </p>
             )}
           </div>

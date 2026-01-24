@@ -331,6 +331,11 @@ export const machinesApi = {
       `/machines/${id}/test-tunnel`,
       { method: 'POST' }
     ),
+
+  checkClaudeStatus: (id: string) =>
+    request<ApiResponse<{ installed: boolean; path: string | null; version: string | null }>>(
+      `/machines/${id}/claude-status`
+    ),
 };
 
 // SSH API

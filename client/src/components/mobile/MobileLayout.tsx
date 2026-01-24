@@ -872,6 +872,15 @@ export function MobileLayout() {
 
   const currentInstance = id ? instances.find(i => i.id === id) ?? null : null;
 
+  // Drawer open handlers
+  const openBottomDrawer = useCallback(() => {
+    setBottomDrawerOpen(true);
+  }, []);
+
+  const openTopDrawer = useCallback(() => {
+    setTopDrawerOpen(true);
+  }, []);
+
   // Handle instance selection
   const handleSelectInstance = useCallback((instanceId: string) => {
     const instance = instances.find(i => i.id === instanceId);
@@ -951,8 +960,8 @@ export function MobileLayout() {
         <div className="h-full flex flex-col bg-surface-900">
           <EmptyState
             onNewInstance={handleNewInstance}
-            onTopGesture={() => setTopDrawerOpen(true)}
-            onBottomGesture={() => setBottomDrawerOpen(true)}
+            onTopGesture={() => openTopDrawer()}
+            onBottomGesture={() => openBottomDrawer()}
           />
           <InstanceDrawer
             isOpen={bottomDrawerOpen}
@@ -1076,41 +1085,41 @@ export function MobileLayout() {
         {/* Main content */}
         {isHomePage ? (
           <MobileHomeView
-            onTopGesture={() => setTopDrawerOpen(true)}
-            onBottomGesture={() => setBottomDrawerOpen(true)}
-            onViewAllInstances={() => setBottomDrawerOpen(true)}
+            onTopGesture={() => openTopDrawer()}
+            onBottomGesture={() => openBottomDrawer()}
+            onViewAllInstances={() => openBottomDrawer()}
           />
         // History tab temporarily disabled
         // ) : isHistoryPage ? (
         //   <MobileHistoryView
-        //     onTopGesture={() => setTopDrawerOpen(true)}
-        //     onBottomGesture={() => setBottomDrawerOpen(true)}
+        //     onTopGesture={() => openTopDrawer()}
+        //     onBottomGesture={() => openBottomDrawer()}
         //   />
         // Activity tab temporarily disabled
         // ) : isActivityPage ? (
         //   <MobileActivityView
-        //     onTopGesture={() => setTopDrawerOpen(true)}
-        //     onBottomGesture={() => setBottomDrawerOpen(true)}
+        //     onTopGesture={() => openTopDrawer()}
+        //     onBottomGesture={() => openBottomDrawer()}
         //   />
         ) : isTasksPage ? (
           <MobileTasksView
-            onTopGesture={() => setTopDrawerOpen(true)}
-            onBottomGesture={() => setBottomDrawerOpen(true)}
+            onTopGesture={() => openTopDrawer()}
+            onBottomGesture={() => openBottomDrawer()}
             onOpenNewInstance={handleNewInstance}
           />
         ) : currentInstance ? (
           <MobileTerminalView
             key={currentInstance.id}
             instanceId={currentInstance.id}
-            onTopGesture={() => setTopDrawerOpen(true)}
-            onBottomGesture={() => setBottomDrawerOpen(true)}
+            onTopGesture={() => openTopDrawer()}
+            onBottomGesture={() => openBottomDrawer()}
             terminalRef={{ current: terminalRefs.current.get(currentInstance.id) || null } as React.RefObject<TerminalRef>}
           />
         ) : (
           <EmptyState
             onNewInstance={handleNewInstance}
-            onTopGesture={() => setTopDrawerOpen(true)}
-            onBottomGesture={() => setBottomDrawerOpen(true)}
+            onTopGesture={() => openTopDrawer()}
+            onBottomGesture={() => openBottomDrawer()}
           />
         )}
 

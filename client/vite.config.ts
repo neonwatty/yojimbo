@@ -1,6 +1,7 @@
 /// <reference types="vitest" />
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { VitePWA } from 'vite-plugin-pwa';
 import path from 'path';
 import fs from 'fs';
 import { parse as parseYaml } from 'yaml';
@@ -45,7 +46,37 @@ const packageJson = JSON.parse(fs.readFileSync(path.resolve(__dirname, './packag
 const appVersion = process.env.VITE_APP_VERSION || packageJson.version;
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    VitePWA({
+      registerType: 'autoUpdate',
+      includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
+      manifest: false, // Use existing manifest.json
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/fonts\.googleapis\.com/,
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: 'google-fonts-stylesheets',
+            },
+          },
+          {
+            urlPattern: /^https:\/\/fonts\.gstatic\.com/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'google-fonts-webfonts',
+              expiration: {
+                maxEntries: 30,
+                maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
+              },
+            },
+          },
+        ],
+      },
+    }),
+  ],
   define: {
     __APP_VERSION__: JSON.stringify(appVersion),
   },

@@ -1,5 +1,7 @@
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import path from 'path';
 import os from 'os';
 import { fileURLToPath } from 'url';
@@ -24,18 +26,50 @@ import smartTodosRouter from './routes/smart-todos.js';
 // import debugRouter from './routes/debug.js';
 import CONFIG from './config/index.js';
 
+// Rate limiters for sensitive endpoints
+const keychainLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // 10 attempts per window
+  message: { success: false, error: 'Too many attempts, please try again later' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const destructiveLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 5, // 5 attempts per hour
+  message: { success: false, error: 'Too many requests, please try again later' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const app = express();
 
-// Middleware
+// Security headers
+app.use(helmet({
+  contentSecurityPolicy: false, // Disable CSP for now (would need tuning for inline scripts)
+  crossOriginEmbedderPolicy: false, // Allow embedding resources
+}));
+
+// CORS configuration
+// In dev: allow localhost origins
+// In prod: allow same-origin (when served from same host) or configured origins
+const corsOrigins = CONFIG.isDev
+  ? [
+      `http://localhost:${CONFIG.clientPort}`,
+      `http://127.0.0.1:${CONFIG.clientPort}`,
+    ]
+  : process.env.CORS_ORIGINS
+    ? process.env.CORS_ORIGINS.split(',').map(s => s.trim())
+    : true; // true = reflect request origin (same-origin when served together)
+
 app.use(cors({
-  origin: CONFIG.isDev ? [
-    `http://localhost:${CONFIG.clientPort}`,
-    `http://127.0.0.1:${CONFIG.clientPort}`,
-  ] : false,
+  origin: corsOrigins,
   credentials: true,
 }));
+
 app.use(express.json());
 
 // Config endpoint - provides runtime config to client
@@ -55,6 +89,9 @@ app.use('/api/sessions', sessionsRouter);
 app.use('/api/plans', plansRouter);
 app.use('/api/mockups', mockupsRouter);
 app.use('/api/hooks', hooksRouter);
+
+// Settings routes with rate limiting on destructive endpoints
+app.use('/api/settings/reset-database', destructiveLimiter);
 app.use('/api/settings', settingsRouter);
 app.use('/api/filesystem', filesystemRouter);
 app.use('/api/feed', feedRouter);
@@ -62,7 +99,14 @@ app.use('/api/summaries', summariesRouter);
 app.use('/api/machines', machinesRouter);
 app.use('/api/ssh', sshRouter);
 app.use('/api/instances', portForwardsRouter);
+
+// Keychain routes with rate limiting on sensitive endpoints
+app.use('/api/keychain/unlock', keychainLimiter);
+app.use('/api/keychain/local/save', keychainLimiter);
+app.use('/api/keychain/local/test-unlock', keychainLimiter);
+app.use('/api/keychain/remote/:machineId/save', keychainLimiter);
 app.use('/api/keychain', keychainRouter);
+
 app.use('/api/todos', todosRouter);
 app.use('/api/releases', releasesRouter);
 app.use('/api/projects', projectsRouter);

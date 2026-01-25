@@ -461,6 +461,7 @@ class HookInstallerService {
 
   /**
    * Generate the bash script to install hooks on the remote machine
+   * Uses base64 encoding to work with any default shell (bash, zsh, nushell, fish, etc.)
    */
   private generateInstallScript(hooksConfig: object): string {
     const hooksJson = JSON.stringify(hooksConfig, null, 2);
@@ -468,24 +469,22 @@ class HookInstallerService {
     // Escape single quotes in the JSON for the shell script
     const escapedJson = hooksJson.replace(/'/g, "'\"'\"'");
 
-    // Wrap in bash heredoc to ensure it works regardless of user's default shell (e.g., nushell)
-    return `bash << 'BASH_SCRIPT'
-      set -e
+    // The actual bash script to run
+    const bashScript = `set -e
 
-      CLAUDE_DIR="$HOME/.claude"
-      SETTINGS_FILE="$CLAUDE_DIR/settings.json"
+CLAUDE_DIR="$HOME/.claude"
+SETTINGS_FILE="$CLAUDE_DIR/settings.json"
 
-      # Create .claude directory if it doesn't exist
-      mkdir -p "$CLAUDE_DIR"
+# Create .claude directory if it doesn't exist
+mkdir -p "$CLAUDE_DIR"
 
-      # Check if settings.json exists
-      if [ -f "$SETTINGS_FILE" ]; then
-        # Backup existing settings
-        cp "$SETTINGS_FILE" "$SETTINGS_FILE.backup.$(date +%Y%m%d%H%M%S)"
+# Check if settings.json exists
+if [ -f "$SETTINGS_FILE" ]; then
+  # Backup existing settings
+  cp "$SETTINGS_FILE" "$SETTINGS_FILE.backup.$(date +%Y%m%d%H%M%S)"
 
-        # Read existing settings and merge with new hooks
-        # Using Python for JSON manipulation as it's commonly available
-        python3 << 'PYTHON_SCRIPT'
+  # Read existing settings and merge with new hooks using Python
+  python3 -c '
 import json
 import os
 
@@ -493,30 +492,35 @@ settings_file = os.path.expanduser("~/.claude/settings.json")
 new_hooks = ${JSON.stringify(hooksConfig)}
 
 try:
-    with open(settings_file, 'r') as f:
+    with open(settings_file, "r") as f:
         settings = json.load(f)
 except (FileNotFoundError, json.JSONDecodeError):
     settings = {}
 
 # Merge hooks - new hooks take precedence
-if 'hooks' not in settings:
-    settings['hooks'] = {}
+if "hooks" not in settings:
+    settings["hooks"] = {}
 
-settings['hooks'].update(new_hooks.get('hooks', {}))
+settings["hooks"].update(new_hooks.get("hooks", {}))
 
-with open(settings_file, 'w') as f:
+with open(settings_file, "w") as f:
     json.dump(settings, f, indent=2)
 
 print("Hooks merged successfully")
-PYTHON_SCRIPT
-      else
-        # Create new settings file with hooks
-        echo '${escapedJson}' > "$SETTINGS_FILE"
-        echo "Settings file created with hooks"
-      fi
+'
+else
+  # Create new settings file with hooks
+  echo '${escapedJson}' > "$SETTINGS_FILE"
+  echo "Settings file created with hooks"
+fi
 
-      echo "Hook installation complete"
-BASH_SCRIPT`;
+echo "Hook installation complete"`;
+
+    // Base64 encode the script and wrap in a command that works in any shell
+    // The outer command is simple enough for any shell to parse:
+    // bash -c 'echo BASE64 | base64 -d | bash'
+    const base64Script = Buffer.from(bashScript).toString('base64');
+    return `bash -c 'echo ${base64Script} | base64 -d | bash'`;
   }
 
   /**
@@ -669,49 +673,49 @@ BASH_SCRIPT`;
    * Generate script to remove Yojimbo hooks (hooks that call localhost:3456)
    * Since hooks are shared across instances on the same machine, this removes
    * all hooks that look like they were installed by Yojimbo.
+   * Uses base64 encoding to work with any default shell (bash, zsh, nushell, fish, etc.)
    */
   private generateUninstallScript(_instanceId: string): string {
-    // Wrap in bash heredoc to ensure it works regardless of user's default shell (e.g., nushell)
-    return `bash << 'BASH_SCRIPT'
-      set -e
+    // The actual bash script to run
+    const bashScript = `set -e
 
-      SETTINGS_FILE="$HOME/.claude/settings.json"
+SETTINGS_FILE="$HOME/.claude/settings.json"
 
-      if [ ! -f "$SETTINGS_FILE" ]; then
-        echo "No settings file found, nothing to uninstall"
-        exit 0
-      fi
+if [ ! -f "$SETTINGS_FILE" ]; then
+  echo "No settings file found, nothing to uninstall"
+  exit 0
+fi
 
-      # Backup existing settings
-      cp "$SETTINGS_FILE" "$SETTINGS_FILE.backup.$(date +%Y%m%d%H%M%S)"
+# Backup existing settings
+cp "$SETTINGS_FILE" "$SETTINGS_FILE.backup.$(date +%Y%m%d%H%M%S)"
 
-      # Remove Yojimbo hooks (those that call localhost:3456) using Python
-      python3 << 'PYTHON_SCRIPT'
+# Remove Yojimbo hooks (those that call localhost:3456) using Python
+python3 -c '
 import json
 import os
 
 settings_file = os.path.expanduser("~/.claude/settings.json")
 
 try:
-    with open(settings_file, 'r') as f:
+    with open(settings_file, "r") as f:
         settings = json.load(f)
 except (FileNotFoundError, json.JSONDecodeError):
     print("No valid settings file")
     exit(0)
 
-if 'hooks' not in settings:
+if "hooks" not in settings:
     print("No hooks in settings")
     exit(0)
 
 # Remove hooks that call localhost:3456 (Yojimbo hooks)
-hooks = settings['hooks']
+hooks = settings["hooks"]
 for hook_type in list(hooks.keys()):
     hook_list = hooks[hook_type]
     if isinstance(hook_list, list):
         # Filter out hooks that call localhost:3456
         hooks[hook_type] = [
             h for h in hook_list
-            if not (isinstance(h, dict) and 'localhost:3456' in str(h))
+            if not (isinstance(h, dict) and "localhost:3456" in str(h))
         ]
         # Remove empty hook types
         if not hooks[hook_type]:
@@ -719,16 +723,19 @@ for hook_type in list(hooks.keys()):
 
 # Remove hooks key if empty
 if not hooks:
-    del settings['hooks']
+    del settings["hooks"]
 
-with open(settings_file, 'w') as f:
+with open(settings_file, "w") as f:
     json.dump(settings, f, indent=2)
 
 print("Hooks removed successfully")
-PYTHON_SCRIPT
+'
 
-      echo "Hook uninstallation complete"
-BASH_SCRIPT`;
+echo "Hook uninstallation complete"`;
+
+    // Base64 encode the script and wrap in a command that works in any shell
+    const base64Script = Buffer.from(bashScript).toString('base64');
+    return `bash -c 'echo ${base64Script} | base64 -d | bash'`;
   }
 
   /**

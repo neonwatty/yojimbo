@@ -31,6 +31,7 @@ export function RemoteMachinesSection() {
   const [editMachine, setEditMachine] = useState<RemoteMachine | null>(null);
   const [testingIds, setTestingIds] = useState<Set<string>>(new Set());
   const [testingTunnelIds, setTestingTunnelIds] = useState<Set<string>>(new Set());
+  const [isHelpExpanded, setIsHelpExpanded] = useState(false);
 
   const handleTestConnection = async (id: string) => {
     setTestingIds((prev) => new Set(prev).add(id));
@@ -127,35 +128,88 @@ export function RemoteMachinesSection() {
         Run Claude Code sessions on remote machines via SSH. Port forwards are automatically created when dev servers start.
       </p>
 
+      {/* Expandable macOS Setup Guide */}
+      <div className="bg-surface-800 border border-surface-600 rounded-lg mb-3 overflow-hidden">
+        <button
+          onClick={() => setIsHelpExpanded(!isHelpExpanded)}
+          className="w-full flex items-center justify-between px-3 py-2 hover:bg-surface-700 transition-colors"
+        >
+          <div className="flex items-center gap-2 text-xs text-theme-muted">
+            <Icons.help />
+            <span className="font-medium">macOS Setup Guide</span>
+          </div>
+          <span className={`text-theme-dim transition-transform ${isHelpExpanded ? 'rotate-180' : ''}`}>
+            <Icons.chevronDown />
+          </span>
+        </button>
+
+        {isHelpExpanded && (
+          <div className="px-3 pb-3 border-t border-surface-600 text-xs">
+            <div className="mt-3 space-y-3">
+              <div>
+                <p className="font-medium text-theme-muted mb-1">Prerequisites</p>
+                <ul className="list-disc list-inside text-theme-dim space-y-0.5 ml-1">
+                  <li>Both machines on Tailscale (recommended) or same local network</li>
+                  <li>Claude Code installed on the remote Mac</li>
+                  <li>Remote Login enabled on the remote Mac</li>
+                </ul>
+              </div>
+
+              <div>
+                <p className="font-medium text-theme-muted mb-1">1. Enable Remote Login on the remote Mac</p>
+                <p className="text-theme-dim mb-1">On the Mac you want to connect <strong className="text-theme-muted">to</strong>:</p>
+                <code className="block bg-surface-900 border border-surface-600 rounded px-2 py-1.5 text-state-working font-mono text-[11px]">
+                  System Settings → General → Sharing → Remote Login → On
+                </code>
+              </div>
+
+              <div>
+                <p className="font-medium text-theme-muted mb-1">2. Copy your SSH key to the remote Mac</p>
+                <p className="text-theme-dim mb-1">On the Mac you're connecting <strong className="text-theme-muted">from</strong> (where Yojimbo runs):</p>
+                <code className="block bg-surface-900 border border-surface-600 rounded px-2 py-1.5 text-state-working font-mono text-[11px]">
+                  ssh-copy-id username@hostname
+                </code>
+                <p className="text-theme-dim mt-1">
+                  Replace <code className="bg-surface-700 px-1 rounded text-amber-400">username</code> with the remote Mac's login and{' '}
+                  <code className="bg-surface-700 px-1 rounded text-amber-400">hostname</code> with its Tailscale name.
+                </p>
+              </div>
+
+              <div>
+                <p className="font-medium text-theme-muted mb-1">3. Test the connection</p>
+                <code className="block bg-surface-900 border border-surface-600 rounded px-2 py-1.5 text-state-working font-mono text-[11px]">
+                  ssh username@hostname "echo 'Connection successful!'"
+                </code>
+              </div>
+
+              <div>
+                <p className="font-medium text-theme-muted mb-1">4. Add the machine in Yojimbo</p>
+                <p className="text-theme-dim">Click "Add Machine" and enter the hostname and username.</p>
+              </div>
+
+              <div className="bg-blue-950/50 border border-blue-800/50 rounded p-2 mt-2">
+                <p className="text-blue-300">
+                  <strong>💡 Tip:</strong> Run <code className="bg-surface-700 px-1 rounded text-theme-muted">whoami</code> in Terminal on the remote Mac to find the exact username.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
       {machines.length === 0 ? (
-        <div className="bg-surface-800 border border-surface-600 rounded-lg p-4">
-          <div className="text-center mb-4">
-            <Icons.server />
-            <p className="text-sm text-theme-muted mt-2">No remote machines configured</p>
-          </div>
-
-          <div className="text-xs text-theme-dim space-y-2 mb-4 bg-surface-900 rounded p-3">
-            <p className="font-medium text-theme-muted">Prerequisites:</p>
-            <ul className="list-disc list-inside space-y-1 ml-1">
-              <li>SSH key access to the remote machine</li>
-              <li>Claude Code installed on the remote machine</li>
-              <li>Your SSH key added to ~/.ssh/authorized_keys on remote</li>
-            </ul>
-            <p className="font-medium text-theme-muted mt-3">For macOS remotes:</p>
-            <p className="ml-1">
-              Run <code className="bg-surface-700 px-1 rounded text-theme-muted">security unlock-keychain</code> on
-              the remote machine before starting Claude Code to allow keychain access.
-            </p>
-          </div>
-
-          <div className="text-center">
-            <button
-              onClick={() => setIsAddModalOpen(true)}
-              className="text-xs text-accent hover:text-accent/80 transition-colors"
-            >
-              Add your first machine
-            </button>
-          </div>
+        <div className="bg-surface-800 border border-surface-600 rounded-lg p-4 text-center">
+          <Icons.server />
+          <p className="text-sm text-theme-muted mt-2">No remote machines configured</p>
+          <p className="text-xs text-theme-dim mt-1 mb-3">
+            Follow the setup guide above, then add your first machine.
+          </p>
+          <button
+            onClick={() => setIsAddModalOpen(true)}
+            className="text-xs text-accent hover:text-accent/80 transition-colors"
+          >
+            Add your first machine
+          </button>
         </div>
       ) : (
         <div className="space-y-2">
@@ -238,10 +292,6 @@ export function RemoteMachinesSection() {
 
           <p className="text-[10px] text-theme-dim mt-3 px-1">
             To use: Create a new session and select "Remote" → choose a machine. Dev server ports are automatically forwarded to localhost.
-          </p>
-          <p className="text-[10px] text-theme-dim mt-1 px-1">
-            <strong>macOS tip:</strong> Run <code className="bg-surface-700 px-1 rounded">security unlock-keychain</code> on
-            the remote before starting Claude Code to allow keychain access.
           </p>
         </div>
       )}

@@ -485,4 +485,44 @@ router.get('/:id/hooks-status', async (req, res) => {
   }
 });
 
+// GET /api/machines/:id/tunnel-status - Check if reverse tunnel is active for machine
+router.get('/:id/tunnel-status', (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const db = getDatabase();
+    const existing = db
+      .prepare('SELECT * FROM remote_machines WHERE id = ?')
+      .get(id) as RemoteMachineRow | undefined;
+
+    if (!existing) {
+      return res.status(404).json({ success: false, error: 'Machine not found' });
+    }
+
+    const tunnel = reverseTunnelService.getMachineTunnel(id);
+
+    if (tunnel) {
+      res.json({
+        success: true,
+        data: {
+          tunnelActive: true,
+          remotePort: tunnel.remotePort,
+          localPort: tunnel.localPort,
+          instanceCount: tunnel.instanceIds.size,
+        },
+      });
+    } else {
+      res.json({
+        success: true,
+        data: {
+          tunnelActive: false,
+        },
+      });
+    }
+  } catch (error) {
+    console.error('Error checking tunnel status:', error);
+    res.status(500).json({ success: false, error: 'Failed to check tunnel status' });
+  }
+});
+
 export default router;

@@ -277,6 +277,12 @@ router.post('/status', (req, res) => {
     if (instance) {
       const previousStatus = instance.status;
       const status: InstanceStatus = event === 'working' ? 'working' : 'idle';
+
+      // Record idle status hooks to prevent remote polling from overriding
+      if (status === 'idle') {
+        hookPriorityService.recordHook(instance.id, 'notification'); // Use 'notification' type for idle status
+      }
+
       updateInstanceStatus(instance.id, status, `status:${event}`);
       debugEntry.statusBefore = previousStatus;
       debugEntry.statusAfter = status;

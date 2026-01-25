@@ -558,4 +558,105 @@ router.post('/:id/test-tunnel', async (req, res) => {
   }
 });
 
+// GET /api/machines/:id/debug-hooks - Get detailed diagnostic information about hooks
+router.get('/:id/debug-hooks', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const db = getDatabase();
+    const machine = db
+      .prepare('SELECT * FROM remote_machines WHERE id = ?')
+      .get(id) as RemoteMachineRow | undefined;
+
+    if (!machine) {
+      return res.status(404).json({ success: false, error: 'Machine not found' });
+    }
+
+    // Gather diagnostic info in parallel
+    const diagnostics: {
+      settingsJson?: string;
+      settingsError?: string;
+      jqInstalled?: boolean;
+      jqVersion?: string;
+      jqError?: string;
+      curlInstalled?: boolean;
+      curlVersion?: string;
+      tunnelReachable?: boolean;
+      tunnelError?: string;
+      hookTestResult?: string;
+      hookTestError?: string;
+    } = {};
+
+    // 1. Read settings.json content
+    const settingsResult = await sshConnectionService.executeCommand(
+      id,
+      "bash -c 'cat ~/.claude/settings.json 2>&1 || echo \"FILE_NOT_FOUND\"'"
+    );
+    if (settingsResult.success) {
+      diagnostics.settingsJson = settingsResult.stdout;
+    } else {
+      diagnostics.settingsError = settingsResult.stderr;
+    }
+
+    // 2. Check if jq is installed
+    const jqResult = await sshConnectionService.executeCommand(
+      id,
+      "bash -c 'which jq && jq --version 2>&1 || echo \"JQ_NOT_FOUND\"'"
+    );
+    if (jqResult.stdout.includes('JQ_NOT_FOUND')) {
+      diagnostics.jqInstalled = false;
+      diagnostics.jqError = 'jq not found - hooks will not work without jq installed';
+    } else {
+      diagnostics.jqInstalled = true;
+      const lines = jqResult.stdout.trim().split('\n');
+      diagnostics.jqVersion = lines[1] || lines[0];
+    }
+
+    // 3. Check if curl is installed
+    const curlResult = await sshConnectionService.executeCommand(
+      id,
+      "bash -c 'which curl && curl --version 2>&1 | head -1 || echo \"CURL_NOT_FOUND\"'"
+    );
+    diagnostics.curlInstalled = !curlResult.stdout.includes('CURL_NOT_FOUND');
+    if (diagnostics.curlInstalled) {
+      const lines = curlResult.stdout.trim().split('\n');
+      diagnostics.curlVersion = lines[1] || lines[0];
+    }
+
+    // 4. Test if tunnel is reachable (duplicate of test-tunnel but included for convenience)
+    const tunnelResult = await sshConnectionService.testTunnelConnectivity(
+      machine.hostname,
+      machine.port,
+      machine.username,
+      machine.ssh_key_path || undefined,
+      3456
+    );
+    diagnostics.tunnelReachable = tunnelResult.tunnelWorking;
+    if (!tunnelResult.tunnelWorking) {
+      diagnostics.tunnelError = tunnelResult.error;
+    }
+
+    // 5. Simulate a hook call (without the actual hook, just the command pattern)
+    // This tests if the full pipeline works: jq + curl
+    if (diagnostics.jqInstalled && diagnostics.tunnelReachable) {
+      const testPayload = JSON.stringify({ cwd: '/test/path' });
+      const hookTestCmd = `bash -c 'echo '"'"'${testPayload}'"'"' | jq '"'"'{event:"test",projectDir:.cwd,machineId:"${id}"}'"'"' | curl -s -X POST "http://localhost:3456/api/hooks/status" -H "Content-Type: application/json" -d @- 2>&1'`;
+      const hookTestResult = await sshConnectionService.executeCommand(id, hookTestCmd);
+      if (hookTestResult.success) {
+        diagnostics.hookTestResult = hookTestResult.stdout;
+      } else {
+        diagnostics.hookTestError = hookTestResult.stderr || hookTestResult.stdout;
+      }
+    }
+
+    res.json({
+      success: true,
+      data: diagnostics,
+    });
+  } catch (error) {
+    console.error('Error debugging hooks:', error);
+    res.status(500).json({ success: false, error: 'Failed to debug hooks' });
+  }
+});
+
 export default router;

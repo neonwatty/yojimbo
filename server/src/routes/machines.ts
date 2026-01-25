@@ -525,4 +525,37 @@ router.get('/:id/tunnel-status', (req, res) => {
   }
 });
 
+// POST /api/machines/:id/test-tunnel - Test tunnel connectivity by running curl on remote machine
+router.post('/:id/test-tunnel', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const db = getDatabase();
+    const machine = db
+      .prepare('SELECT * FROM remote_machines WHERE id = ?')
+      .get(id) as RemoteMachineRow | undefined;
+
+    if (!machine) {
+      return res.status(404).json({ success: false, error: 'Machine not found' });
+    }
+
+    // Test tunnel by running curl on the remote machine
+    const result = await sshConnectionService.testTunnelConnectivity(
+      machine.hostname,
+      machine.port,
+      machine.username,
+      machine.ssh_key_path || undefined,
+      3456  // The port hooks use
+    );
+
+    res.json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    console.error('Error testing tunnel:', error);
+    res.status(500).json({ success: false, error: 'Failed to test tunnel' });
+  }
+});
+
 export default router;

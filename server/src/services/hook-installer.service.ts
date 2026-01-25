@@ -466,14 +466,16 @@ class HookInstallerService {
   private generateInstallScript(hooksConfig: object): string {
     const hooksJson = JSON.stringify(hooksConfig, null, 2);
 
-    // Escape single quotes in the JSON for the shell script
-    const escapedJson = hooksJson.replace(/'/g, "'\"'\"'");
+    // Base64 encode the hooks JSON to safely pass it to Python
+    // This avoids any issues with quotes/escaping in the JSON
+    const hooksBase64 = Buffer.from(hooksJson).toString('base64');
 
     // The actual bash script to run
     const bashScript = `set -e
 
 CLAUDE_DIR="$HOME/.claude"
 SETTINGS_FILE="$CLAUDE_DIR/settings.json"
+HOOKS_BASE64="${hooksBase64}"
 
 # Create .claude directory if it doesn't exist
 mkdir -p "$CLAUDE_DIR"
@@ -484,33 +486,35 @@ if [ -f "$SETTINGS_FILE" ]; then
   cp "$SETTINGS_FILE" "$SETTINGS_FILE.backup.$(date +%Y%m%d%H%M%S)"
 
   # Read existing settings and merge with new hooks using Python
-  python3 -c '
+  python3 -c "
 import json
 import os
+import base64
 
-settings_file = os.path.expanduser("~/.claude/settings.json")
-new_hooks = ${JSON.stringify(hooksConfig)}
+settings_file = os.path.expanduser('~/.claude/settings.json')
+hooks_b64 = '$HOOKS_BASE64'
+new_hooks = json.loads(base64.b64decode(hooks_b64).decode('utf-8'))
 
 try:
-    with open(settings_file, "r") as f:
+    with open(settings_file, 'r') as f:
         settings = json.load(f)
 except (FileNotFoundError, json.JSONDecodeError):
     settings = {}
 
 # Merge hooks - new hooks take precedence
-if "hooks" not in settings:
-    settings["hooks"] = {}
+if 'hooks' not in settings:
+    settings['hooks'] = {}
 
-settings["hooks"].update(new_hooks.get("hooks", {}))
+settings['hooks'].update(new_hooks.get('hooks', {}))
 
-with open(settings_file, "w") as f:
+with open(settings_file, 'w') as f:
     json.dump(settings, f, indent=2)
 
-print("Hooks merged successfully")
-'
+print('Hooks merged successfully')
+"
 else
-  # Create new settings file with hooks
-  echo '${escapedJson}' > "$SETTINGS_FILE"
+  # Create new settings file with hooks - decode base64 and write
+  echo "$HOOKS_BASE64" | base64 -d > "$SETTINGS_FILE"
   echo "Settings file created with hooks"
 fi
 

@@ -84,7 +84,7 @@ export function logHookReceived(params: {
  */
 export function logInstanceLookup(params: {
   found: boolean;
-  method: 'id' | 'directory' | 'none';
+  method: 'id' | 'directory' | 'machine+dir' | 'none';
   instanceId?: string;
   instanceName?: string;
   projectDir: string;

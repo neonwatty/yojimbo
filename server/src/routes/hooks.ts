@@ -26,6 +26,38 @@ function findInstanceById(instanceId: string): InstanceRow | null {
     .get(instanceId) as InstanceRow | undefined) || null;
 }
 
+// Helper to find instance by machineId and projectDir (for remote machines)
+function findInstanceByMachineAndDir(machineId: string, projectDir: string): InstanceRow | null {
+  if (!machineId || !projectDir) return null;
+  const db = getDatabase();
+
+  // Normalize the project directory for comparison
+  // Remote hooks may send paths like ~/projects/foo or /Users/user/projects/foo
+  // We need to match against the working_dir stored in the database
+  const normalizedDir = projectDir.replace(/^~/, '');
+
+  // First try exact match
+  let instance = db
+    .prepare('SELECT * FROM instances WHERE machine_id = ? AND working_dir = ? AND closed_at IS NULL')
+    .get(machineId, projectDir) as InstanceRow | undefined;
+
+  if (!instance) {
+    // Try matching with ~ prefix
+    instance = db
+      .prepare('SELECT * FROM instances WHERE machine_id = ? AND working_dir = ? AND closed_at IS NULL')
+      .get(machineId, `~${normalizedDir}`) as InstanceRow | undefined;
+  }
+
+  if (!instance) {
+    // Try matching without ~ prefix
+    instance = db
+      .prepare('SELECT * FROM instances WHERE machine_id = ? AND working_dir LIKE ? AND closed_at IS NULL')
+      .get(machineId, `%${normalizedDir}`) as InstanceRow | undefined;
+  }
+
+  return instance || null;
+}
+
 // Update instance status
 function updateInstanceStatus(instanceId: string, status: InstanceStatus, hookType: string): void {
   const db = getDatabase();
@@ -85,13 +117,19 @@ router.post('/status', (req, res) => {
 
     logHookReceived({ hookType: `status:${event}`, projectDir, instanceId, machineId });
 
-    // Only match by instanceId - no directory fallback
-    // This ensures external Claude sessions (without CC_INSTANCE_ID) don't affect Yojimbo instances
-    const instance = findInstanceById(instanceId || '');
+    // Try to find instance by instanceId first (local instances with CC_INSTANCE_ID)
+    // Then try machineId + projectDir (remote instances via hooks)
+    let instance = findInstanceById(instanceId || '');
+    let lookupMethod: 'id' | 'directory' | 'machine+dir' | 'none' = instance ? 'id' : 'none';
+
+    if (!instance && machineId && projectDir) {
+      instance = findInstanceByMachineAndDir(machineId, projectDir);
+      lookupMethod = instance ? 'machine+dir' : 'none';
+    }
 
     logInstanceLookup({
       found: !!instance,
-      method: instance ? 'id' : 'none',
+      method: lookupMethod,
       instanceId: instance?.id,
       instanceName: instance?.name,
       projectDir,
@@ -117,12 +155,18 @@ router.post('/notification', (req, res) => {
 
     logHookReceived({ hookType: 'notification', projectDir, instanceId, machineId });
 
-    // Only match by instanceId - no directory fallback
-    const instance = findInstanceById(instanceId || '');
+    // Try to find instance by instanceId first, then machineId + projectDir
+    let instance = findInstanceById(instanceId || '');
+    let lookupMethod: 'id' | 'directory' | 'machine+dir' | 'none' = instance ? 'id' : 'none';
+
+    if (!instance && machineId && projectDir) {
+      instance = findInstanceByMachineAndDir(machineId, projectDir);
+      lookupMethod = instance ? 'machine+dir' : 'none';
+    }
 
     logInstanceLookup({
       found: !!instance,
-      method: instance ? 'id' : 'none',
+      method: lookupMethod,
       instanceId: instance?.id,
       instanceName: instance?.name,
       projectDir,
@@ -149,12 +193,18 @@ router.post('/stop', (req, res) => {
 
     logHookReceived({ hookType: 'stop', projectDir, instanceId, machineId });
 
-    // Only match by instanceId - no directory fallback
-    const instance = findInstanceById(instanceId || '');
+    // Try to find instance by instanceId first, then machineId + projectDir
+    let instance = findInstanceById(instanceId || '');
+    let lookupMethod: 'id' | 'directory' | 'machine+dir' | 'none' = instance ? 'id' : 'none';
+
+    if (!instance && machineId && projectDir) {
+      instance = findInstanceByMachineAndDir(machineId, projectDir);
+      lookupMethod = instance ? 'machine+dir' : 'none';
+    }
 
     logInstanceLookup({
       found: !!instance,
-      method: instance ? 'id' : 'none',
+      method: lookupMethod,
       instanceId: instance?.id,
       instanceName: instance?.name,
       projectDir,

@@ -3,6 +3,7 @@ import { sshConnectionService } from './ssh-connection.service.js';
 import { broadcast } from '../websocket/server.js';
 import { createActivityEvent } from './feed.service.js';
 import { logStatusChange } from './status-logger.service.js';
+import { hookPriorityService } from './hook-priority.service.js';
 import type { InstanceStatus } from '@cc-orchestrator/shared';
 
 interface RemoteInstanceRow {
@@ -89,6 +90,21 @@ class RemoteStatusPollerService {
    */
   private async pollInstance(instance: RemoteInstanceRow): Promise<void> {
     try {
+      // Check if a recent hook should take priority over polling
+      if (hookPriorityService.shouldDeferToHook(instance.id)) {
+        const hookInfo = hookPriorityService.getRecentHook(instance.id);
+        logStatusChange({
+          instanceId: instance.id,
+          instanceName: instance.name,
+          oldStatus: instance.status,
+          newStatus: instance.status, // No change - deferred to hook
+          source: 'remote-poll',
+          reason: `Deferred to recent ${hookInfo?.hookType} hook (within grace period)`,
+          metadata: { deferredToHook: true, hookType: hookInfo?.hookType },
+        });
+        return; // Skip this instance - trust the hook
+      }
+
       const result = await sshConnectionService.checkRemoteClaudeStatus(
         instance.machine_id,
         instance.working_dir

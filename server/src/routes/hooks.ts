@@ -5,7 +5,7 @@ import { createActivityEvent } from '../services/feed.service.js';
 import { statusTimeoutService } from '../services/status-timeout.service.js';
 import { hookPriorityService } from '../services/hook-priority.service.js';
 import { logStatusChange, logHookReceived, logInstanceLookup } from '../services/status-logger.service.js';
-import type { HookStatusEvent, HookNotificationEvent, HookStopEvent, InstanceStatus } from '@cc-orchestrator/shared';
+import type { HookStatusEvent, HookNotificationEvent, HookStopEvent, InstanceStatus, MachineStatus } from '@cc-orchestrator/shared';
 
 const router = Router();
 
@@ -30,6 +30,67 @@ function addDebugEntry(entry: Omit<HookDebugEntry, 'timestamp'>) {
   });
   if (hookDebugLog.length > MAX_DEBUG_LOG) {
     hookDebugLog.pop();
+  }
+}
+
+// Database row type for remote_machines table
+interface RemoteMachineRow {
+  id: string;
+  name: string;
+  hostname: string;
+  port: number;
+  username: string;
+  ssh_key_path: string | null;
+  forward_credentials: number;
+  status: MachineStatus;
+  last_connected_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// Helper to convert DB row to RemoteMachine
+function rowToMachine(row: RemoteMachineRow) {
+  return {
+    id: row.id,
+    name: row.name,
+    hostname: row.hostname,
+    port: row.port,
+    username: row.username,
+    sshKeyPath: row.ssh_key_path,
+    forwardCredentials: Boolean(row.forward_credentials),
+    status: row.status,
+    lastConnectedAt: row.last_connected_at,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+// Helper to update machine status when hook activity proves connectivity
+function updateMachineOnlineStatus(machineId: string | undefined): void {
+  if (!machineId) return;
+
+  const db = getDatabase();
+
+  // Update machine status to online if it's currently offline or unknown
+  const result = db.prepare(`
+    UPDATE remote_machines
+    SET status = 'online',
+        last_connected_at = datetime('now'),
+        updated_at = datetime('now')
+    WHERE id = ? AND status != 'online'
+  `).run(machineId);
+
+  if (result.changes > 0) {
+    console.log(`📡 Machine ${machineId} status updated to online (hook activity)`);
+
+    // Broadcast machine update
+    const row = db.prepare('SELECT * FROM remote_machines WHERE id = ?').get(machineId) as RemoteMachineRow | undefined;
+    if (row) {
+      broadcast({
+        type: 'machine:updated',
+        machine: rowToMachine(row),
+      });
+    }
   }
 }
 
@@ -219,6 +280,9 @@ router.post('/status', (req, res) => {
       updateInstanceStatus(instance.id, status, `status:${event}`);
       debugEntry.statusBefore = previousStatus;
       debugEntry.statusAfter = status;
+
+      // Update machine status to online when receiving hooks (proves connectivity)
+      updateMachineOnlineStatus(machineId);
     }
 
     addDebugEntry(debugEntry);
@@ -260,6 +324,9 @@ router.post('/notification', (req, res) => {
       hookPriorityService.recordHook(instance.id, 'notification');
       // Notification events now set to idle (Claude is done working, waiting for user)
       updateInstanceStatus(instance.id, 'idle', 'notification');
+
+      // Update machine status to online when receiving hooks (proves connectivity)
+      updateMachineOnlineStatus(machineId);
     }
 
     res.json({ ok: true });
@@ -297,6 +364,9 @@ router.post('/stop', (req, res) => {
       // Record this hook to prevent local polling from overriding
       hookPriorityService.recordHook(instance.id, 'stop');
       updateInstanceStatus(instance.id, 'idle', 'stop');
+
+      // Update machine status to online when receiving hooks (proves connectivity)
+      updateMachineOnlineStatus(machineId);
     }
 
     res.json({ ok: true });

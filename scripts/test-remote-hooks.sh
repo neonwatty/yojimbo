@@ -108,7 +108,8 @@ TUNNEL_TEST_RESPONSE=$(curl -s -X POST "http://${STAGING_HOST}:${STAGING_PORT}/a
 echo "Tunnel Test Response:"
 echo "$TUNNEL_TEST_RESPONSE" | jq .
 
-TUNNEL_WORKING=$(echo "$TUNNEL_TEST_RESPONSE" | jq -r '.data.tunnelWorking // false')
+# Handle both response formats: .data.tunnelWorking (new) or .data.active (existing)
+TUNNEL_WORKING=$(echo "$TUNNEL_TEST_RESPONSE" | jq -r '.data.tunnelWorking // .data.active // false')
 TUNNEL_ERROR=$(echo "$TUNNEL_TEST_RESPONSE" | jq -r '.data.error // empty')
 
 if [ "$TUNNEL_WORKING" == "true" ]; then

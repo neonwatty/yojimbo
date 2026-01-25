@@ -1,4 +1,4 @@
-.PHONY: dev start stop build lint lint-fix knip test test-unit test-e2e test-local clean db-reset db-migrate install hooks-install hooks-uninstall help pm2-start pm2-stop pm2-restart pm2-reload pm2-logs pm2-status pm2-setup pm2-delete smart-cleanup smart-test smart-prompt
+.PHONY: dev start stop build lint lint-fix knip test test-unit test-e2e test-local test-remote-hooks clean db-reset db-migrate install hooks-install hooks-uninstall help pm2-start pm2-stop pm2-restart pm2-reload pm2-logs pm2-status pm2-setup pm2-delete smart-cleanup smart-test smart-prompt
 
 # Default target
 .DEFAULT_GOAL := help
@@ -164,6 +164,12 @@ test-local:
 	@echo "$(YELLOW)Note: Keychain tests require macOS and will test real keychain access$(NC)"
 	@unset CI && npm run test --workspace=server
 	@echo "$(GREEN)All local tests complete$(NC)"
+
+## test-remote-hooks: Test hooks installation on remote machine via staging API
+test-remote-hooks:
+	@echo "$(CYAN)Testing remote hooks installation...$(NC)"
+	@./scripts/test-remote-hooks.sh
+	@echo "$(GREEN)Remote hooks test complete$(NC)"
 
 #===============================================================================
 # Database

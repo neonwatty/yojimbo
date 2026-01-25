@@ -6,7 +6,6 @@ As usage scales, managing multiple terminals, tabs, tmux splits, markdown plans,
 
 - **Manage terminal instances** — with hooks into Claude Code so you always know which are churning, idle, or awaiting input
 - **Remote SSH sessions** — connect to remote machines and track Claude status across your fleet
-- **Activity feed** — real-time notifications when instances start, complete, or error
 - **View markdown plans** — keep your roadmaps and specs visible alongside active work
 - **Preview mockups** — render HTML files without leaving the environment
 - **Mobile-optimized UI** — manage instances from your phone or tablet
@@ -141,28 +140,17 @@ For status tracking to work on remote instances, you need to configure hooks on 
 
 If an instance gets stuck showing "Working" status, you can manually reset it to "Idle" using the **Reset Status** button in the instance header.
 
-## Activity Feed
+### Shell Compatibility
 
-The Activity Feed tracks events across all your instances:
+Yojimbo wraps SSH commands in `bash` to ensure compatibility with remote machines using alternative shells. Tested shells:
 
-- **Started** — When Claude begins working
-- **Completed** — When Claude finishes a task
-- **Error** — When something goes wrong
+| Shell | Status |
+|-------|--------|
+| bash | ✅ Fully supported |
+| zsh | ✅ Fully supported |
+| nushell | ✅ Supported (commands wrapped in bash) |
 
-### Accessing the Activity Feed
-
-- Click **Activity** in the header to view all events
-- Unread events show a badge count
-- Click an event to mark it as read
-- Use **Mark all read** to clear all unread indicators
-
-### Configuring Notifications
-
-In Settings, under **Activity Feed**, you can:
-
-- Toggle which event types to track (Completed, Error, Started)
-- Set the retention period for old events
-- Show/hide the Activity button in navigation
+If you encounter issues with other shells, please open an issue.
 
 ## Architecture
 
@@ -254,13 +242,6 @@ yojimbo/
 - `DELETE /api/machines/:id` - Remove a machine
 - `POST /api/machines/:id/test` - Test SSH connection
 
-### Activity Feed
-- `GET /api/feed` - List activity events
-- `GET /api/feed/stats` - Get unread count and totals
-- `PATCH /api/feed/:id/read` - Mark event as read
-- `POST /api/feed/mark-all-read` - Mark all events as read
-- `DELETE /api/feed` - Clear all events
-
 ### Keychain (macOS)
 - `POST /api/keychain/unlock` - Unlock local macOS login keychain
 - `GET /api/keychain/status` - Check if keychain is locked
@@ -285,8 +266,6 @@ The server communicates with clients via WebSocket at `ws://localhost:3456/ws`:
 - `terminal:resize` - Resize terminal
 - `instance:updated` - Instance state changed
 - `status:changed` - Claude status changed
-- `feed:new` - New activity event created
-- `feed:updated` - Activity event updated (e.g., marked as read)
 - `file:changed` - Plan or mockup file modified
 - `file:deleted` - Plan or mockup file deleted
 

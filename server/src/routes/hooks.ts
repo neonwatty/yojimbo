@@ -141,16 +141,16 @@ function findInstanceByMachineAndDir(machineId: string, projectDir: string): Ins
   }
 
   // Try matching "~" working_dir to home directory paths
-  // If projectDir looks like a home directory (/Users/..., /home/..., or C:\Users\...)
-  // and instance working_dir is "~", that's a match
-  const isHomeDirPath = /^(\/Users\/|\/home\/|C:\\Users\\)/i.test(projectDir);
-  if (isHomeDirPath) {
+  // ONLY match if projectDir is the EXACT home directory (not a subdirectory)
+  // e.g., /Users/username matches ~, but /Users/username/Desktop does NOT
+  const isExactHomeDir = /^(\/Users\/[^/]+|\/home\/[^/]+|C:\\Users\\[^\\]+)$/.test(projectDir);
+  if (isExactHomeDir) {
     instance = db
       .prepare('SELECT * FROM instances WHERE machine_id = ? AND working_dir = ? AND closed_at IS NULL')
       .get(machineId, '~') as InstanceRow | undefined;
 
     if (instance) {
-      console.log(`[Hook Lookup] Found by ~ match (home dir): ${instance.name}`);
+      console.log(`[Hook Lookup] Found by ~ match (exact home dir): ${instance.name}`);
       return instance;
     }
   }

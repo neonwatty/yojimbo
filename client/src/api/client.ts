@@ -350,6 +350,18 @@ export const machinesApi = {
     request<ApiResponse<{ installed: boolean; hookTypes: string[]; error?: string }>>(
       `/machines/${id}/hooks-status`
     ),
+
+  // Machine-level keychain unlock
+  unlockKeychain: (id: string) =>
+    request<ApiResponse<{ unlocked?: boolean; alreadyUnlocked?: boolean; message: string }>>(
+      `/machines/${id}/unlock-keychain`,
+      { method: 'POST' }
+    ),
+
+  getKeychainStatus: (id: string) =>
+    request<ApiResponse<{ unlocked: boolean; message: string }>>(
+      `/machines/${id}/keychain-status`
+    ),
 };
 
 // SSH API

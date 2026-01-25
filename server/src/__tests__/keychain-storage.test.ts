@@ -272,4 +272,68 @@ describe.skipIf(process.env.CI)('KeychainStorageService', () => {
       expect(result).toBe(false);
     });
   });
+
+  describe('Machine Unlock State Tracking', () => {
+    const machineId1 = 'machine-1';
+    const machineId2 = 'machine-2';
+
+    beforeEach(() => {
+      // Clear any existing unlock state
+      keychainStorageService.clearAllUnlockState();
+    });
+
+    it('should initially report machines as not unlocked', () => {
+      expect(keychainStorageService.isUnlocked(machineId1)).toBe(false);
+      expect(keychainStorageService.isUnlocked(machineId2)).toBe(false);
+    });
+
+    it('should mark a machine as unlocked', () => {
+      keychainStorageService.markUnlocked(machineId1);
+
+      expect(keychainStorageService.isUnlocked(machineId1)).toBe(true);
+      expect(keychainStorageService.isUnlocked(machineId2)).toBe(false);
+    });
+
+    it('should mark multiple machines as unlocked independently', () => {
+      keychainStorageService.markUnlocked(machineId1);
+      keychainStorageService.markUnlocked(machineId2);
+
+      expect(keychainStorageService.isUnlocked(machineId1)).toBe(true);
+      expect(keychainStorageService.isUnlocked(machineId2)).toBe(true);
+    });
+
+    it('should mark a machine as locked', () => {
+      keychainStorageService.markUnlocked(machineId1);
+      expect(keychainStorageService.isUnlocked(machineId1)).toBe(true);
+
+      keychainStorageService.markLocked(machineId1);
+      expect(keychainStorageService.isUnlocked(machineId1)).toBe(false);
+    });
+
+    it('should handle marking a non-unlocked machine as locked (no-op)', () => {
+      keychainStorageService.markLocked(machineId1);
+      expect(keychainStorageService.isUnlocked(machineId1)).toBe(false);
+    });
+
+    it('should clear all unlock state', () => {
+      keychainStorageService.markUnlocked(machineId1);
+      keychainStorageService.markUnlocked(machineId2);
+
+      keychainStorageService.clearAllUnlockState();
+
+      expect(keychainStorageService.isUnlocked(machineId1)).toBe(false);
+      expect(keychainStorageService.isUnlocked(machineId2)).toBe(false);
+    });
+
+    it('should be idempotent for multiple unlock calls', () => {
+      keychainStorageService.markUnlocked(machineId1);
+      keychainStorageService.markUnlocked(machineId1);
+      keychainStorageService.markUnlocked(machineId1);
+
+      expect(keychainStorageService.isUnlocked(machineId1)).toBe(true);
+
+      keychainStorageService.markLocked(machineId1);
+      expect(keychainStorageService.isUnlocked(machineId1)).toBe(false);
+    });
+  });
 });

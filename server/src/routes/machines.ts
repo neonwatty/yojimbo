@@ -4,6 +4,7 @@ import { getDatabase } from '../db/connection.js';
 import { sshConnectionService } from '../services/ssh-connection.service.js';
 import { reverseTunnelService } from '../services/reverse-tunnel.service.js';
 import { hookInstallerService } from '../services/hook-installer.service.js';
+import { keychainStorageService } from '../services/keychain-storage.service.js';
 import { broadcast } from '../websocket/server.js';
 import type { RemoteMachine, MachineStatus } from '@cc-orchestrator/shared';
 
@@ -255,6 +256,126 @@ router.post('/:id/test', async (req, res) => {
   } catch (error) {
     console.error('Error testing machine connection:', error);
     res.status(500).json({ success: false, error: 'Failed to test connection' });
+  }
+});
+
+// POST /api/machines/:id/unlock-keychain - Unlock the remote machine's keychain
+// This is done once per machine (not per instance) and the unlock state is tracked
+// for the duration of the server session.
+router.post('/:id/unlock-keychain', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const db = getDatabase();
+    const machine = db
+      .prepare('SELECT * FROM remote_machines WHERE id = ?')
+      .get(id) as RemoteMachineRow | undefined;
+
+    if (!machine) {
+      return res.status(404).json({ success: false, error: 'Machine not found' });
+    }
+
+    // Check if already unlocked in this session
+    if (keychainStorageService.isUnlocked(id)) {
+      return res.json({
+        success: true,
+        data: {
+          alreadyUnlocked: true,
+          message: 'Keychain already unlocked for this machine in this session',
+        },
+      });
+    }
+
+    // Get stored password from local keychain
+    const passwordResult = await keychainStorageService.getPassword(id);
+
+    if (!passwordResult.success || !passwordResult.password) {
+      return res.status(400).json({
+        success: false,
+        error: 'No stored password found for this machine. Please save the keychain password first.',
+      });
+    }
+
+    // Unlock the remote keychain via SSH
+    // First send the unlock command, then the password
+    const keychainPath = '~/Library/Keychains/login.keychain-db';
+
+    try {
+      // Execute unlock command and pipe password via stdin
+      // The -p flag is avoided to prevent password exposure in process list
+      // Using bash -c with input redirection for secure password passing
+      const unlockCmd = `bash -c 'echo "${passwordResult.password.replace(/"/g, '\\"').replace(/\$/g, '\\$')}" | security unlock-keychain ${keychainPath} 2>&1'`;
+      const result = await sshConnectionService.executeCommand(id, unlockCmd);
+
+      // Check for common error patterns
+      const output = result.stdout + (result.stderr || '');
+      const isError = output.toLowerCase().includes('incorrect') ||
+                      output.toLowerCase().includes('password') ||
+                      output.toLowerCase().includes('error');
+
+      if (result.success && !isError) {
+        // Mark as unlocked for this session
+        keychainStorageService.markUnlocked(id);
+
+        console.log(`🔓 Machine ${machine.name} (${id}) keychain unlocked successfully`);
+
+        return res.json({
+          success: true,
+          data: {
+            unlocked: true,
+            message: `Keychain unlocked for ${machine.name}`,
+          },
+        });
+      } else {
+        console.error(`🔒 Failed to unlock keychain for machine ${id}:`, output);
+        return res.status(400).json({
+          success: false,
+          error: output.includes('incorrect')
+            ? 'Incorrect password - please update the stored password'
+            : 'Failed to unlock keychain. The password may be incorrect.',
+        });
+      }
+    } catch (sshError) {
+      console.error(`🔒 SSH error unlocking keychain for machine ${id}:`, sshError);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to connect to remote machine to unlock keychain',
+      });
+    }
+  } catch (error) {
+    console.error('Error unlocking machine keychain:', error);
+    res.status(500).json({ success: false, error: 'Failed to unlock keychain' });
+  }
+});
+
+// GET /api/machines/:id/keychain-status - Check if machine keychain is unlocked in this session
+router.get('/:id/keychain-status', (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const db = getDatabase();
+    const machine = db
+      .prepare('SELECT * FROM remote_machines WHERE id = ?')
+      .get(id) as RemoteMachineRow | undefined;
+
+    if (!machine) {
+      return res.status(404).json({ success: false, error: 'Machine not found' });
+    }
+
+    const isUnlocked = keychainStorageService.isUnlocked(id);
+
+    res.json({
+      success: true,
+      data: {
+        unlocked: isUnlocked,
+        message: isUnlocked
+          ? 'Keychain is unlocked for this session'
+          : 'Keychain has not been unlocked in this session',
+      },
+    });
+  } catch (error) {
+    console.error('Error checking keychain status:', error);
+    res.status(500).json({ success: false, error: 'Failed to check keychain status' });
   }
 });
 

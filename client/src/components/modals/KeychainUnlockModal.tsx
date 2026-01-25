@@ -85,7 +85,8 @@ export function KeychainUnlockModal({ isOpen, onClose, instanceId, machineId }: 
       await instancesApi.sendInput(instanceId, unlockCommand);
 
       // Wait for the password prompt to appear
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Use 1500ms delay to account for SSH latency (was 500ms which was too fast)
+      await new Promise(resolve => setTimeout(resolve, 1500));
 
       // Send the password (won't be echoed because it's a password prompt)
       await instancesApi.sendInput(instanceId, password + '\n');

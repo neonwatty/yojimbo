@@ -183,6 +183,24 @@ export function useMachines() {
     throw new Error('Failed to check hooks status');
   }, []);
 
+  // Unlock keychain for entire machine (not per-instance)
+  const unlockKeychain = useCallback(async (id: string) => {
+    const response = await machinesApi.unlockKeychain(id);
+    if (response.data) {
+      return response.data;
+    }
+    throw new Error('Failed to unlock keychain');
+  }, []);
+
+  // Check keychain unlock status
+  const getKeychainStatus = useCallback(async (id: string) => {
+    const response = await machinesApi.getKeychainStatus(id);
+    if (response.data) {
+      return response.data;
+    }
+    throw new Error('Failed to get keychain status');
+  }, []);
+
   return {
     machines,
     sshKeys,
@@ -195,6 +213,8 @@ export function useMachines() {
     testTunnel,
     installHooks,
     checkHooksStatus,
+    unlockKeychain,
+    getKeychainStatus,
     refetch: fetchMachines,
   };
 }

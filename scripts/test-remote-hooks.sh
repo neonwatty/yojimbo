@@ -127,6 +127,67 @@ else
     exit 0
 fi
 
+# Step 6: Run diagnostic checks (jq, curl, hook simulation)
+echo ""
+echo -e "${YELLOW}Step 6: Running hook diagnostics...${NC}"
+DEBUG_RESPONSE=$(curl -s "http://${STAGING_HOST}:${STAGING_PORT}/api/machines/${MACHINE_ID}/debug-hooks")
+
+# Check jq installation
+JQ_INSTALLED=$(echo "$DEBUG_RESPONSE" | jq -r '.data.jqInstalled // false')
+JQ_VERSION=$(echo "$DEBUG_RESPONSE" | jq -r '.data.jqVersion // "unknown"')
+JQ_ERROR=$(echo "$DEBUG_RESPONSE" | jq -r '.data.jqError // empty')
+
+if [ "$JQ_INSTALLED" == "true" ]; then
+    echo -e "${GREEN}✓ jq is installed: ${JQ_VERSION}${NC}"
+else
+    echo -e "${RED}✗ jq is NOT installed on remote machine${NC}"
+    if [ -n "$JQ_ERROR" ]; then
+        echo -e "${RED}  Error: ${JQ_ERROR}${NC}"
+    fi
+    echo -e "${RED}  Hooks require jq to parse JSON input from Claude Code${NC}"
+    echo ""
+    echo -e "${RED}=== TEST FAILED (jq not installed) ===${NC}"
+    exit 1
+fi
+
+# Check curl installation
+CURL_INSTALLED=$(echo "$DEBUG_RESPONSE" | jq -r '.data.curlInstalled // false')
+if [ "$CURL_INSTALLED" == "true" ]; then
+    CURL_VERSION=$(echo "$DEBUG_RESPONSE" | jq -r '.data.curlVersion // "unknown"')
+    echo -e "${GREEN}✓ curl is installed: ${CURL_VERSION}${NC}"
+else
+    echo -e "${RED}✗ curl is NOT installed on remote machine${NC}"
+    echo ""
+    echo -e "${RED}=== TEST FAILED (curl not installed) ===${NC}"
+    exit 1
+fi
+
+# Check hook test result
+HOOK_TEST_RESULT=$(echo "$DEBUG_RESPONSE" | jq -r '.data.hookTestResult // empty')
+HOOK_TEST_ERROR=$(echo "$DEBUG_RESPONSE" | jq -r '.data.hookTestError // empty')
+
+if [ -n "$HOOK_TEST_RESULT" ]; then
+    echo -e "${GREEN}✓ Hook simulation successful${NC}"
+    # Parse the response to show what the server returned
+    HOOK_SUCCESS=$(echo "$HOOK_TEST_RESULT" | jq -r '.success // false' 2>/dev/null || echo "parse_error")
+    if [ "$HOOK_SUCCESS" == "true" ]; then
+        echo -e "${GREEN}  Server accepted the hook request${NC}"
+    else
+        echo -e "${YELLOW}  Server response: ${HOOK_TEST_RESULT}${NC}"
+    fi
+elif [ -n "$HOOK_TEST_ERROR" ]; then
+    echo -e "${RED}✗ Hook simulation failed${NC}"
+    echo -e "${RED}  Error: ${HOOK_TEST_ERROR}${NC}"
+fi
+
+# Show settings.json summary
+SETTINGS_JSON=$(echo "$DEBUG_RESPONSE" | jq -r '.data.settingsJson // empty')
+if [ -n "$SETTINGS_JSON" ] && [ "$SETTINGS_JSON" != "FILE_NOT_FOUND" ]; then
+    echo ""
+    echo -e "${YELLOW}Hook configuration on remote machine:${NC}"
+    echo "$SETTINGS_JSON" | jq '.hooks | keys' 2>/dev/null || echo "  (could not parse settings)"
+fi
+
 echo ""
 echo -e "${GREEN}=== TEST PASSED ===${NC}"
 exit 0

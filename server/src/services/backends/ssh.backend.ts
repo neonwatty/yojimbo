@@ -65,6 +65,20 @@ export class SSHBackend extends TerminalBackend {
   }
 
   /**
+   * Filter out Cursor Position Report (CPR) sequences from output
+   *
+   * When programs send ESC[6n to query cursor position, the terminal responds
+   * with ESC[row;colR. In SSH sessions, these responses can leak into the output
+   * stream and appear as gibberish like "[48;1R[46;1R". We filter them out.
+   */
+  private filterCursorPositionReports(data: string): string {
+    // CPR format: ESC [ row ; col R  (e.g., \x1b[48;1R)
+    // Also handle partial sequences where ESC may be missing (just [48;1R)
+    // eslint-disable-next-line no-control-regex
+    return data.replace(/\x1b?\[\d+;\d+R/g, '');
+  }
+
+  /**
    * Process SSH output with sync frame buffering
    *
    * SSH delivers data based on TCP packet boundaries (512-4KB chunks),
@@ -73,6 +87,9 @@ export class SSHBackend extends TerminalBackend {
    * visual glitches in terminal animations like Claude Code's thinking spinner.
    */
   private processSyncOutput(data: string): void {
+    // First filter out any CPR sequences that leaked into the output
+    data = this.filterCursorPositionReports(data);
+
     const SYNC_START = '\x1b[?2026h';
     const SYNC_END = '\x1b[?2026l';
 

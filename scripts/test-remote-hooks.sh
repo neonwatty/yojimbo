@@ -188,6 +188,42 @@ if [ -n "$SETTINGS_JSON" ] && [ "$SETTINGS_JSON" != "FILE_NOT_FOUND" ]; then
     echo "$SETTINGS_JSON" | jq '.hooks | keys' 2>/dev/null || echo "  (could not parse settings)"
 fi
 
+# Step 7: End-to-end test - create instance, simulate hooks, verify status changes
 echo ""
-echo -e "${GREEN}=== TEST PASSED ===${NC}"
+echo -e "${YELLOW}Step 7: Running end-to-end hook status test...${NC}"
+E2E_RESPONSE=$(curl -s -X POST "http://${STAGING_HOST}:${STAGING_PORT}/api/machines/${MACHINE_ID}/test-hooks-e2e")
+
+echo "E2E Test Response:"
+echo "$E2E_RESPONSE" | jq .
+
+E2E_SUCCESS=$(echo "$E2E_RESPONSE" | jq -r '.success // false')
+E2E_SUMMARY=$(echo "$E2E_RESPONSE" | jq -r '.data.summary // "No summary"')
+WORKING_PASSED=$(echo "$E2E_RESPONSE" | jq -r '.data.workingHook.passed // false')
+STOP_PASSED=$(echo "$E2E_RESPONSE" | jq -r '.data.stopHook.passed // false')
+
+if [ "$E2E_SUCCESS" == "true" ]; then
+    echo -e "${GREEN}✓ End-to-end test PASSED${NC}"
+    echo -e "${GREEN}  Working hook: status changed idle → working${NC}"
+    echo -e "${GREEN}  Stop hook: status changed working → idle${NC}"
+    echo -e "${GREEN}  ${E2E_SUMMARY}${NC}"
+else
+    echo -e "${RED}✗ End-to-end test FAILED${NC}"
+    if [ "$WORKING_PASSED" == "true" ]; then
+        echo -e "${GREEN}  ✓ Working hook passed${NC}"
+    else
+        echo -e "${RED}  ✗ Working hook failed - status did not change to 'working'${NC}"
+    fi
+    if [ "$STOP_PASSED" == "true" ]; then
+        echo -e "${GREEN}  ✓ Stop hook passed${NC}"
+    else
+        echo -e "${RED}  ✗ Stop hook failed - status did not change to 'idle'${NC}"
+    fi
+    echo -e "${YELLOW}  Summary: ${E2E_SUMMARY}${NC}"
+    echo ""
+    echo -e "${RED}=== TEST FAILED (hooks not updating instance status) ===${NC}"
+    exit 1
+fi
+
+echo ""
+echo -e "${GREEN}=== ALL TESTS PASSED ===${NC}"
 exit 0

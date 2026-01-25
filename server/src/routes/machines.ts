@@ -659,5 +659,144 @@ router.get('/:id/debug-hooks', async (req, res) => {
   }
 });
 
+// POST /api/machines/:id/test-hooks-e2e - End-to-end test of hooks status updates
+// Creates a temp instance, simulates hooks through tunnel, verifies status changes
+router.post('/:id/test-hooks-e2e', async (req, res) => {
+  const { id } = req.params;
+  const db = getDatabase();
+  let testInstanceId: string | null = null;
+
+  try {
+    // 1. Verify machine exists
+    const machine = db
+      .prepare('SELECT * FROM remote_machines WHERE id = ?')
+      .get(id) as RemoteMachineRow | undefined;
+
+    if (!machine) {
+      return res.status(404).json({ success: false, error: 'Machine not found' });
+    }
+
+    // 2. Create a temporary test instance
+    const testWorkingDir = '/tmp/yojimbo-hook-test';
+    testInstanceId = `test-${Date.now()}`;
+    const testInstanceName = `Hook Test ${new Date().toISOString()}`;
+
+    db.prepare(`
+      INSERT INTO instances (id, name, working_dir, status, display_order, machine_type, machine_id)
+      VALUES (?, ?, ?, 'idle', 9999, 'remote', ?)
+    `).run(testInstanceId, testInstanceName, testWorkingDir, id);
+
+    console.log(`[E2E Test] Created test instance ${testInstanceId} for machine ${id}`);
+
+    // 3. Verify instance was created with correct initial status
+    const initialInstance = db
+      .prepare('SELECT status FROM instances WHERE id = ?')
+      .get(testInstanceId) as { status: string } | undefined;
+
+    if (!initialInstance || initialInstance.status !== 'idle') {
+      throw new Error('Failed to create test instance with idle status');
+    }
+
+    // 4. Simulate a "working" hook through the tunnel
+    const workingPayload = JSON.stringify({
+      cwd: testWorkingDir,
+    });
+    const workingHookCmd = `bash -c 'echo '"'"'${workingPayload}'"'"' | jq '"'"'{event:"working",projectDir:.cwd,machineId:"${id}"}'"'"' | curl -s -X POST "http://localhost:3456/api/hooks/status" -H "Content-Type: application/json" -d @- 2>&1'`;
+
+    console.log(`[E2E Test] Sending working hook...`);
+    const workingResult = await sshConnectionService.executeCommand(id, workingHookCmd);
+
+    if (!workingResult.success) {
+      throw new Error(`Failed to send working hook: ${workingResult.stderr}`);
+    }
+
+    // Small delay to let the hook be processed
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    // 5. Check if status changed to "working"
+    const afterWorking = db
+      .prepare('SELECT status FROM instances WHERE id = ?')
+      .get(testInstanceId) as { status: string } | undefined;
+
+    const workingStatusChanged = afterWorking?.status === 'working';
+    console.log(`[E2E Test] After working hook: status=${afterWorking?.status}, changed=${workingStatusChanged}`);
+
+    // 6. Simulate a "stop" hook through the tunnel
+    const stopPayload = JSON.stringify({
+      cwd: testWorkingDir,
+    });
+    const stopHookCmd = `bash -c 'echo '"'"'${stopPayload}'"'"' | jq '"'"'{projectDir:.cwd,machineId:"${id}"}'"'"' | curl -s -X POST "http://localhost:3456/api/hooks/stop" -H "Content-Type: application/json" -d @- 2>&1'`;
+
+    console.log(`[E2E Test] Sending stop hook...`);
+    const stopResult = await sshConnectionService.executeCommand(id, stopHookCmd);
+
+    if (!stopResult.success) {
+      throw new Error(`Failed to send stop hook: ${stopResult.stderr}`);
+    }
+
+    // Small delay to let the hook be processed
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    // 7. Check if status changed back to "idle"
+    const afterStop = db
+      .prepare('SELECT status FROM instances WHERE id = ?')
+      .get(testInstanceId) as { status: string } | undefined;
+
+    const stopStatusChanged = afterStop?.status === 'idle';
+    console.log(`[E2E Test] After stop hook: status=${afterStop?.status}, changed=${stopStatusChanged}`);
+
+    // 8. Clean up - delete the test instance
+    db.prepare('DELETE FROM instances WHERE id = ?').run(testInstanceId);
+    console.log(`[E2E Test] Cleaned up test instance ${testInstanceId}`);
+    testInstanceId = null; // Prevent double cleanup in catch
+
+    // 9. Return results
+    const allPassed = workingStatusChanged && stopStatusChanged;
+
+    res.json({
+      success: allPassed,
+      data: {
+        testInstanceId: `test-${Date.now()}`,
+        workingHook: {
+          sent: true,
+          response: workingResult.stdout,
+          statusBefore: 'idle',
+          statusAfter: afterWorking?.status,
+          passed: workingStatusChanged,
+        },
+        stopHook: {
+          sent: true,
+          response: stopResult.stdout,
+          statusBefore: afterWorking?.status,
+          statusAfter: afterStop?.status,
+          passed: stopStatusChanged,
+        },
+        summary: allPassed
+          ? 'All hooks working correctly - status updates are being received and processed'
+          : workingStatusChanged
+            ? 'Working hook works, but stop hook did not reset status'
+            : 'Working hook did not update status - check instance lookup by machineId + projectDir',
+      },
+    });
+  } catch (error) {
+    console.error('Error in E2E hook test:', error);
+
+    // Cleanup on error
+    if (testInstanceId) {
+      try {
+        db.prepare('DELETE FROM instances WHERE id = ?').run(testInstanceId);
+        console.log(`[E2E Test] Cleaned up test instance after error`);
+      } catch {
+        // Ignore cleanup errors
+      }
+    }
+
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to run E2E hook test',
+    });
+  }
+});
+
 export default router;
 

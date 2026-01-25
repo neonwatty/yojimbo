@@ -31,31 +31,65 @@ function findInstanceByMachineAndDir(machineId: string, projectDir: string): Ins
   if (!machineId || !projectDir) return null;
   const db = getDatabase();
 
-  // Normalize the project directory for comparison
-  // Remote hooks may send paths like ~/projects/foo or /Users/user/projects/foo
-  // We need to match against the working_dir stored in the database
-  const normalizedDir = projectDir.replace(/^~/, '');
+  // Log for debugging
+  console.log(`[Hook Lookup] Looking for instance: machineId=${machineId}, projectDir=${projectDir}`);
 
   // First try exact match
   let instance = db
     .prepare('SELECT * FROM instances WHERE machine_id = ? AND working_dir = ? AND closed_at IS NULL')
     .get(machineId, projectDir) as InstanceRow | undefined;
 
-  if (!instance) {
-    // Try matching with ~ prefix
+  if (instance) {
+    console.log(`[Hook Lookup] Found by exact match: ${instance.name}`);
+    return instance;
+  }
+
+  // Try matching "~" working_dir to home directory paths
+  // If projectDir looks like a home directory (/Users/..., /home/..., or C:\Users\...)
+  // and instance working_dir is "~", that's a match
+  const isHomeDirPath = /^(\/Users\/|\/home\/|C:\\Users\\)/i.test(projectDir);
+  if (isHomeDirPath) {
     instance = db
       .prepare('SELECT * FROM instances WHERE machine_id = ? AND working_dir = ? AND closed_at IS NULL')
-      .get(machineId, `~${normalizedDir}`) as InstanceRow | undefined;
+      .get(machineId, '~') as InstanceRow | undefined;
+
+    if (instance) {
+      console.log(`[Hook Lookup] Found by ~ match (home dir): ${instance.name}`);
+      return instance;
+    }
   }
 
-  if (!instance) {
-    // Try matching without ~ prefix
+  // Try matching ~/subdir to /Users/user/subdir
+  // Extract the relative path from projectDir and try matching with ~
+  const homeMatch = projectDir.match(/^\/(?:Users|home)\/[^/]+(.*)$/);
+  if (homeMatch) {
+    const relativePath = homeMatch[1]; // e.g., "" or "/projects/foo"
+    const tildeDir = relativePath ? `~${relativePath}` : '~';
+
     instance = db
-      .prepare('SELECT * FROM instances WHERE machine_id = ? AND working_dir LIKE ? AND closed_at IS NULL')
-      .get(machineId, `%${normalizedDir}`) as InstanceRow | undefined;
+      .prepare('SELECT * FROM instances WHERE machine_id = ? AND working_dir = ? AND closed_at IS NULL')
+      .get(machineId, tildeDir) as InstanceRow | undefined;
+
+    if (instance) {
+      console.log(`[Hook Lookup] Found by tilde path match: ${instance.name} (${tildeDir})`);
+      return instance;
+    }
   }
 
-  return instance || null;
+  // Try the reverse: if projectDir starts with ~, expand to match full paths
+  if (projectDir.startsWith('~')) {
+    instance = db
+      .prepare(`SELECT * FROM instances WHERE machine_id = ? AND working_dir LIKE ? AND closed_at IS NULL`)
+      .get(machineId, `%${projectDir.slice(1)}`) as InstanceRow | undefined;
+
+    if (instance) {
+      console.log(`[Hook Lookup] Found by tilde expansion: ${instance.name}`);
+      return instance;
+    }
+  }
+
+  console.log(`[Hook Lookup] No instance found for machineId=${machineId}, projectDir=${projectDir}`);
+  return null;
 }
 
 // Update instance status

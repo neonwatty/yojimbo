@@ -295,6 +295,64 @@ describe('HookInstallerService', () => {
     });
   });
 
+  describe('installHooksForMachine', () => {
+    it('should return error for non-existent machine', async () => {
+      mockGet.mockReturnValue(undefined);
+
+      const { hookInstallerService } = await import('../services/hook-installer.service.js');
+
+      const result = await hookInstallerService.installHooksForMachine(
+        'non-existent-id',
+        'http://localhost:3456'
+      );
+
+      expect(result.success).toBe(false);
+      expect(result.message).toBe('Remote machine not found');
+    });
+
+    it('should query remote_machines table', async () => {
+      mockGet.mockReturnValue(undefined);
+
+      const { hookInstallerService } = await import('../services/hook-installer.service.js');
+
+      await hookInstallerService.installHooksForMachine(
+        'test-machine',
+        'http://localhost:3456'
+      );
+
+      // Verify the SQL query uses remote_machines table
+      expect(mockPrepare).toHaveBeenCalledWith(
+        expect.stringContaining('remote_machines')
+      );
+    });
+  });
+
+  describe('checkExistingHooksForMachine', () => {
+    it('should return error for non-existent machine', async () => {
+      mockGet.mockReturnValue(undefined);
+
+      const { hookInstallerService } = await import('../services/hook-installer.service.js');
+
+      const result = await hookInstallerService.checkExistingHooksForMachine('non-existent-id');
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('Remote machine not found');
+    });
+
+    it('should query remote_machines table', async () => {
+      mockGet.mockReturnValue(undefined);
+
+      const { hookInstallerService } = await import('../services/hook-installer.service.js');
+
+      await hookInstallerService.checkExistingHooksForMachine('test-machine');
+
+      // Verify the SQL query uses remote_machines table
+      expect(mockPrepare).toHaveBeenCalledWith(
+        expect.stringContaining('remote_machines')
+      );
+    });
+  });
+
   describe('getHooksConfigForPreview', () => {
     it('should return the same config as generateHooksConfig', async () => {
       const { HookInstallerService } = await import('../services/hook-installer.service.js') as any;

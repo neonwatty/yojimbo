@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { getDatabase } from '../db/connection.js';
 import { sshConnectionService } from '../services/ssh-connection.service.js';
 import { reverseTunnelService } from '../services/reverse-tunnel.service.js';
+import { hookInstallerService } from '../services/hook-installer.service.js';
 import { broadcast } from '../websocket/server.js';
 import type { RemoteMachine, MachineStatus } from '@cc-orchestrator/shared';
 
@@ -367,6 +368,73 @@ router.get('/:id/directories', async (req, res) => {
   } catch (error) {
     console.error('Error listing remote directories:', error);
     res.status(500).json({ success: false, error: 'Failed to list directories' });
+  }
+});
+
+// POST /api/machines/:id/install-hooks - Install Claude Code hooks on remote machine
+router.post('/:id/install-hooks', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { orchestratorUrl } = req.body;
+
+    if (!orchestratorUrl) {
+      return res.status(400).json({
+        success: false,
+        error: 'orchestratorUrl is required',
+      });
+    }
+
+    const db = getDatabase();
+    const existing = db
+      .prepare('SELECT * FROM remote_machines WHERE id = ?')
+      .get(id) as RemoteMachineRow | undefined;
+
+    if (!existing) {
+      return res.status(404).json({ success: false, error: 'Machine not found' });
+    }
+
+    const result = await hookInstallerService.installHooksForMachine(id, orchestratorUrl);
+
+    res.json({
+      success: result.success,
+      data: {
+        message: result.message,
+        error: result.error,
+      },
+    });
+  } catch (error) {
+    console.error('Error installing hooks on remote machine:', error);
+    res.status(500).json({ success: false, error: 'Failed to install hooks' });
+  }
+});
+
+// GET /api/machines/:id/hooks-status - Check if hooks are installed on remote machine
+router.get('/:id/hooks-status', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const db = getDatabase();
+    const existing = db
+      .prepare('SELECT * FROM remote_machines WHERE id = ?')
+      .get(id) as RemoteMachineRow | undefined;
+
+    if (!existing) {
+      return res.status(404).json({ success: false, error: 'Machine not found' });
+    }
+
+    const result = await hookInstallerService.checkExistingHooksForMachine(id);
+
+    res.json({
+      success: result.success,
+      data: {
+        installed: result.existingHooks.length > 0,
+        hookTypes: result.existingHooks,
+        error: result.error,
+      },
+    });
+  } catch (error) {
+    console.error('Error checking hooks status on remote machine:', error);
+    res.status(500).json({ success: false, error: 'Failed to check hooks status' });
   }
 });
 

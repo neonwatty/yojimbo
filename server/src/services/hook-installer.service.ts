@@ -81,6 +81,65 @@ class HookInstallerService {
   }
 
   /**
+   * Install hooks on a remote machine directly (without requiring an instance)
+   * This allows setting up hooks before creating any instances on the machine.
+   */
+  async installHooksForMachine(
+    machineId: string,
+    orchestratorUrl: string
+  ): Promise<HookInstallResult> {
+    const db = getDatabase();
+
+    // Get machine details
+    const machine = db.prepare(`
+      SELECT id, hostname, port, username, ssh_key_path
+      FROM remote_machines
+      WHERE id = ?
+    `).get(machineId) as RemoteMachineRow | undefined;
+
+    if (!machine) {
+      return { success: false, message: 'Remote machine not found', error: 'Machine not found' };
+    }
+
+    const sshConfig: SSHConfig = {
+      host: machine.hostname,
+      port: machine.port,
+      username: machine.username,
+      privateKeyPath: machine.ssh_key_path || undefined,
+    };
+
+    // Use empty string for instanceId since hooks don't actually use it
+    return this.installHooks(sshConfig, '', orchestratorUrl, machine.id);
+  }
+
+  /**
+   * Check which hook types already exist on a remote machine (by machine ID)
+   */
+  async checkExistingHooksForMachine(machineId: string): Promise<CheckHooksResult> {
+    const db = getDatabase();
+
+    // Get machine details
+    const machine = db.prepare(`
+      SELECT id, hostname, port, username, ssh_key_path
+      FROM remote_machines
+      WHERE id = ?
+    `).get(machineId) as RemoteMachineRow | undefined;
+
+    if (!machine) {
+      return { success: false, existingHooks: [], error: 'Remote machine not found' };
+    }
+
+    const sshConfig: SSHConfig = {
+      host: machine.hostname,
+      port: machine.port,
+      username: machine.username,
+      privateKeyPath: machine.ssh_key_path || undefined,
+    };
+
+    return this.checkExistingHooks(sshConfig);
+  }
+
+  /**
    * Check which hook types already exist on a remote machine
    */
   async checkExistingHooksForInstance(instanceId: string): Promise<CheckHooksResult> {

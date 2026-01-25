@@ -165,6 +165,24 @@ export function useMachines() {
     throw new Error('Failed to test tunnel');
   }, []);
 
+  // Install hooks on remote machine
+  const installHooks = useCallback(async (id: string, orchestratorUrl: string) => {
+    const response = await machinesApi.installHooks(id, orchestratorUrl);
+    if (response.data) {
+      return response.data;
+    }
+    throw new Error('Failed to install hooks');
+  }, []);
+
+  // Check hooks status on remote machine
+  const checkHooksStatus = useCallback(async (id: string) => {
+    const response = await machinesApi.checkHooksStatus(id);
+    if (response.data) {
+      return response.data;
+    }
+    throw new Error('Failed to check hooks status');
+  }, []);
+
   return {
     machines,
     sshKeys,
@@ -175,6 +193,8 @@ export function useMachines() {
     deleteMachine,
     testConnection,
     testTunnel,
+    installHooks,
+    checkHooksStatus,
     refetch: fetchMachines,
   };
 }

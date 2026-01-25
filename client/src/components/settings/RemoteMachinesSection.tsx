@@ -25,12 +25,13 @@ function StatusIndicator({ status }: { status: MachineStatus }) {
 }
 
 export function RemoteMachinesSection() {
-  const { machines, sshKeys, loading, createMachine, updateMachine, deleteMachine, testConnection, testTunnel } =
+  const { machines, sshKeys, loading, createMachine, updateMachine, deleteMachine, testConnection, testTunnel, installHooks } =
     useMachines();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editMachine, setEditMachine] = useState<RemoteMachine | null>(null);
   const [testingIds, setTestingIds] = useState<Set<string>>(new Set());
   const [testingTunnelIds, setTestingTunnelIds] = useState<Set<string>>(new Set());
+  const [installingHooksIds, setInstallingHooksIds] = useState<Set<string>>(new Set());
   const [isHelpExpanded, setIsHelpExpanded] = useState(false);
 
   const handleTestConnection = async (id: string) => {
@@ -66,6 +67,28 @@ export function RemoteMachinesSection() {
       toast.error('Failed to test tunnel');
     } finally {
       setTestingTunnelIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    }
+  };
+
+  const handleInstallHooks = async (id: string) => {
+    setInstallingHooksIds((prev) => new Set(prev).add(id));
+    try {
+      // Use the current page URL as the orchestrator URL
+      const orchestratorUrl = `${window.location.protocol}//${window.location.hostname}:3456`;
+      const result = await installHooks(id, orchestratorUrl);
+      if (result.error) {
+        toast.error(result.error);
+      } else {
+        toast.success(result.message || 'Hooks installed successfully');
+      }
+    } catch {
+      toast.error('Failed to install hooks');
+    } finally {
+      setInstallingHooksIds((prev) => {
         const next = new Set(prev);
         next.delete(id);
         return next;
@@ -253,6 +276,18 @@ export function RemoteMachinesSection() {
                       <Spinner size="sm" />
                     ) : (
                       'Tunnel'
+                    )}
+                  </button>
+                  <button
+                    onClick={() => handleInstallHooks(machine.id)}
+                    disabled={installingHooksIds.has(machine.id)}
+                    className="px-2 py-0.5 text-xs text-theme-muted hover:text-theme-primary border border-surface-500 hover:border-surface-400 rounded transition-colors disabled:opacity-50"
+                    title="Install Claude Code hooks on remote machine"
+                  >
+                    {installingHooksIds.has(machine.id) ? (
+                      <Spinner size="sm" />
+                    ) : (
+                      'Hooks'
                     )}
                   </button>
                   <button

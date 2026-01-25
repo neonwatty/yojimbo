@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Icons } from '../common/Icons';
 import { Spinner } from '../common/Spinner';
 import { AddMachineModal } from '../modals/AddMachineModal';
+import { MachinePasswordModal } from '../modals/MachinePasswordModal';
 import { useMachines } from '../../hooks/useMachines';
 import { toast } from '../../store/toastStore';
+import { keychainApi } from '../../api/client';
 import type { RemoteMachine, MachineStatus } from '@cc-orchestrator/shared';
 
 function StatusIndicator({ status }: { status: MachineStatus }) {
@@ -34,6 +36,41 @@ export function RemoteMachinesSection() {
   const [installingHooksIds, setInstallingHooksIds] = useState<Set<string>>(new Set());
   const [unlockingKeychainIds, setUnlockingKeychainIds] = useState<Set<string>>(new Set());
   const [isHelpExpanded, setIsHelpExpanded] = useState(false);
+
+  // Password modal state
+  const [passwordModalMachine, setPasswordModalMachine] = useState<RemoteMachine | null>(null);
+  // Track which machines have saved passwords
+  const [machinePasswordStatus, setMachinePasswordStatus] = useState<Record<string, boolean>>({});
+  const [loadingPasswordStatus, setLoadingPasswordStatus] = useState(true);
+
+  // Fetch password status for all machines on load
+  const refreshPasswordStatus = useCallback(async () => {
+    if (machines.length === 0) {
+      setLoadingPasswordStatus(false);
+      return;
+    }
+
+    setLoadingPasswordStatus(true);
+    const statusMap: Record<string, boolean> = {};
+
+    await Promise.all(
+      machines.map(async (machine) => {
+        try {
+          const res = await keychainApi.hasRemotePassword(machine.id);
+          statusMap[machine.id] = res.data?.hasPassword ?? false;
+        } catch {
+          statusMap[machine.id] = false;
+        }
+      })
+    );
+
+    setMachinePasswordStatus(statusMap);
+    setLoadingPasswordStatus(false);
+  }, [machines]);
+
+  useEffect(() => {
+    refreshPasswordStatus();
+  }, [refreshPasswordStatus]);
 
   const handleTestConnection = async (id: string) => {
     setTestingIds((prev) => new Set(prev).add(id));
@@ -342,15 +379,43 @@ export function RemoteMachinesSection() {
                 </div>
               </div>
               <div className="flex items-center justify-between mt-2 pt-2 border-t border-surface-600">
-                <label className="flex items-center gap-2 cursor-pointer text-xs text-theme-muted">
-                  <input
-                    type="checkbox"
-                    checked={machine.forwardCredentials}
-                    onChange={() => handleToggleForwardCredentials(machine)}
-                    className="w-3.5 h-3.5 rounded border-surface-500 bg-surface-700 text-accent focus:ring-accent focus:ring-offset-0"
-                  />
-                  Forward local credentials
-                </label>
+                <div className="flex items-center gap-3">
+                  <label className="flex items-center gap-2 cursor-pointer text-xs text-theme-muted">
+                    <input
+                      type="checkbox"
+                      checked={machine.forwardCredentials}
+                      onChange={() => handleToggleForwardCredentials(machine)}
+                      className="w-3.5 h-3.5 rounded border-surface-500 bg-surface-700 text-accent focus:ring-accent focus:ring-offset-0"
+                    />
+                    Forward local credentials
+                  </label>
+                  {/* Password status indicator and button */}
+                  <div className="flex items-center gap-1.5">
+                    {loadingPasswordStatus ? (
+                      <span className="text-[10px] text-theme-dim">...</span>
+                    ) : machinePasswordStatus[machine.id] ? (
+                      <span
+                        className="flex items-center gap-1 text-[10px] text-frost-3"
+                        title="Keychain password saved"
+                      >
+                        <Icons.lock />
+                      </span>
+                    ) : (
+                      <span
+                        className="flex items-center gap-1 text-[10px] text-aurora-3"
+                        title="No keychain password saved"
+                      >
+                        <Icons.alertCircle />
+                      </span>
+                    )}
+                    <button
+                      onClick={() => setPasswordModalMachine(machine)}
+                      className="text-[10px] text-accent hover:text-accent/80 transition-colors"
+                    >
+                      {machinePasswordStatus[machine.id] ? 'Password' : 'Set Password'}
+                    </button>
+                  </div>
+                </div>
                 {machine.lastConnectedAt && (
                   <span className="text-[10px] text-theme-dim">
                     Last connected: {new Date(machine.lastConnectedAt).toLocaleString()}
@@ -374,6 +439,17 @@ export function RemoteMachinesSection() {
         editMachine={editMachine}
         onUpdate={updateMachine}
       />
+
+      {/* Machine Password Modal */}
+      {passwordModalMachine && (
+        <MachinePasswordModal
+          isOpen={!!passwordModalMachine}
+          onClose={() => setPasswordModalMachine(null)}
+          machineId={passwordModalMachine.id}
+          machineName={passwordModalMachine.name}
+          onPasswordSaved={refreshPasswordStatus}
+        />
+      )}
     </div>
   );
 }

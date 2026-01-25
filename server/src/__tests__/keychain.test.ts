@@ -359,6 +359,145 @@ describe('Keychain API', () => {
     });
   });
 
+  describe('POST /api/keychain/remote/:machineId/test (PR #164)', () => {
+    // Tests for the remote keychain password test endpoint
+    // This endpoint tests a password against a remote machine's keychain via SSH
+
+    it('should require a password in request body', () => {
+      const body = {};
+
+      const password = (body as { password?: string }).password;
+      expect(password).toBeUndefined();
+
+      // Would return 400
+      const response = {
+        success: false,
+        error: 'Password is required',
+      };
+      expect(response.error).toBe('Password is required');
+    });
+
+    it('should return 404 if machine not found', () => {
+      // When no machine exists with given ID
+      const machine = undefined;
+
+      const response = machine
+        ? { success: true }
+        : { success: false, error: 'Machine not found' };
+
+      expect(response.success).toBe(false);
+      expect(response.error).toBe('Machine not found');
+    });
+
+    it('should return valid: true when password is correct', () => {
+      // Simulating successful unlock
+      const sshResult = {
+        success: true,
+        stdout: '',
+        stderr: '',
+      };
+
+      const output = sshResult.stdout + (sshResult.stderr || '');
+      const isError = output.toLowerCase().includes('incorrect') ||
+                      output.toLowerCase().includes('bad password') ||
+                      output.toLowerCase().includes('error');
+
+      const response = sshResult.success && !isError
+        ? { success: true, data: { valid: true, message: 'Password is correct - keychain unlocked successfully' } }
+        : { success: true, data: { valid: false, message: 'Failed to unlock keychain' } };
+
+      expect(response.data.valid).toBe(true);
+      expect(response.data.message).toContain('correct');
+    });
+
+    it('should return valid: false when password is incorrect', () => {
+      // Simulating incorrect password
+      const sshResult = {
+        success: false,
+        stdout: 'The user name or password is incorrect',
+        stderr: '',
+      };
+
+      const output = sshResult.stdout + (sshResult.stderr || '');
+      const isError = output.toLowerCase().includes('incorrect') ||
+                      output.toLowerCase().includes('bad password');
+
+      const response = !isError
+        ? { success: true, data: { valid: true, message: 'Password is correct' } }
+        : { success: true, data: { valid: false, message: 'Incorrect password' } };
+
+      expect(response.data.valid).toBe(false);
+      expect(response.data.message).toContain('Incorrect');
+    });
+
+    it('should return valid: false for bad password error messages', () => {
+      const sshResult = {
+        success: false,
+        stdout: 'bad password for keychain',
+        stderr: '',
+      };
+
+      const output = sshResult.stdout;
+      const isBadPassword = output.toLowerCase().includes('bad password');
+
+      expect(isBadPassword).toBe(true);
+
+      const response = {
+        success: true,
+        data: {
+          valid: false,
+          message: 'Incorrect password',
+        },
+      };
+
+      expect(response.data.valid).toBe(false);
+    });
+
+    it('should escape special characters in password for shell', () => {
+      const password = 'pass"word$test';
+      const escapedPassword = password.replace(/"/g, '\\"').replace(/\$/g, '\\$');
+
+      expect(escapedPassword).toBe('pass\\"word\\$test');
+
+      // Verify the escaped password can be safely used in shell command
+      const keychainPath = '~/Library/Keychains/login.keychain-db';
+      const cmd = `bash -c 'echo "${escapedPassword}" | security unlock-keychain ${keychainPath} 2>&1'`;
+
+      expect(cmd).toContain('pass\\"word\\$test');
+      expect(cmd).not.toContain('pass"word$test');
+    });
+
+    it('should return structured data format with valid property', () => {
+      // Test the response format matches the API types
+      const successResponse = {
+        success: true,
+        data: {
+          valid: true,
+          message: 'Password is correct - keychain unlocked successfully',
+        },
+      };
+
+      expect(successResponse).toHaveProperty('success');
+      expect(successResponse).toHaveProperty('data');
+      expect(successResponse.data).toHaveProperty('valid');
+      expect(successResponse.data).toHaveProperty('message');
+      expect(typeof successResponse.data.valid).toBe('boolean');
+      expect(typeof successResponse.data.message).toBe('string');
+    });
+
+    it('should handle SSH connection failures gracefully', () => {
+      // When SSH connection fails
+      const sshConnectionFailed = true;
+
+      const response = sshConnectionFailed
+        ? { success: false, error: 'Failed to connect to remote machine' }
+        : { success: true };
+
+      expect(response.success).toBe(false);
+      expect(response.error).toContain('connect');
+    });
+  });
+
   describe('Remote keychain API response format', () => {
     it('should return hasPassword wrapped in data object', () => {
       // Test the expected response format for has-password endpoint

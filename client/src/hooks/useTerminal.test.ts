@@ -376,6 +376,109 @@ describe('useTerminal', () => {
     });
   });
 
+  describe('CPR (Cursor Position Report) filtering', () => {
+    // Tests for PR #162 and #163 - filtering out CPR sequences from terminal output
+    // CPR format: ESC[row;colR (e.g., \x1b[18;1R or [18;1R)
+    // These can appear due to DSR queries (ESC[6n) and should be filtered out
+
+    // Helper to extract the filtering logic (mirrors what's in write())
+    const filterCPR = (data: string): string => {
+      // eslint-disable-next-line no-control-regex
+      let filtered = data.replace(/\x1b?\[\d+;\d+R/g, '');
+      // Partial CPR ending with R: ";4R", "23;4R"
+      filtered = filtered.replace(/\d*;\d+R/g, '');
+      // Partial CPR start with semicolon (no R yet): "[23;", "[23;4" - only if standalone
+      filtered = filtered.replace(/^\[\d+;\d*$/gm, '');
+      filtered = filtered.replace(/(?:^|\n)\[\d+;\d*(?:\n|$)/g, '\n');
+      // Digits-bracket-digits pattern unique to interleaved CPR: "23[4", "6[46", "29[4"
+      filtered = filtered.replace(/\d+\[\d+/g, '');
+      // Standalone digit-R at word boundary: "4R", "23R"
+      filtered = filtered.replace(/\b\d{1,3}R\b/g, '');
+      // Lines that are ONLY CPR garbage (just digits, brackets, semicolons, R)
+      filtered = filtered.replace(/^[\d\[;\]R\s]+$/gm, '');
+      // Clean up empty lines that resulted from filtering
+      filtered = filtered.replace(/\n{3,}/g, '\n\n');
+      return filtered;
+    };
+
+    it('filters complete CPR sequences with ESC', () => {
+      expect(filterCPR('\x1b[18;1R')).toBe('');
+      expect(filterCPR('\x1b[48;80R')).toBe('');
+      expect(filterCPR('\x1b[1;1R')).toBe('');
+    });
+
+    it('filters complete CPR sequences without ESC', () => {
+      expect(filterCPR('[18;1R')).toBe('');
+      expect(filterCPR('[48;80R')).toBe('');
+    });
+
+    it('filters CPR sequences embedded in normal text', () => {
+      expect(filterCPR('Hello\x1b[18;1RWorld')).toBe('HelloWorld');
+      expect(filterCPR('Test[48;1R output')).toBe('Test output');
+    });
+
+    it('filters partial CPR ending with R (;colR pattern)', () => {
+      expect(filterCPR(';4R')).toBe('');
+      expect(filterCPR('23;4R')).toBe('');
+      expect(filterCPR(';80R')).toBe('');
+    });
+
+    it('filters interleaved CPR fragments (digits-bracket-digits)', () => {
+      // These appear when CPR sequences are split across TCP packets
+      expect(filterCPR('23[4')).toBe('');
+      expect(filterCPR('6[46')).toBe('');
+      expect(filterCPR('29[4')).toBe('');
+    });
+
+    it('filters standalone digit-R at word boundaries', () => {
+      expect(filterCPR('4R')).toBe('');
+      expect(filterCPR('23R')).toBe('');
+      // ' 4R ' - the digit-R is filtered, remaining whitespace is CPR garbage and also filtered
+      expect(filterCPR(' 4R ')).toBe('');
+    });
+
+    it('filters lines that are only CPR garbage', () => {
+      expect(filterCPR('[18;1')).toBe('');
+      // '[\n' - the '[' alone is CPR garbage, gets filtered to empty
+      expect(filterCPR('[\n')).toBe('');
+      expect(filterCPR('123;456R')).toBe('');
+    });
+
+    it('preserves normal terminal output', () => {
+      expect(filterCPR('Hello World')).toBe('Hello World');
+      expect(filterCPR('ls -la\n')).toBe('ls -la\n');
+      expect(filterCPR('$ git status')).toBe('$ git status');
+    });
+
+    it('preserves ANSI color codes', () => {
+      expect(filterCPR('\x1b[32mGreen\x1b[0m')).toBe('\x1b[32mGreen\x1b[0m');
+      expect(filterCPR('\x1b[1;31mBold Red\x1b[0m')).toBe('\x1b[1;31mBold Red\x1b[0m');
+    });
+
+    it('preserves cursor movement sequences (not CPR)', () => {
+      expect(filterCPR('\x1b[5A')).toBe('\x1b[5A');  // Cursor up
+      expect(filterCPR('\x1b[10B')).toBe('\x1b[10B');  // Cursor down
+      expect(filterCPR('\x1b[K')).toBe('\x1b[K');  // Erase line
+    });
+
+    it('handles multiple CPR sequences in one chunk', () => {
+      expect(filterCPR('\x1b[18;1R\x1b[19;1R\x1b[20;1R')).toBe('');
+      expect(filterCPR('start\x1b[18;1Rmiddle\x1b[19;1Rend')).toBe('startmiddleend');
+    });
+
+    it('handles mixed valid and CPR content', () => {
+      const input = 'Line 1\n\x1b[18;1RLine 2\n23;4RLine 3';
+      const expected = 'Line 1\nLine 2\nLine 3';
+      expect(filterCPR(input)).toBe(expected);
+    });
+
+    it('reduces excessive empty lines from filtering', () => {
+      const input = 'Line 1\n\n\n\nLine 2';
+      const expected = 'Line 1\n\nLine 2';
+      expect(filterCPR(input)).toBe(expected);
+    });
+  });
+
   describe('refresh method (terminal rendering fix)', () => {
     it('provides refresh function in hook return value', () => {
       const { result } = renderHook(() => useTerminal());

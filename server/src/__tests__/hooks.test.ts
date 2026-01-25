@@ -236,6 +236,119 @@ describe('Hooks API', () => {
     });
   });
 
+  describe('PR #161 - Exact home directory matching for ~ instances', () => {
+    // This tests the fix for the bug where subdirectories incorrectly matched ~ instances.
+    // The bug was that /Users/username/Desktop (from a hook) would match an instance
+    // with working_dir="~", when it should NOT.
+
+    // The regex used in hooks.ts to detect exact home directories:
+    const isExactHomeDir = (projectDir: string) =>
+      /^(\/Users\/[^/]+|\/home\/[^/]+|C:\\Users\\[^\\]+)$/.test(projectDir);
+
+    it('should match exact macOS home directory (/Users/username)', () => {
+      expect(isExactHomeDir('/Users/neonwatty')).toBe(true);
+      expect(isExactHomeDir('/Users/jeremywatt')).toBe(true);
+      expect(isExactHomeDir('/Users/testuser')).toBe(true);
+    });
+
+    it('should match exact Linux home directory (/home/username)', () => {
+      expect(isExactHomeDir('/home/ubuntu')).toBe(true);
+      expect(isExactHomeDir('/home/ec2-user')).toBe(true);
+      expect(isExactHomeDir('/home/testuser')).toBe(true);
+    });
+
+    it('should match exact Windows home directory (C:\\Users\\username)', () => {
+      expect(isExactHomeDir('C:\\Users\\John')).toBe(true);
+      expect(isExactHomeDir('C:\\Users\\Administrator')).toBe(true);
+    });
+
+    it('should NOT match subdirectories under /Users', () => {
+      // These are the paths that were incorrectly matching before the fix
+      expect(isExactHomeDir('/Users/neonwatty/Desktop')).toBe(false);
+      expect(isExactHomeDir('/Users/neonwatty/Desktop/ytgify-glue')).toBe(false);
+      expect(isExactHomeDir('/Users/jeremywatt/projects')).toBe(false);
+      expect(isExactHomeDir('/Users/testuser/Documents/project')).toBe(false);
+    });
+
+    it('should NOT match subdirectories under /home', () => {
+      expect(isExactHomeDir('/home/ubuntu/projects')).toBe(false);
+      expect(isExactHomeDir('/home/ec2-user/.ssh')).toBe(false);
+      expect(isExactHomeDir('/home/testuser/workspace/app')).toBe(false);
+    });
+
+    it('should NOT match subdirectories under C:\\Users', () => {
+      expect(isExactHomeDir('C:\\Users\\John\\Desktop')).toBe(false);
+      expect(isExactHomeDir('C:\\Users\\Administrator\\Documents')).toBe(false);
+    });
+
+    it('should NOT match paths that do not start with home directory patterns', () => {
+      expect(isExactHomeDir('/var/log')).toBe(false);
+      expect(isExactHomeDir('/etc/config')).toBe(false);
+      expect(isExactHomeDir('/tmp/test')).toBe(false);
+      expect(isExactHomeDir('~')).toBe(false);  // The tilde itself doesn't match
+      expect(isExactHomeDir('~/projects')).toBe(false);
+      expect(isExactHomeDir('')).toBe(false);
+    });
+
+    it('should NOT match partial or malformed paths', () => {
+      expect(isExactHomeDir('/Users')).toBe(false);
+      expect(isExactHomeDir('/Users/')).toBe(false);
+      expect(isExactHomeDir('/home')).toBe(false);
+      expect(isExactHomeDir('/home/')).toBe(false);
+      expect(isExactHomeDir('C:\\Users')).toBe(false);
+      expect(isExactHomeDir('C:\\Users\\')).toBe(false);
+    });
+  });
+
+  describe('PR #161 - Tilde path matching for ~/subdir patterns', () => {
+    // This tests the logic that matches ~/projects/foo to /Users/user/projects/foo
+
+    // The regex used to extract relative path from full path:
+    const extractTildePath = (projectDir: string): string | null => {
+      const homeMatch = projectDir.match(/^\/(?:Users|home)\/[^/]+(.*)$/);
+      if (homeMatch) {
+        const relativePath = homeMatch[1]; // e.g., "" or "/projects/foo"
+        return relativePath ? `~${relativePath}` : '~';
+      }
+      return null;
+    };
+
+    it('should convert /Users/username to ~', () => {
+      expect(extractTildePath('/Users/neonwatty')).toBe('~');
+      expect(extractTildePath('/Users/jeremywatt')).toBe('~');
+    });
+
+    it('should convert /home/username to ~', () => {
+      expect(extractTildePath('/home/ubuntu')).toBe('~');
+      expect(extractTildePath('/home/ec2-user')).toBe('~');
+    });
+
+    it('should convert /Users/username/projects to ~/projects', () => {
+      expect(extractTildePath('/Users/neonwatty/projects')).toBe('~/projects');
+      expect(extractTildePath('/Users/jeremywatt/Desktop')).toBe('~/Desktop');
+    });
+
+    it('should convert /home/username/workspace/app to ~/workspace/app', () => {
+      expect(extractTildePath('/home/ubuntu/workspace/app')).toBe('~/workspace/app');
+    });
+
+    it('should convert deeply nested paths correctly', () => {
+      expect(extractTildePath('/Users/neonwatty/Desktop/ytgify-glue/ytgify')).toBe('~/Desktop/ytgify-glue/ytgify');
+      expect(extractTildePath('/home/ec2-user/projects/my-app/src')).toBe('~/projects/my-app/src');
+    });
+
+    it('should return null for non-home directory paths', () => {
+      expect(extractTildePath('/var/log')).toBe(null);
+      expect(extractTildePath('/etc/config')).toBe(null);
+      expect(extractTildePath('/tmp/test')).toBe(null);
+    });
+
+    it('should return null for Windows paths (not supported by this regex)', () => {
+      // The current regex only handles Unix-style paths
+      expect(extractTildePath('C:\\Users\\John')).toBe(null);
+    });
+  });
+
   describe('Directory matching scoring', () => {
     it('should prefer exact match over partial match', () => {
       const projectDir = '/Users/neonwatty/Desktop';

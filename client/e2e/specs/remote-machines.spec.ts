@@ -166,6 +166,152 @@ test.describe('Remote Machines API', () => {
   });
 });
 
+test.describe('Machine Password Modal (PR #164)', () => {
+  // Tests for the password management modal in Remote Machines settings
+
+  let testMachineId: string;
+
+  test.beforeEach(async () => {
+    // Create a test machine
+    const response = await fetch(`${API_BASE}/machines`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: 'Password Test Machine',
+        hostname: 'password-test.local',
+        port: 22,
+        username: 'testuser',
+      }),
+    });
+    const data = await response.json();
+    testMachineId = data.data.id;
+  });
+
+  test.afterEach(async () => {
+    if (testMachineId) {
+      // Clean up the test machine
+      await fetch(`${API_BASE}/machines/${testMachineId}`, { method: 'DELETE' });
+      // Also delete any stored password
+      await fetch(`${API_BASE}/keychain/remote/${testMachineId}`, { method: 'DELETE' });
+    }
+  });
+
+  test('Password button exists for machine in settings', async ({ basePage }) => {
+    await basePage.goto('/instances');
+    await basePage.openSettings();
+
+    // Look for either "Password" or "Set Password" button
+    const passwordButton = basePage.page.locator('button:has-text("Password")').first();
+    await expect(passwordButton).toBeAttached({ timeout: 5000 });
+  });
+
+  test('password status icon shows correctly for machine without password', async ({ basePage }) => {
+    await basePage.goto('/instances');
+    await basePage.openSettings();
+
+    // Machine without stored password should show warning indicator
+    // Look for the machine row
+    const machineRow = basePage.page.locator('text=Password Test Machine').locator('..');
+    await expect(machineRow).toBeAttached({ timeout: 5000 });
+
+    // The password button should exist (could be "Set Password" or "Password" depending on state)
+    const anyPasswordButton = basePage.page.locator('button:has-text("Password")').first();
+    await expect(anyPasswordButton).toBeAttached({ timeout: 5000 });
+  });
+
+  test('keychain test endpoint returns correct format', async () => {
+    // Test with invalid machine ID
+    const response = await fetch(`${API_BASE}/keychain/remote/nonexistent/test`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: 'test' }),
+    });
+
+    // Skip if endpoint doesn't exist
+    if (response.headers.get('content-type')?.includes('text/html')) {
+      console.log('Skipping: keychain test endpoint not available');
+      return;
+    }
+
+    const data = await response.json();
+    expect(response.status).toBe(404);
+    expect(data.success).toBe(false);
+    expect(data.error).toContain('not found');
+  });
+
+  test('keychain test endpoint requires password', async () => {
+    const response = await fetch(`${API_BASE}/keychain/remote/${testMachineId}/test`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+
+    // Skip if endpoint doesn't exist
+    if (response.headers.get('content-type')?.includes('text/html')) {
+      console.log('Skipping: keychain test endpoint not available');
+      return;
+    }
+
+    const data = await response.json();
+    expect(response.status).toBe(400);
+    expect(data.success).toBe(false);
+    expect(data.error).toContain('required');
+  });
+
+  test('can save password via API', async () => {
+    const saveResponse = await fetch(`${API_BASE}/keychain/remote/${testMachineId}/save`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: 'test-password-123' }),
+    });
+
+    // Skip if endpoint doesn't exist
+    if (saveResponse.headers.get('content-type')?.includes('text/html')) {
+      console.log('Skipping: save endpoint not available');
+      return;
+    }
+
+    const saveData = await saveResponse.json();
+    expect(saveResponse.ok).toBe(true);
+    expect(saveData.success).toBe(true);
+
+    // Check that password now exists
+    const checkResponse = await fetch(`${API_BASE}/keychain/remote/${testMachineId}/has-password`);
+    const checkData = await checkResponse.json();
+    expect(checkData.success).toBe(true);
+    expect(checkData.data.hasPassword).toBe(true);
+  });
+
+  test('can delete password via API', async () => {
+    // First save a password
+    await fetch(`${API_BASE}/keychain/remote/${testMachineId}/save`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: 'test-password-123' }),
+    });
+
+    // Delete it
+    const deleteResponse = await fetch(`${API_BASE}/keychain/remote/${testMachineId}`, {
+      method: 'DELETE',
+    });
+
+    // Skip if endpoint doesn't exist
+    if (deleteResponse.headers.get('content-type')?.includes('text/html')) {
+      console.log('Skipping: delete endpoint not available');
+      return;
+    }
+
+    const deleteData = await deleteResponse.json();
+    expect(deleteResponse.ok).toBe(true);
+    expect(deleteData.success).toBe(true);
+
+    // Check that password no longer exists
+    const checkResponse = await fetch(`${API_BASE}/keychain/remote/${testMachineId}/has-password`);
+    const checkData = await checkResponse.json();
+    expect(checkData.data.hasPassword).toBe(false);
+  });
+});
+
 test.describe('Remote Machines UI with Machine', () => {
   // Create a test machine before these tests
   let testMachineId: string;

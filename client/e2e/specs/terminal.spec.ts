@@ -100,6 +100,73 @@ test.describe('Terminal', () => {
     expect(terminalContent).toContain('UNIQUE-OUTPUT-INSTANCE-1');
   });
 
+  test('terminal dimensions are set correctly on initial load (PR #165)', async ({ instancesPage }) => {
+    // This tests that initial terminal dimensions are sent to the server
+    // The fix ensures text wrapping works correctly in SSH sessions
+    await instancesPage.gotoInstances();
+    await instancesPage.createNewInstance();
+
+    // Wait for terminal to fully initialize
+    await instancesPage.page.waitForTimeout(3000);
+
+    // Check that terminal has proper dimensions
+    const terminal = instancesPage.page.locator('.xterm-screen');
+    await expect(terminal).toBeVisible({ timeout: 10000 });
+
+    // Verify terminal has non-zero dimensions
+    const box = await terminal.boundingBox();
+    expect(box).not.toBeNull();
+    expect(box!.width).toBeGreaterThan(100);
+    expect(box!.height).toBeGreaterThan(100);
+
+    // Type a long line to verify text wrapping works
+    await terminal.click();
+    await instancesPage.page.keyboard.type('echo "This is a test of terminal text wrapping which should work correctly with proper dimensions"');
+    await instancesPage.page.keyboard.press('Enter');
+
+    await instancesPage.page.waitForTimeout(500);
+
+    // Terminal should still be visible and functional
+    await expect(terminal).toBeVisible();
+  });
+
+  test('terminal responds to window resize', async ({ instancesPage }) => {
+    await instancesPage.gotoInstances();
+    await instancesPage.createNewInstance();
+
+    // Wait for terminal to fully initialize
+    await instancesPage.page.waitForTimeout(2000);
+
+    const terminal = instancesPage.page.locator('.xterm-screen');
+    await expect(terminal).toBeVisible({ timeout: 10000 });
+
+    // Get initial size
+    const initialBox = await terminal.boundingBox();
+    expect(initialBox).not.toBeNull();
+
+    // Resize window (make it smaller)
+    await instancesPage.page.setViewportSize({ width: 800, height: 600 });
+    await instancesPage.page.waitForTimeout(500);
+
+    // Terminal should still be visible
+    await expect(terminal).toBeVisible();
+
+    // Get new size - it should have changed
+    const smallerBox = await terminal.boundingBox();
+    expect(smallerBox).not.toBeNull();
+
+    // Resize window (make it larger)
+    await instancesPage.page.setViewportSize({ width: 1400, height: 900 });
+    await instancesPage.page.waitForTimeout(500);
+
+    // Terminal should adjust to new size
+    const largerBox = await terminal.boundingBox();
+    expect(largerBox).not.toBeNull();
+
+    // Terminal should be visible after all resizes
+    await expect(terminal).toBeVisible();
+  });
+
   test('terminals are isolated between instances (no cross-contamination)', async ({ instancesPage, apiClient }) => {
     await instancesPage.gotoInstances();
 

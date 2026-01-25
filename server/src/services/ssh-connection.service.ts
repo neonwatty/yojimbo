@@ -259,7 +259,9 @@ class SSHConnectionService {
         // 1. Expands ~ to home directory
         // 2. Lists only directories
         // 3. Outputs the resolved path first, then directories
-        const cmd = `cd ${remotePath} 2>/dev/null && pwd && ls -1d */ 2>/dev/null | sed 's|/$||' || echo ""`;
+        // Wrap in bash -c to ensure bash syntax works regardless of user's default shell (e.g., nushell)
+        const bashCmd = `cd ${remotePath} 2>/dev/null && pwd && ls -1d */ 2>/dev/null | sed 's|/$||' || echo ""`;
+        const cmd = `bash -c '${bashCmd.replace(/'/g, "'\"'\"'")}'`;
 
         client.exec(cmd, (err, stream) => {
           if (err) {
@@ -413,7 +415,8 @@ class SSHConnectionService {
     // 1. Find the latest .jsonl session file for this project
     // 2. Get its modification time in seconds since epoch
     // 3. Get the last line to check message type
-    const command = `
+    // Wrap in bash -c to ensure bash syntax works regardless of user's default shell (e.g., nushell)
+    const bashScript = `
       SESSION_DIR="$HOME/.claude/projects/${encodedDir}"
       if [ -d "$SESSION_DIR" ]; then
         LATEST=$(ls -t "$SESSION_DIR"/*.jsonl 2>/dev/null | head -1)
@@ -433,6 +436,7 @@ class SSHConnectionService {
         echo "NO_PROJECT"
       fi
     `;
+    const command = `bash -c '${bashScript.replace(/'/g, "'\"'\"'")}'`;
 
     const result = await this.executeCommand(machineId, command);
 

@@ -81,6 +81,65 @@ class HookInstallerService {
   }
 
   /**
+   * Install hooks on a remote machine directly (without requiring an instance)
+   * This allows setting up hooks before creating any instances on the machine.
+   */
+  async installHooksForMachine(
+    machineId: string,
+    orchestratorUrl: string
+  ): Promise<HookInstallResult> {
+    const db = getDatabase();
+
+    // Get machine details
+    const machine = db.prepare(`
+      SELECT id, hostname, port, username, ssh_key_path
+      FROM remote_machines
+      WHERE id = ?
+    `).get(machineId) as RemoteMachineRow | undefined;
+
+    if (!machine) {
+      return { success: false, message: 'Remote machine not found', error: 'Machine not found' };
+    }
+
+    const sshConfig: SSHConfig = {
+      host: machine.hostname,
+      port: machine.port,
+      username: machine.username,
+      privateKeyPath: machine.ssh_key_path || undefined,
+    };
+
+    // Use empty string for instanceId since hooks don't actually use it
+    return this.installHooks(sshConfig, '', orchestratorUrl, machine.id);
+  }
+
+  /**
+   * Check which hook types already exist on a remote machine (by machine ID)
+   */
+  async checkExistingHooksForMachine(machineId: string): Promise<CheckHooksResult> {
+    const db = getDatabase();
+
+    // Get machine details
+    const machine = db.prepare(`
+      SELECT id, hostname, port, username, ssh_key_path
+      FROM remote_machines
+      WHERE id = ?
+    `).get(machineId) as RemoteMachineRow | undefined;
+
+    if (!machine) {
+      return { success: false, existingHooks: [], error: 'Remote machine not found' };
+    }
+
+    const sshConfig: SSHConfig = {
+      host: machine.hostname,
+      port: machine.port,
+      username: machine.username,
+      privateKeyPath: machine.ssh_key_path || undefined,
+    };
+
+    return this.checkExistingHooks(sshConfig);
+  }
+
+  /**
    * Check which hook types already exist on a remote machine
    */
   async checkExistingHooksForInstance(instanceId: string): Promise<CheckHooksResult> {
@@ -170,7 +229,8 @@ class HookInstallerService {
 
       client.on('ready', () => {
         // Read settings.json and check for existing hooks
-        const checkScript = `cat ~/.claude/settings.json 2>/dev/null || echo '{}'`;
+        // Wrap in bash -c to ensure it works regardless of user's default shell (e.g., nushell)
+        const checkScript = `bash -c "cat ~/.claude/settings.json 2>/dev/null || echo '{}'"`;
 
         client.exec(checkScript, (err, stream) => {
           if (err) {
@@ -408,7 +468,8 @@ class HookInstallerService {
     // Escape single quotes in the JSON for the shell script
     const escapedJson = hooksJson.replace(/'/g, "'\"'\"'");
 
-    return `
+    // Wrap in bash heredoc to ensure it works regardless of user's default shell (e.g., nushell)
+    return `bash << 'BASH_SCRIPT'
       set -e
 
       CLAUDE_DIR="$HOME/.claude"
@@ -455,7 +516,7 @@ PYTHON_SCRIPT
       fi
 
       echo "Hook installation complete"
-    `;
+BASH_SCRIPT`;
   }
 
   /**
@@ -610,7 +671,8 @@ PYTHON_SCRIPT
    * all hooks that look like they were installed by Yojimbo.
    */
   private generateUninstallScript(_instanceId: string): string {
-    return `
+    // Wrap in bash heredoc to ensure it works regardless of user's default shell (e.g., nushell)
+    return `bash << 'BASH_SCRIPT'
       set -e
 
       SETTINGS_FILE="$HOME/.claude/settings.json"
@@ -666,7 +728,7 @@ print("Hooks removed successfully")
 PYTHON_SCRIPT
 
       echo "Hook uninstallation complete"
-    `;
+BASH_SCRIPT`;
   }
 
   /**

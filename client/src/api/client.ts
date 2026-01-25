@@ -336,6 +336,20 @@ export const machinesApi = {
     request<ApiResponse<{ installed: boolean; path: string | null; version: string | null }>>(
       `/machines/${id}/claude-status`
     ),
+
+  installHooks: (id: string, orchestratorUrl: string) =>
+    request<ApiResponse<{ message: string; error?: string }>>(
+      `/machines/${id}/install-hooks`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ orchestratorUrl }),
+      }
+    ),
+
+  checkHooksStatus: (id: string) =>
+    request<ApiResponse<{ installed: boolean; hookTypes: string[]; error?: string }>>(
+      `/machines/${id}/hooks-status`
+    ),
 };
 
 // SSH API

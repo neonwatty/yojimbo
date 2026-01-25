@@ -395,13 +395,60 @@ router.post('/:id/install-hooks', async (req, res) => {
 
     const result = await hookInstallerService.installHooksForMachine(id, orchestratorUrl);
 
-    res.json({
-      success: result.success,
-      data: {
-        message: result.message,
-        error: result.error,
-      },
-    });
+    if (!result.success) {
+      return res.status(400).json({
+        success: false,
+        error: result.message,
+        details: result.error,
+      });
+    }
+
+    // Set up reverse tunnel so hooks can reach the local server
+    // Parse port from orchestratorUrl (default to 3456)
+    let localPort = 3456;
+    try {
+      const url = new URL(orchestratorUrl);
+      if (url.port) {
+        localPort = parseInt(url.port, 10);
+      } else if (url.protocol === 'https:') {
+        localPort = 443;
+      } else if (url.protocol === 'http:') {
+        localPort = 80;
+      }
+    } catch {
+      // Keep default port if URL parsing fails
+    }
+
+    // Create reverse tunnel: remote:localPort → local:localPort
+    // Use synthetic instance ID for machine-level tunnel
+    const syntheticInstanceId = `machine-${id}`;
+    const tunnelResult = await reverseTunnelService.createTunnel(syntheticInstanceId, id, localPort);
+
+    if (tunnelResult.success) {
+      const tunnelStatus = tunnelResult.shared ? 'sharing existing' : 'new';
+      console.log(`[Hooks] Installed hooks and ${tunnelStatus} reverse tunnel for machine ${id}`);
+      res.json({
+        success: true,
+        data: {
+          message: result.message,
+          tunnelActive: true,
+          tunnelPort: localPort,
+          tunnelShared: tunnelResult.shared || false,
+        },
+      });
+    } else {
+      // Hooks installed but tunnel failed - warn but don't fail completely
+      console.warn(`[Hooks] Hooks installed but reverse tunnel failed for machine ${id}: ${tunnelResult.error}`);
+      res.json({
+        success: true,
+        data: {
+          message: result.message,
+          tunnelActive: false,
+          tunnelError: tunnelResult.error,
+          warning: 'Hooks installed but reverse tunnel could not be established. Remote hooks may not work.',
+        },
+      });
+    }
   } catch (error) {
     console.error('Error installing hooks on remote machine:', error);
     res.status(500).json({ success: false, error: 'Failed to install hooks' });

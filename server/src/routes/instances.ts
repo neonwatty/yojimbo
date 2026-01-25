@@ -123,23 +123,31 @@ router.post('/', async (req, res) => {
 
       // Auto-unlock keychain for remote Claude Code instances
       if (machineType === 'remote' && machineId && startupCommand.includes('claude')) {
-        const hasPassword = await keychainStorageService.hasPassword(machineId);
-        if (hasPassword) {
-          const passwordResult = await keychainStorageService.getPassword(machineId);
-          if (passwordResult.success && passwordResult.password) {
-            // Unlock keychain first (after initial shell setup delay)
-            setTimeout(() => {
-              if (terminalManager.has(id)) {
-                terminalManager.write(id, 'security unlock-keychain ~/Library/Keychains/login.keychain-db\n');
-                setTimeout(() => {
-                  if (terminalManager.has(id)) {
-                    terminalManager.write(id, passwordResult.password + '\n');
-                  }
-                }, 500);
-              }
-            }, 1000);
-            keychainUnlockDelay = 2500; // Wait for unlock before starting Claude
-            console.log(`🔐 Auto-unlocking keychain for remote Claude Code instance ${id}`);
+        // Check if machine keychain is already unlocked in this session
+        if (keychainStorageService.isUnlocked(machineId)) {
+          console.log(`🔓 Keychain already unlocked for machine ${machineId}, skipping auto-unlock for instance ${id}`);
+        } else {
+          const hasPassword = await keychainStorageService.hasPassword(machineId);
+          if (hasPassword) {
+            const passwordResult = await keychainStorageService.getPassword(machineId);
+            if (passwordResult.success && passwordResult.password) {
+              // Unlock keychain first (after initial shell setup delay)
+              // Use longer delays (1500ms) to account for SSH latency
+              setTimeout(() => {
+                if (terminalManager.has(id)) {
+                  terminalManager.write(id, 'security unlock-keychain ~/Library/Keychains/login.keychain-db\n');
+                  setTimeout(() => {
+                    if (terminalManager.has(id)) {
+                      terminalManager.write(id, passwordResult.password + '\n');
+                      // Mark as unlocked for this session after successful unlock attempt
+                      keychainStorageService.markUnlocked(machineId!);
+                    }
+                  }, 1500);
+                }
+              }, 1000);
+              keychainUnlockDelay = 3500; // Wait for unlock before starting Claude (1000 + 1500 + buffer)
+              console.log(`🔐 Auto-unlocking keychain for remote Claude Code instance ${id}`);
+            }
           }
         }
       }

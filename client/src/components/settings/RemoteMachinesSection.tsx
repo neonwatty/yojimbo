@@ -25,13 +25,14 @@ function StatusIndicator({ status }: { status: MachineStatus }) {
 }
 
 export function RemoteMachinesSection() {
-  const { machines, sshKeys, loading, createMachine, updateMachine, deleteMachine, testConnection, testTunnel, installHooks } =
+  const { machines, sshKeys, loading, createMachine, updateMachine, deleteMachine, testConnection, testTunnel, installHooks, unlockKeychain } =
     useMachines();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editMachine, setEditMachine] = useState<RemoteMachine | null>(null);
   const [testingIds, setTestingIds] = useState<Set<string>>(new Set());
   const [testingTunnelIds, setTestingTunnelIds] = useState<Set<string>>(new Set());
   const [installingHooksIds, setInstallingHooksIds] = useState<Set<string>>(new Set());
+  const [unlockingKeychainIds, setUnlockingKeychainIds] = useState<Set<string>>(new Set());
   const [isHelpExpanded, setIsHelpExpanded] = useState(false);
 
   const handleTestConnection = async (id: string) => {
@@ -89,6 +90,28 @@ export function RemoteMachinesSection() {
       toast.error('Failed to install hooks');
     } finally {
       setInstallingHooksIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    }
+  };
+
+  const handleUnlockKeychain = async (id: string, machineName: string) => {
+    setUnlockingKeychainIds((prev) => new Set(prev).add(id));
+    try {
+      const result = await unlockKeychain(id);
+      if (result.alreadyUnlocked) {
+        toast.info(`Keychain already unlocked for ${machineName}`);
+      } else if (result.unlocked) {
+        toast.success(`Keychain unlocked for ${machineName}`);
+      } else {
+        toast.success(result.message);
+      }
+    } catch {
+      toast.error('Failed to unlock keychain. Make sure a password is saved for this machine.');
+    } finally {
+      setUnlockingKeychainIds((prev) => {
         const next = new Set(prev);
         next.delete(id);
         return next;
@@ -264,6 +287,18 @@ export function RemoteMachinesSection() {
                       <Spinner size="sm" />
                     ) : (
                       'Test'
+                    )}
+                  </button>
+                  <button
+                    onClick={() => handleUnlockKeychain(machine.id, machine.name)}
+                    disabled={unlockingKeychainIds.has(machine.id)}
+                    className="px-2 py-0.5 text-xs text-theme-muted hover:text-theme-primary border border-surface-500 hover:border-surface-400 rounded transition-colors disabled:opacity-50"
+                    title="Unlock keychain on remote machine (for Claude Code)"
+                  >
+                    {unlockingKeychainIds.has(machine.id) ? (
+                      <Spinner size="sm" />
+                    ) : (
+                      'Unlock'
                     )}
                   </button>
                   <button

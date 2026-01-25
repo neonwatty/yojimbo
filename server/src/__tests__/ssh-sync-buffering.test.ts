@@ -306,6 +306,175 @@ describe('SSHBackend sync frame buffering', () => {
   });
 });
 
+describe('SSHBackend CPR (Cursor Position Report) filtering', () => {
+  let backend: SSHBackend;
+  let emissions: string[];
+
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    mockStreamInstance = null;
+    mockExistsSync.mockReturnValue(true);
+    mockReadFileSync.mockReturnValue(Buffer.from('fake-private-key'));
+    emissions = [];
+
+    backend = new SSHBackend('test-cpr', {
+      host: 'test.example.com',
+      port: 22,
+      username: 'testuser',
+    });
+
+    // Capture all data emissions
+    backend.on('data', (_id: string, data: string) => {
+      emissions.push(data);
+    });
+
+    // Spawn the backend (connects and starts shell)
+    await backend.spawn({ workingDir: '~', cols: 80, rows: 24 });
+
+    // Wait for shell initialization
+    await new Promise(r => setTimeout(r, 400));
+  });
+
+  afterEach(async () => {
+    if (backend) {
+      await backend.kill();
+    }
+  });
+
+  function simulateData(data: string): void {
+    if (mockStreamInstance) {
+      mockStreamInstance.emit('data', Buffer.from(data));
+    }
+  }
+
+  describe('complete CPR sequences', () => {
+    it('should filter out complete CPR sequence with ESC', () => {
+      simulateData('hello\x1b[48;1Rworld');
+
+      expect(emissions).toHaveLength(1);
+      expect(emissions[0]).toBe('helloworld');
+    });
+
+    it('should filter out complete CPR sequence without ESC', () => {
+      // Sometimes CPR sequences arrive without the ESC prefix
+      simulateData('hello[18;1Rworld');
+
+      expect(emissions).toHaveLength(1);
+      expect(emissions[0]).toBe('helloworld');
+    });
+
+    it('should filter multiple CPR sequences', () => {
+      simulateData('a[48;1Rb[46;1Rc\x1b[18;5Rd');
+
+      expect(emissions).toHaveLength(1);
+      expect(emissions[0]).toBe('abcd');
+    });
+  });
+
+  describe('split CPR sequences (THE BUG FIX)', () => {
+    it('should buffer CPR split across 2 packets: [ in first, rest in second', () => {
+      // This is the exact bug scenario: "[" arrives alone, then "18;1R"
+      simulateData('hello[');
+      expect(emissions).toHaveLength(1);
+      expect(emissions[0]).toBe('hello');
+
+      simulateData('18;1Rworld');
+      expect(emissions).toHaveLength(2);
+      expect(emissions[1]).toBe('world');
+    });
+
+    it('should buffer CPR split: [18; in first, 1R in second', () => {
+      simulateData('hello[18;');
+      expect(emissions).toHaveLength(1);
+      expect(emissions[0]).toBe('hello');
+
+      simulateData('1Rworld');
+      expect(emissions).toHaveLength(2);
+      expect(emissions[1]).toBe('world');
+    });
+
+    it('should buffer CPR split: ESC[ in first, rest in second', () => {
+      simulateData('hello\x1b[');
+      expect(emissions).toHaveLength(1);
+      expect(emissions[0]).toBe('hello');
+
+      simulateData('48;1Rworld');
+      expect(emissions).toHaveLength(2);
+      expect(emissions[1]).toBe('world');
+    });
+
+    it('should buffer CPR split across 3 packets', () => {
+      simulateData('hello[');
+      expect(emissions).toHaveLength(1);
+      expect(emissions[0]).toBe('hello');
+
+      simulateData('18');
+      expect(emissions).toHaveLength(1); // Still buffering
+
+      simulateData(';1Rworld');
+      expect(emissions).toHaveLength(2);
+      expect(emissions[1]).toBe('world');
+    });
+
+    it('should handle ESC[ at end of packet', () => {
+      // ESC alone is NOT buffered (it could be start of many escape sequences)
+      // But ESC[ IS buffered as a potential CPR start
+      simulateData('hello\x1b[');
+      expect(emissions).toHaveLength(1);
+      expect(emissions[0]).toBe('hello');
+
+      simulateData('48;1Rworld');
+      expect(emissions).toHaveLength(2);
+      expect(emissions[1]).toBe('world');
+    });
+  });
+
+  describe('edge cases', () => {
+    it('should not filter partial sequence that is not CPR', () => {
+      // [H is cursor home, not CPR - should not be buffered
+      simulateData('[H');
+
+      // Since [H doesn't match CPR pattern, it should pass through
+      // But the buffer might hold it if it looks like a potential CPR start
+      expect(emissions.join('')).toContain('[H');
+    });
+
+    it('should flush buffer on kill', async () => {
+      // Start a potential CPR sequence
+      simulateData('hello[18');
+
+      // Kill should flush the buffer
+      await backend.kill();
+
+      // The partial sequence should be emitted (it wasn't a complete CPR)
+      const allOutput = emissions.join('');
+      expect(allOutput).toContain('hello');
+      expect(allOutput).toContain('[18');
+    });
+
+    it('should handle multiple rapid CPR sequences', () => {
+      // Simulate rapid cursor position queries (like from Claude Code)
+      simulateData('\x1b[1;1R\x1b[2;1R\x1b[3;1Rcontent');
+
+      expect(emissions).toHaveLength(1);
+      expect(emissions[0]).toBe('content');
+    });
+  });
+
+  describe('realistic Claude Code scenario', () => {
+    it('should handle CPR responses during Claude Code startup', () => {
+      // Claude Code queries cursor position, response may be split
+      simulateData('Thinking...[');
+      simulateData('48;1R');
+      simulateData(' Done!');
+
+      const allOutput = emissions.join('');
+      expect(allOutput).toBe('Thinking... Done!');
+      expect(allOutput).not.toContain('[48;1R');
+    });
+  });
+});
+
 describe('Bug detection helper', () => {
   /**
    * This function can be used to detect split sync frames in real output

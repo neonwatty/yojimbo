@@ -16,8 +16,14 @@ interface PasswordResult extends KeychainResult {
  * Keychain Storage Service
  * Uses the LOCAL macOS Keychain to securely store remote machine keychain passwords.
  * This leverages OS-level encryption and Touch ID/password protection.
+ *
+ * Also tracks which remote machines have unlocked keychains in this server session
+ * to avoid redundant unlock attempts.
  */
 class KeychainStorageService {
+  // Track which machines have unlocked keychains in this server session
+  // Note: This resets when the server restarts (by design - keychains lock on sleep/reboot)
+  private unlockedMachines: Set<string> = new Set();
   /**
    * Check if we're running on macOS
    */
@@ -147,6 +153,43 @@ class KeychainStorageService {
   async hasPassword(machineId: string): Promise<boolean> {
     const result = await this.getPassword(machineId);
     return result.success && !!result.password;
+  }
+
+  // ============================================
+  // Machine Unlock State Tracking
+  // ============================================
+  // Tracks which machines have had their keychains unlocked in this session.
+  // This allows us to skip redundant unlock attempts for multiple instances
+  // on the same machine.
+
+  /**
+   * Check if a machine's keychain has been unlocked in this session
+   */
+  isUnlocked(machineId: string): boolean {
+    return this.unlockedMachines.has(machineId);
+  }
+
+  /**
+   * Mark a machine's keychain as unlocked for this session
+   */
+  markUnlocked(machineId: string): void {
+    this.unlockedMachines.add(machineId);
+    console.log(`🔓 Machine ${machineId} keychain marked as unlocked for this session`);
+  }
+
+  /**
+   * Mark a machine's keychain as locked (e.g., after sleep/disconnect)
+   */
+  markLocked(machineId: string): void {
+    this.unlockedMachines.delete(machineId);
+    console.log(`🔒 Machine ${machineId} keychain marked as locked`);
+  }
+
+  /**
+   * Clear all unlock state (e.g., on server restart)
+   */
+  clearAllUnlockState(): void {
+    this.unlockedMachines.clear();
   }
 }
 

@@ -55,6 +55,10 @@ export class SSHBackend extends TerminalBackend {
   // which can split DEC mode 2026 sync frames across multiple callbacks
   private syncOutputBuffer: string = '';
   private inSyncMode: boolean = false;
+  // CPR (Cursor Position Report) buffering - handles partial sequences split across chunks
+  // When programs send ESC[6n, the terminal responds with ESC[row;colR which may arrive
+  // in multiple chunks (e.g., "[" in one chunk and "18;1R" in the next)
+  private cprBuffer: string = '';
 
 
   constructor(id: string, sshConfig: SSHConfig, maxHistorySize?: number) {
@@ -70,12 +74,41 @@ export class SSHBackend extends TerminalBackend {
    * When programs send ESC[6n to query cursor position, the terminal responds
    * with ESC[row;colR. In SSH sessions, these responses can leak into the output
    * stream and appear as gibberish like "[48;1R[46;1R". We filter them out.
+   *
+   * CPR sequences can be split across multiple data chunks due to TCP packet
+   * boundaries, so we buffer potential partial sequences and reassemble them.
    */
   private filterCursorPositionReports(data: string): string {
+    // Prepend any buffered partial sequence from previous chunk
+    const combined = this.cprBuffer + data;
+    this.cprBuffer = '';
+
+    // Filter complete CPR sequences
     // CPR format: ESC [ row ; col R  (e.g., \x1b[48;1R)
     // Also handle partial sequences where ESC may be missing (just [48;1R)
     // eslint-disable-next-line no-control-regex
-    return data.replace(/\x1b?\[\d+;\d+R/g, '');
+    let filtered = combined.replace(/\x1b?\[\d+;\d+R/g, '');
+
+    // Check if we end with a partial CPR sequence that might continue
+    // Patterns: ESC, ESC[, ESC[N, ESC[N;, ESC[N;N (waiting for R)
+    // Or without ESC: [, [N, [N;, [N;N
+    // eslint-disable-next-line no-control-regex
+    const partialMatch = filtered.match(/(?:\x1b\[[\d;]*|\[[\d;]*)$/);
+    if (partialMatch) {
+      this.cprBuffer = partialMatch[0];
+      filtered = filtered.slice(0, -partialMatch[0].length);
+    }
+
+    return filtered;
+  }
+
+  /**
+   * Flush any remaining CPR buffer (called when stream ends)
+   */
+  private flushCprBuffer(): string {
+    const remaining = this.cprBuffer;
+    this.cprBuffer = '';
+    return remaining;
   }
 
   /**
@@ -414,6 +447,12 @@ export class SSHBackend extends TerminalBackend {
       this.emitData(this.syncOutputBuffer);
       this.syncOutputBuffer = '';
       this.inSyncMode = false;
+    }
+
+    // Flush any buffered CPR data (in case partial sequence was legitimate output)
+    const remainingCpr = this.flushCprBuffer();
+    if (remainingCpr) {
+      this.emitData(remainingCpr);
     }
 
     if (this.channel) {

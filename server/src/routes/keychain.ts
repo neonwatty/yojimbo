@@ -282,9 +282,10 @@ router.post('/remote/:instanceId/auto-unlock', async (req: Request, res: Respons
 
     // Wait for the password prompt to appear, then send password
     // The password won't be echoed because it's a password prompt
+    // Use 1500ms delay to account for SSH latency (was 500ms which was too fast)
     setTimeout(() => {
       terminalManager.write(instanceId, passwordResult.password + '\n');
-    }, 500);
+    }, 1500);
 
     console.log(`🔓 Sent auto-unlock command for instance ${instanceId}`);
 

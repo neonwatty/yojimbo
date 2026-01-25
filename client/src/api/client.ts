@@ -438,6 +438,12 @@ export const keychainApi = {
     request<ApiResponse<{ message: string }>>(`/keychain/remote/${instanceId}/auto-unlock`, {
       method: 'POST',
     }),
+
+  testRemotePassword: (machineId: string, password: string) =>
+    request<ApiResponse<{ valid: boolean; message: string }>>(`/keychain/remote/${machineId}/test`, {
+      method: 'POST',
+      body: JSON.stringify({ password }),
+    }),
 };
 
 // Todos API

@@ -450,4 +450,95 @@ router.post('/local/test-unlock', (req: Request, res: Response) => {
   }
 });
 
+/**
+ * POST /api/keychain/remote/:machineId/test
+ * Test a password against a remote machine's keychain via SSH
+ * Does NOT save the password - just tests if it would work
+ */
+router.post('/remote/:machineId/test', async (req: Request, res: Response) => {
+  // Dynamically import to avoid circular dependencies
+  const { sshConnectionService } = await import('../services/ssh-connection.service.js');
+
+  try {
+    const { machineId } = req.params;
+    const { password } = req.body;
+
+    if (!password) {
+      return res.status(400).json({
+        success: false,
+        error: 'Password is required',
+      });
+    }
+
+    // Get machine details from database
+    const db = getDatabase();
+    const machine = db.prepare(`
+      SELECT id, name, hostname, port, username, ssh_key_path
+      FROM remote_machines WHERE id = ?
+    `).get(machineId) as {
+      id: string;
+      name: string;
+      hostname: string;
+      port: number;
+      username: string;
+      ssh_key_path: string | null;
+    } | undefined;
+
+    if (!machine) {
+      return res.status(404).json({
+        success: false,
+        error: 'Machine not found',
+      });
+    }
+
+    // Test the password by running the unlock command via SSH
+    // Escape special characters in the password for shell
+    const keychainPath = '~/Library/Keychains/login.keychain-db';
+    const escapedPassword = password.replace(/"/g, '\\"').replace(/\$/g, '\\$');
+    const unlockCmd = `bash -c 'echo "${escapedPassword}" | security unlock-keychain ${keychainPath} 2>&1'`;
+
+    try {
+      const result = await sshConnectionService.executeCommand(machineId, unlockCmd);
+
+      // Check for error patterns in output
+      const output = result.stdout + (result.stderr || '');
+      const isError = output.toLowerCase().includes('incorrect') ||
+                      output.toLowerCase().includes('bad password') ||
+                      output.toLowerCase().includes('error');
+
+      if (result.success && !isError) {
+        return res.json({
+          success: true,
+          data: {
+            valid: true,
+            message: 'Password is correct - keychain unlocked successfully',
+          },
+        });
+      } else {
+        return res.json({
+          success: true,
+          data: {
+            valid: false,
+            message: output.includes('incorrect') || output.includes('bad password')
+              ? 'Incorrect password'
+              : 'Failed to unlock keychain',
+          },
+        });
+      }
+    } catch (sshError) {
+      console.error(`Error testing keychain password for machine ${machineId}:`, sshError);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to connect to remote machine',
+      });
+    }
+  } catch (error) {
+    console.error('Error testing remote keychain password:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to test password',
+    });
+  }
+});
+
 export default router;

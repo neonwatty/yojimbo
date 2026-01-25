@@ -170,7 +170,8 @@ class HookInstallerService {
 
       client.on('ready', () => {
         // Read settings.json and check for existing hooks
-        const checkScript = `cat ~/.claude/settings.json 2>/dev/null || echo '{}'`;
+        // Wrap in bash -c to ensure it works regardless of user's default shell (e.g., nushell)
+        const checkScript = `bash -c "cat ~/.claude/settings.json 2>/dev/null || echo '{}'"`;
 
         client.exec(checkScript, (err, stream) => {
           if (err) {
@@ -408,7 +409,8 @@ class HookInstallerService {
     // Escape single quotes in the JSON for the shell script
     const escapedJson = hooksJson.replace(/'/g, "'\"'\"'");
 
-    return `
+    // Wrap in bash heredoc to ensure it works regardless of user's default shell (e.g., nushell)
+    return `bash << 'BASH_SCRIPT'
       set -e
 
       CLAUDE_DIR="$HOME/.claude"
@@ -455,7 +457,7 @@ PYTHON_SCRIPT
       fi
 
       echo "Hook installation complete"
-    `;
+BASH_SCRIPT`;
   }
 
   /**
@@ -610,7 +612,8 @@ PYTHON_SCRIPT
    * all hooks that look like they were installed by Yojimbo.
    */
   private generateUninstallScript(_instanceId: string): string {
-    return `
+    // Wrap in bash heredoc to ensure it works regardless of user's default shell (e.g., nushell)
+    return `bash << 'BASH_SCRIPT'
       set -e
 
       SETTINGS_FILE="$HOME/.claude/settings.json"
@@ -666,7 +669,7 @@ print("Hooks removed successfully")
 PYTHON_SCRIPT
 
       echo "Hook uninstallation complete"
-    `;
+BASH_SCRIPT`;
   }
 
   /**

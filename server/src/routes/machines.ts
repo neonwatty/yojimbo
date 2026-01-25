@@ -313,7 +313,8 @@ router.get('/:id/claude-status', async (req, res) => {
 
     try {
       // Check if claude is installed by running which claude && claude --version
-      const result = await sshConnectionService.executeCommand(id, 'which claude && claude --version');
+      // Wrap in bash -c to ensure it works regardless of user's default shell (e.g., nushell)
+      const result = await sshConnectionService.executeCommand(id, "bash -c 'which claude && claude --version'");
       const lines = result.stdout.trim().split('\n');
       const path = lines[0] || null;
       const version = lines[1]?.match(/v[\d.]+/)?.[0] || null;

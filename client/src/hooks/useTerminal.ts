@@ -191,27 +191,38 @@ export function useTerminal(options: UseTerminalOptions = {}) {
   );
 
   const write = useCallback((data: string) => {
+    // Filter out Cursor Position Report (CPR) sequences that may leak through
+    // CPR format: ESC[row;colR - these are terminal responses to DSR queries (ESC[6n)
+    // Some may slip through server-side filtering due to TCP packet splitting
+    // eslint-disable-next-line no-control-regex
+    let filtered = data.replace(/\x1b?\[\d+;\d+R/g, '');
+    // Also catch partial CPR fragments that lost their leading bracket
+    // e.g., ";1R", "27;1R" - semicolon followed by digits and R
+    filtered = filtered.replace(/;\d+R/g, '');
+    // And fragments like "1R", "27R" at word boundaries (very fragmented CPR)
+    filtered = filtered.replace(/\b\d{1,3}R\b/g, '');
+
     // Debug: Detect potential blank line issues
     // Enable with localStorage.setItem('DEBUG_ANIMATION', '1')
     const DEBUG = localStorage.getItem('DEBUG_ANIMATION') === '1';
     if (DEBUG) {
       // eslint-disable-next-line no-control-regex
-      const startCount = (data.match(/\x1b\[\?2026h/g) || []).length;
+      const startCount = (filtered.match(/\x1b\[\?2026h/g) || []).length;
       // eslint-disable-next-line no-control-regex
-      const endCount = (data.match(/\x1b\[\?2026l/g) || []).length;
-      const hasEmptyLine = /\n\s*\n/.test(data);
+      const endCount = (filtered.match(/\x1b\[\?2026l/g) || []).length;
+      const hasEmptyLine = /\n\s*\n/.test(filtered);
       // eslint-disable-next-line no-control-regex
-      const hasCursorUp = /\x1b\[\d*A/.test(data);
+      const hasCursorUp = /\x1b\[\d*A/.test(filtered);
 
       if (startCount > 0 || endCount > 0 || hasEmptyLine) {
         console.log('[TERM] write:', {
-          len: data.length,
+          len: filtered.length,
           syncStart: startCount,
           syncEnd: endCount,
           balanced: startCount === endCount,
           hasEmptyLine,
           hasCursorUp,
-          preview: JSON.stringify(data.slice(0, 150)),
+          preview: JSON.stringify(filtered.slice(0, 150)),
         });
 
         // Alert on unbalanced sync frames (the bug we're looking for)
@@ -219,16 +230,16 @@ export function useTerminal(options: UseTerminalOptions = {}) {
           console.warn('[TERM] UNBALANCED SYNC FRAME DETECTED!', {
             startCount,
             endCount,
-            fullData: JSON.stringify(data),
+            fullData: JSON.stringify(filtered),
           });
         }
       }
     }
 
-    // Write directly to terminal - sync frame buffering is handled
+    // Write filtered data to terminal - sync frame buffering is handled
     // at the server level in the SSH backend to ensure complete
     // frames are sent as atomic units over WebSocket
-    terminalRef.current?.write(data);
+    terminalRef.current?.write(filtered);
   }, []);
 
   const clear = useCallback(() => {

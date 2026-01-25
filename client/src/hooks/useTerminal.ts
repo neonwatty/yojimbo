@@ -121,6 +121,12 @@ export function useTerminal(options: UseTerminalOptions = {}) {
       terminalRef.current = terminal;
       fitAddonRef.current = fitAddon;
 
+      // Send initial terminal size to server
+      // This is important for SSH sessions where the remote needs accurate dimensions
+      if (onResize) {
+        onResize(terminal.cols, terminal.rows);
+      }
+
       // Mobile touch scrolling support
       // xterm.js doesn't natively support touch scrolling, so we implement it manually
       // See: https://github.com/xtermjs/xterm.js/issues/5377

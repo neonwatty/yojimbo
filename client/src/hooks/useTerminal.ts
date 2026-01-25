@@ -194,13 +194,27 @@ export function useTerminal(options: UseTerminalOptions = {}) {
     // Filter out Cursor Position Report (CPR) sequences that may leak through
     // CPR format: ESC[row;colR - these are terminal responses to DSR queries (ESC[6n)
     // Some may slip through server-side filtering due to TCP packet splitting
+    //
+    // CPR sequences can fragment in many ways when split across packets:
+    // - Complete: \x1b[23;4R or [23;4R
+    // - Partial with semicolon: [23; or [23;4 or ;4R
+    // - Interleaved fragments: 23[4 (digit-bracket-digit from split sequences)
+    //
     // eslint-disable-next-line no-control-regex
     let filtered = data.replace(/\x1b?\[\d+;\d+R/g, '');
-    // Also catch partial CPR fragments that lost their leading bracket
-    // e.g., ";1R", "27;1R" - semicolon followed by digits and R
-    filtered = filtered.replace(/;\d+R/g, '');
-    // And fragments like "1R", "27R" at word boundaries (very fragmented CPR)
+    // Partial CPR ending with R: ";4R", "23;4R"
+    filtered = filtered.replace(/\d*;\d+R/g, '');
+    // Partial CPR start with semicolon (no R yet): "[23;", "[23;4" - only if standalone
+    filtered = filtered.replace(/^\[\d+;\d*$/gm, '');
+    filtered = filtered.replace(/(?:^|\n)\[\d+;\d*(?:\n|$)/g, '\n');
+    // Digits-bracket-digits pattern unique to interleaved CPR: "23[4", "6[46", "29[4"
+    filtered = filtered.replace(/\d+\[\d+/g, '');
+    // Standalone digit-R at word boundary: "4R", "23R"
     filtered = filtered.replace(/\b\d{1,3}R\b/g, '');
+    // Lines that are ONLY CPR garbage (just digits, brackets, semicolons, R)
+    filtered = filtered.replace(/^[\d\[;\]R\s]+$/gm, '');
+    // Clean up empty lines that resulted from filtering
+    filtered = filtered.replace(/\n{3,}/g, '\n\n');
 
     // Debug: Detect potential blank line issues
     // Enable with localStorage.setItem('DEBUG_ANIMATION', '1')

@@ -50,14 +50,25 @@ echo "$INSTALL_RESPONSE" | jq .
 echo ""
 echo -e "${YELLOW}Step 3: Verifying result...${NC}"
 
-# The API returns { success: true/false, message: "...", error?: "..." }
+# The API returns { success: true/false, data: { message, tunnelActive, ... } }
 SUCCESS=$(echo "$INSTALL_RESPONSE" | jq -r '.success // false')
-MESSAGE=$(echo "$INSTALL_RESPONSE" | jq -r '.message // "No message"')
-ERROR=$(echo "$INSTALL_RESPONSE" | jq -r '.error // empty')
+MESSAGE=$(echo "$INSTALL_RESPONSE" | jq -r '.data.message // .message // "No message"')
+ERROR=$(echo "$INSTALL_RESPONSE" | jq -r '.error // .data.error // empty')
+TUNNEL_ACTIVE=$(echo "$INSTALL_RESPONSE" | jq -r '.data.tunnelActive // false')
+TUNNEL_PORT=$(echo "$INSTALL_RESPONSE" | jq -r '.data.tunnelPort // "N/A"')
+TUNNEL_WARNING=$(echo "$INSTALL_RESPONSE" | jq -r '.data.warning // empty')
 
 if [ "$SUCCESS" == "true" ]; then
     echo -e "${GREEN}✓ API returned success${NC}"
     echo -e "${GREEN}  Message: ${MESSAGE}${NC}"
+    if [ "$TUNNEL_ACTIVE" == "true" ]; then
+        echo -e "${GREEN}  Tunnel: Active on port ${TUNNEL_PORT}${NC}"
+    else
+        echo -e "${YELLOW}  Tunnel: Not active${NC}"
+        if [ -n "$TUNNEL_WARNING" ]; then
+            echo -e "${YELLOW}  Warning: ${TUNNEL_WARNING}${NC}"
+        fi
+    fi
 else
     echo -e "${RED}✗ API returned failure${NC}"
     echo -e "${RED}  Message: ${MESSAGE}${NC}"
@@ -87,6 +98,32 @@ if [ "$HOOKS_COUNT" -gt 0 ]; then
     done
 else
     echo -e "${YELLOW}⚠ No hooks found${NC}"
+fi
+
+# Step 5: Test tunnel connectivity
+echo ""
+echo -e "${YELLOW}Step 5: Testing tunnel connectivity...${NC}"
+TUNNEL_TEST_RESPONSE=$(curl -s -X POST "http://${STAGING_HOST}:${STAGING_PORT}/api/machines/${MACHINE_ID}/test-tunnel")
+
+echo "Tunnel Test Response:"
+echo "$TUNNEL_TEST_RESPONSE" | jq .
+
+TUNNEL_WORKING=$(echo "$TUNNEL_TEST_RESPONSE" | jq -r '.data.tunnelWorking // false')
+TUNNEL_ERROR=$(echo "$TUNNEL_TEST_RESPONSE" | jq -r '.data.error // empty')
+
+if [ "$TUNNEL_WORKING" == "true" ]; then
+    echo -e "${GREEN}✓ Reverse tunnel is working - hooks can reach the server${NC}"
+    HEALTH_STATUS=$(echo "$TUNNEL_TEST_RESPONSE" | jq -r '.data.healthResponse.status // "unknown"')
+    echo -e "${GREEN}  Server health: ${HEALTH_STATUS}${NC}"
+else
+    echo -e "${RED}✗ Reverse tunnel is NOT working${NC}"
+    if [ -n "$TUNNEL_ERROR" ]; then
+        echo -e "${RED}  Error: ${TUNNEL_ERROR}${NC}"
+    fi
+    echo -e "${YELLOW}  Hooks will not function until tunnel is established${NC}"
+    echo ""
+    echo -e "${YELLOW}=== TEST PARTIALLY PASSED (hooks installed but tunnel not working) ===${NC}"
+    exit 0
 fi
 
 echo ""

@@ -9,6 +9,41 @@ import type { HookStatusEvent, HookNotificationEvent, HookStopEvent, InstanceSta
 
 const router = Router();
 
+// In-memory debug log for recent hook activity (last 50 entries)
+interface HookDebugEntry {
+  timestamp: string;
+  type: string;
+  projectDir?: string;
+  machineId?: string;
+  instanceId?: string;
+  matchResult?: string;
+  statusBefore?: string;
+  statusAfter?: string;
+}
+const hookDebugLog: HookDebugEntry[] = [];
+const MAX_DEBUG_LOG = 50;
+
+function addDebugEntry(entry: Omit<HookDebugEntry, 'timestamp'>) {
+  hookDebugLog.unshift({
+    ...entry,
+    timestamp: new Date().toISOString(),
+  });
+  if (hookDebugLog.length > MAX_DEBUG_LOG) {
+    hookDebugLog.pop();
+  }
+}
+
+// GET /api/hooks/debug - View recent hook activity
+router.get('/debug', (_req, res) => {
+  res.json({
+    success: true,
+    data: {
+      entries: hookDebugLog,
+      count: hookDebugLog.length,
+    },
+  });
+});
+
 // Database row type for instances (subset needed by hooks)
 interface InstanceRow {
   id: string;
@@ -169,14 +204,28 @@ router.post('/status', (req, res) => {
       projectDir,
     });
 
+    // Add debug entry
+    const debugEntry: Omit<HookDebugEntry, 'timestamp'> = {
+      type: `status:${event}`,
+      projectDir,
+      machineId,
+      instanceId: instanceId || undefined,
+      matchResult: instance ? `found:${instance.name}(${lookupMethod})` : `not_found(${lookupMethod})`,
+    };
+
     if (instance) {
+      const previousStatus = instance.status;
       const status: InstanceStatus = event === 'working' ? 'working' : 'idle';
       updateInstanceStatus(instance.id, status, `status:${event}`);
+      debugEntry.statusBefore = previousStatus;
+      debugEntry.statusAfter = status;
     }
 
+    addDebugEntry(debugEntry);
     res.json({ ok: true });
   } catch (error) {
     console.error('Error processing status hook:', error);
+    addDebugEntry({ type: 'error', matchResult: `error: ${error}` });
     res.status(500).json({ ok: false, error: 'Failed to process hook' });
   }
 });

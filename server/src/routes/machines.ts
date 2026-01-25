@@ -395,13 +395,60 @@ router.post('/:id/install-hooks', async (req, res) => {
 
     const result = await hookInstallerService.installHooksForMachine(id, orchestratorUrl);
 
-    res.json({
-      success: result.success,
-      data: {
-        message: result.message,
-        error: result.error,
-      },
-    });
+    if (!result.success) {
+      return res.status(400).json({
+        success: false,
+        error: result.message,
+        details: result.error,
+      });
+    }
+
+    // Set up reverse tunnel so hooks can reach the local server
+    // Parse port from orchestratorUrl (default to 3456)
+    let localPort = 3456;
+    try {
+      const url = new URL(orchestratorUrl);
+      if (url.port) {
+        localPort = parseInt(url.port, 10);
+      } else if (url.protocol === 'https:') {
+        localPort = 443;
+      } else if (url.protocol === 'http:') {
+        localPort = 80;
+      }
+    } catch {
+      // Keep default port if URL parsing fails
+    }
+
+    // Create reverse tunnel: remote:localPort → local:localPort
+    // Use synthetic instance ID for machine-level tunnel
+    const syntheticInstanceId = `machine-${id}`;
+    const tunnelResult = await reverseTunnelService.createTunnel(syntheticInstanceId, id, localPort);
+
+    if (tunnelResult.success) {
+      const tunnelStatus = tunnelResult.shared ? 'sharing existing' : 'new';
+      console.log(`[Hooks] Installed hooks and ${tunnelStatus} reverse tunnel for machine ${id}`);
+      res.json({
+        success: true,
+        data: {
+          message: result.message,
+          tunnelActive: true,
+          tunnelPort: localPort,
+          tunnelShared: tunnelResult.shared || false,
+        },
+      });
+    } else {
+      // Hooks installed but tunnel failed - warn but don't fail completely
+      console.warn(`[Hooks] Hooks installed but reverse tunnel failed for machine ${id}: ${tunnelResult.error}`);
+      res.json({
+        success: true,
+        data: {
+          message: result.message,
+          tunnelActive: false,
+          tunnelError: tunnelResult.error,
+          warning: 'Hooks installed but reverse tunnel could not be established. Remote hooks may not work.',
+        },
+      });
+    }
   } catch (error) {
     console.error('Error installing hooks on remote machine:', error);
     res.status(500).json({ success: false, error: 'Failed to install hooks' });
@@ -435,6 +482,79 @@ router.get('/:id/hooks-status', async (req, res) => {
   } catch (error) {
     console.error('Error checking hooks status on remote machine:', error);
     res.status(500).json({ success: false, error: 'Failed to check hooks status' });
+  }
+});
+
+// GET /api/machines/:id/tunnel-status - Check if reverse tunnel is active for machine
+router.get('/:id/tunnel-status', (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const db = getDatabase();
+    const existing = db
+      .prepare('SELECT * FROM remote_machines WHERE id = ?')
+      .get(id) as RemoteMachineRow | undefined;
+
+    if (!existing) {
+      return res.status(404).json({ success: false, error: 'Machine not found' });
+    }
+
+    const tunnel = reverseTunnelService.getMachineTunnel(id);
+
+    if (tunnel) {
+      res.json({
+        success: true,
+        data: {
+          tunnelActive: true,
+          remotePort: tunnel.remotePort,
+          localPort: tunnel.localPort,
+          instanceCount: tunnel.instanceIds.size,
+        },
+      });
+    } else {
+      res.json({
+        success: true,
+        data: {
+          tunnelActive: false,
+        },
+      });
+    }
+  } catch (error) {
+    console.error('Error checking tunnel status:', error);
+    res.status(500).json({ success: false, error: 'Failed to check tunnel status' });
+  }
+});
+
+// POST /api/machines/:id/test-tunnel - Test tunnel connectivity by running curl on remote machine
+router.post('/:id/test-tunnel', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const db = getDatabase();
+    const machine = db
+      .prepare('SELECT * FROM remote_machines WHERE id = ?')
+      .get(id) as RemoteMachineRow | undefined;
+
+    if (!machine) {
+      return res.status(404).json({ success: false, error: 'Machine not found' });
+    }
+
+    // Test tunnel by running curl on the remote machine
+    const result = await sshConnectionService.testTunnelConnectivity(
+      machine.hostname,
+      machine.port,
+      machine.username,
+      machine.ssh_key_path || undefined,
+      3456  // The port hooks use
+    );
+
+    res.json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    console.error('Error testing tunnel:', error);
+    res.status(500).json({ success: false, error: 'Failed to test tunnel' });
   }
 });
 

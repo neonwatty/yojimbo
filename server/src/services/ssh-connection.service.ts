@@ -464,6 +464,111 @@ class SSHConnectionService {
       return { status: 'idle', ageSeconds };
     }
   }
+
+  /**
+   * Test tunnel connectivity by running curl on the remote machine.
+   * This verifies that the reverse tunnel is working by attempting to
+   * reach the local server from the remote machine via localhost.
+   */
+  async testTunnelConnectivity(
+    hostname: string,
+    port: number,
+    username: string,
+    sshKeyPath?: string,
+    tunnelPort: number = 3456
+  ): Promise<{ tunnelWorking: boolean; healthResponse?: object; error?: string }> {
+    return new Promise((resolve) => {
+      const client = new Client();
+      const timeout = setTimeout(() => {
+        client.end();
+        resolve({ tunnelWorking: false, error: 'SSH connection timeout' });
+      }, 15000);
+
+      // Load SSH key
+      const keyResult = loadSSHPrivateKey(sshKeyPath);
+      if (keyResult.error) {
+        clearTimeout(timeout);
+        resolve({ tunnelWorking: false, error: keyResult.error });
+        return;
+      }
+
+      client.on('ready', () => {
+        // Run curl on the remote machine to test the tunnel
+        // Use bash -c wrapper for shell compatibility
+        const testCommand = `bash -c 'curl -s --connect-timeout 5 http://localhost:${tunnelPort}/api/health 2>/dev/null || echo "CURL_FAILED"'`;
+
+        client.exec(testCommand, (err, stream) => {
+          if (err) {
+            clearTimeout(timeout);
+            client.end();
+            resolve({ tunnelWorking: false, error: `SSH exec error: ${err.message}` });
+            return;
+          }
+
+          let stdout = '';
+          let stderr = '';
+
+          stream.on('data', (data: Buffer) => {
+            stdout += data.toString();
+          });
+
+          stream.stderr.on('data', (data: Buffer) => {
+            stderr += data.toString();
+          });
+
+          stream.on('close', () => {
+            clearTimeout(timeout);
+            client.end();
+
+            const trimmedOutput = stdout.trim();
+
+            // Check for curl failure
+            if (trimmedOutput === 'CURL_FAILED' || trimmedOutput === '') {
+              resolve({
+                tunnelWorking: false,
+                error: 'Connection refused - reverse tunnel not active or server not running',
+              });
+              return;
+            }
+
+            // Try to parse the health response
+            try {
+              const healthResponse = JSON.parse(trimmedOutput);
+              if (healthResponse.status === 'healthy') {
+                resolve({ tunnelWorking: true, healthResponse });
+              } else {
+                resolve({
+                  tunnelWorking: true,
+                  healthResponse,
+                  error: 'Server responded but status is not healthy',
+                });
+              }
+            } catch {
+              // Got a response but it's not valid JSON
+              resolve({
+                tunnelWorking: false,
+                error: `Unexpected response from server: ${trimmedOutput.substring(0, 100)}`,
+              });
+            }
+          });
+        });
+      });
+
+      client.on('error', (err) => {
+        clearTimeout(timeout);
+        client.end();
+        resolve({ tunnelWorking: false, error: `SSH connection error: ${err.message}` });
+      });
+
+      client.connect({
+        host: hostname,
+        port,
+        username,
+        privateKey: keyResult.privateKey,
+        readyTimeout: 10000,
+      });
+    });
+  }
 }
 
 export const sshConnectionService = new SSHConnectionService();

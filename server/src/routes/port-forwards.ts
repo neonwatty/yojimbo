@@ -61,4 +61,24 @@ router.delete('/:id/ports/:portId', async (req, res) => {
   }
 });
 
+// POST /api/instances/:id/ports/:portId/reconnect - Manually reconnect a port forward
+router.post('/:id/ports/:portId/reconnect', async (req, res) => {
+  try {
+    const { portId } = req.params;
+
+    const forward = await portForwardService.reconnectForward(portId);
+
+    if (!forward) {
+      return res.status(404).json({ success: false, error: 'Port forward not found' });
+    }
+
+    broadcast({ type: 'port:forwarded', portForward: forward });
+
+    res.json({ success: true, data: forward });
+  } catch (error) {
+    console.error('Error reconnecting port forward:', error);
+    res.status(500).json({ success: false, error: 'Failed to reconnect port forward' });
+  }
+});
+
 export default router;

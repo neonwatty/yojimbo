@@ -8,6 +8,7 @@ import { useSettingsStore } from '../../store/settingsStore';
 // import { useFeedStore } from '../../store/feedStore';
 import { useTodosStore } from '../../store/todosStore';
 import { Icons } from '../common/Icons';
+import { IconButton } from '../common/IconButton';
 import Tooltip from '../common/Tooltip';
 import { ConnectionStatus } from '../common/ConnectionStatus';
 import { SummaryModal } from '../modals/SummaryModal';
@@ -398,35 +399,35 @@ export default function Header() {
 
         {/* Theme Toggle */}
         <Tooltip text={isDark ? 'Light mode' : 'Dark mode'} position="bottom">
-          <button
+          <IconButton
             onClick={() => setTheme(isDark ? 'light' : 'dark')}
-            className="p-1.5 rounded text-theme-dim hover:text-state-awaiting hover:bg-surface-700 transition-colors"
+            variant="compact"
             aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
           >
             {isDark ? <Icons.sun /> : <Icons.moon />}
-          </button>
+          </IconButton>
         </Tooltip>
 
         {/* Settings */}
         <Tooltip text="Settings (⌘,)" position="bottom">
-          <button
+          <IconButton
             onClick={() => setShowSettingsModal(true)}
-            className="p-1.5 rounded text-theme-dim hover:text-theme-primary hover:bg-surface-700 transition-colors"
+            variant="compact"
             aria-label="Open settings"
           >
             <Icons.settings />
-          </button>
+          </IconButton>
         </Tooltip>
 
         {/* Keyboard Shortcuts */}
         <Tooltip text="Keyboard shortcuts (⌘?)" position="bottom">
-          <button
+          <IconButton
             onClick={() => setShowShortcutsModal(true)}
-            className="p-1.5 rounded text-theme-dim hover:text-theme-primary hover:bg-surface-700 transition-colors"
+            variant="compact"
             aria-label="View keyboard shortcuts"
           >
             <Icons.help />
-          </button>
+          </IconButton>
         </Tooltip>
       </div>
 

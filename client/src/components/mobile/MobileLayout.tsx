@@ -17,6 +17,7 @@ import { MobileHomeView } from './MobileHomeView';
 // Activity tab temporarily disabled
 // import { MobileActivityView } from './MobileActivityView';
 import { MobileTasksView } from './MobileTasksView';
+import { MobileTerminalWithPreview } from './MobileAppPreviewView';
 import { KeychainUnlockModal } from '../modals/KeychainUnlockModal';
 import { generateShortName } from '../../utils/strings';
 import type { Instance } from '@cc-orchestrator/shared';
@@ -126,6 +127,7 @@ function LandscapeSidebar({
   onOpenSettings,
   onLongPress,
   isConnected,
+  isTablet,
 }: {
   instances: Instance[];
   selectedId: string | null;
@@ -134,6 +136,7 @@ function LandscapeSidebar({
   onOpenSettings: () => void;
   onLongPress: (instance: Instance) => void;
   isConnected: boolean;
+  isTablet: boolean;
 }) {
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const longPressTriggeredRef = useRef(false);
@@ -163,12 +166,16 @@ function LandscapeSidebar({
     }
   };
 
+  // Responsive width: tablets get wider sidebar, phones get narrower
+  const sidebarWidth = isTablet ? 'min(30%, 320px)' : '200px';
+
   return (
     <aside
       className="h-full flex flex-col bg-surface-800 border-r border-surface-600"
       style={{
-        width: '200px',
-        minWidth: '200px',
+        width: sidebarWidth,
+        minWidth: isTablet ? '280px' : '200px',
+        maxWidth: '320px',
         paddingTop: 'env(safe-area-inset-top, 0)',
         paddingBottom: 'env(safe-area-inset-bottom, 0)',
         paddingLeft: 'env(safe-area-inset-left, 0)',
@@ -860,7 +867,7 @@ export function MobileLayout() {
   // const isActivityPage = location.pathname === '/activity';
   const isTasksPage = location.pathname === '/tasks';
   const { setShowSettingsModal, openNewInstanceModal, isConnected } = useUIStore();
-  const { isFullscreen, isStandalone, fullscreenSupported, isIOS, isIOSSafari, toggleFullscreen } = useMobileLayout();
+  const { isFullscreen, isStandalone, fullscreenSupported, isIOS, isIOSSafari, isTablet, toggleFullscreen } = useMobileLayout();
   const isLandscape = useOrientation();
 
   const [bottomDrawerOpen, setBottomDrawerOpen] = useState(false);
@@ -935,6 +942,7 @@ export function MobileLayout() {
               onOpenSettings={() => setShowSettingsModal(true)}
               onLongPress={handleInstanceLongPress}
               isConnected={isConnected}
+              isTablet={isTablet}
             />
             <div className="flex-1 flex items-center justify-center">
               <div className="text-center text-theme-dim">
@@ -1019,6 +1027,7 @@ export function MobileLayout() {
             onOpenSettings={() => setShowSettingsModal(true)}
             onLongPress={handleInstanceLongPress}
             isConnected={isConnected}
+            isTablet={isTablet}
           />
 
           {/* Main content area */}
@@ -1048,13 +1057,23 @@ export function MobileLayout() {
                 onOpenNewInstance={handleNewInstance}
               />
             ) : currentInstance ? (
-              <MobileTerminalView
-                key={currentInstance.id}
-                instanceId={currentInstance.id}
-                onTopGesture={() => {}} // No top gesture in landscape - settings in sidebar
-                onBottomGesture={() => {}} // No bottom gesture in landscape - list in sidebar
-                terminalRef={{ current: terminalRefs.current.get(currentInstance.id) || null } as React.RefObject<TerminalRef>}
-              />
+              currentInstance.machineType === 'local' ? (
+                <MobileTerminalWithPreview
+                  key={currentInstance.id}
+                  instance={currentInstance}
+                  onTopGesture={() => {}} // No top gesture in landscape - settings in sidebar
+                  onBottomGesture={() => {}} // No bottom gesture in landscape - list in sidebar
+                  terminalRef={{ current: terminalRefs.current.get(currentInstance.id) || null } as React.RefObject<TerminalRef>}
+                />
+              ) : (
+                <MobileTerminalView
+                  key={currentInstance.id}
+                  instanceId={currentInstance.id}
+                  onTopGesture={() => {}} // No top gesture in landscape - settings in sidebar
+                  onBottomGesture={() => {}} // No bottom gesture in landscape - list in sidebar
+                  terminalRef={{ current: terminalRefs.current.get(currentInstance.id) || null } as React.RefObject<TerminalRef>}
+                />
+              )
             ) : (
               <div className="flex-1 flex items-center justify-center">
                 <div className="text-center text-theme-dim">
@@ -1108,13 +1127,23 @@ export function MobileLayout() {
             onOpenNewInstance={handleNewInstance}
           />
         ) : currentInstance ? (
-          <MobileTerminalView
-            key={currentInstance.id}
-            instanceId={currentInstance.id}
-            onTopGesture={() => openTopDrawer()}
-            onBottomGesture={() => openBottomDrawer()}
-            terminalRef={{ current: terminalRefs.current.get(currentInstance.id) || null } as React.RefObject<TerminalRef>}
-          />
+          currentInstance.machineType === 'local' ? (
+            <MobileTerminalWithPreview
+              key={currentInstance.id}
+              instance={currentInstance}
+              onTopGesture={() => openTopDrawer()}
+              onBottomGesture={() => openBottomDrawer()}
+              terminalRef={{ current: terminalRefs.current.get(currentInstance.id) || null } as React.RefObject<TerminalRef>}
+            />
+          ) : (
+            <MobileTerminalView
+              key={currentInstance.id}
+              instanceId={currentInstance.id}
+              onTopGesture={() => openTopDrawer()}
+              onBottomGesture={() => openBottomDrawer()}
+              terminalRef={{ current: terminalRefs.current.get(currentInstance.id) || null } as React.RefObject<TerminalRef>}
+            />
+          )
         ) : (
           <EmptyState
             onNewInstance={handleNewInstance}

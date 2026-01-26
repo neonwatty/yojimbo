@@ -3,7 +3,7 @@ import { promisify } from 'util';
 import { getDatabase } from '../db/connection.js';
 import { broadcast } from '../websocket/server.js';
 import { terminalManager } from './terminal-manager.service.js';
-import type { DetectedPort, InstancePorts, InstanceStatus } from '@cc-orchestrator/shared';
+import type { DetectedPort, InstancePorts, InstanceStatus, ServiceType } from '@cc-orchestrator/shared';
 
 const execAsync = promisify(exec);
 
@@ -147,6 +147,7 @@ class PortDetectionService {
           processName: port.processName,
           bindAddress: port.bindAddress,
           isAccessible: this.isAccessibleAddress(port.bindAddress),
+          serviceType: this.detectServiceType(port.processName),
           detectedAt: new Date().toISOString(),
         });
       }
@@ -265,6 +266,83 @@ class PortDetectionService {
   }
 
   /**
+   * Detect the service/framework type from the process name
+   */
+  private detectServiceType(processName: string): ServiceType {
+    const name = processName.toLowerCase();
+
+    // Frontend bundlers/dev servers
+    if (name.includes('vite')) return 'vite';
+    if (name.includes('next') || name.includes('next-server')) return 'nextjs';
+    if (name.includes('react-scripts') || name.includes('craco')) return 'cra';
+    if (name.includes('webpack')) return 'webpack';
+    if (name.includes('parcel')) return 'parcel';
+    if (name.includes('esbuild')) return 'esbuild';
+
+    // Python frameworks
+    if (name.includes('flask')) return 'flask';
+    if (name.includes('django') || name.includes('gunicorn') || name.includes('uvicorn')) return 'django';
+
+    // Ruby
+    if (name.includes('rails') || name.includes('puma') || name.includes('unicorn')) return 'rails';
+
+    // Node.js frameworks
+    if (name.includes('express')) return 'express';
+    if (name.includes('fastify')) return 'fastify';
+    if (name.includes('nest')) return 'nest';
+
+    // Java
+    if (name.includes('java') || name.includes('spring') || name.includes('tomcat')) return 'spring';
+
+    // Go
+    if (name === 'go' || name.includes('gin') || name.includes('fiber')) return 'go';
+
+    // Rust
+    if (name.includes('cargo') || name.includes('actix') || name.includes('axum')) return 'rust';
+
+    // PHP
+    if (name.includes('php') || name.includes('artisan') || name.includes('laravel')) return 'php';
+
+    // Generic language detections
+    if (name.includes('python') || name.includes('python3')) return 'python';
+    if (name.includes('ruby')) return 'ruby';
+    if (name === 'node' || name.includes('nodejs')) return 'node';
+
+    return 'unknown';
+  }
+
+  /**
+   * Get the LAN IP address (first non-loopback IPv4 address)
+   */
+  private async getLanIp(): Promise<string | null> {
+    try {
+      const { networkInterfaces } = await import('os');
+      const interfaces = networkInterfaces();
+
+      for (const name of Object.keys(interfaces)) {
+        // Skip virtual interfaces
+        if (name.startsWith('lo') || name.startsWith('veth') || name.startsWith('docker')) {
+          continue;
+        }
+
+        const iface = interfaces[name];
+        if (!iface) continue;
+
+        for (const config of iface) {
+          // Look for IPv4 addresses that aren't internal (loopback)
+          if (config.family === 'IPv4' && !config.internal) {
+            return config.address;
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error getting LAN IP:', error);
+    }
+
+    return null;
+  }
+
+  /**
    * Get the Tailscale IP address (cached)
    */
   private async getTailscaleIp(): Promise<string | null> {
@@ -357,6 +435,18 @@ class PortDetectionService {
    */
   clearInstance(instanceId: string): void {
     this.instancePortsCache.delete(instanceId);
+  }
+
+  /**
+   * Get network addresses for this server (for mobile access)
+   */
+  async getNetworkAddresses(): Promise<{ tailscaleIp: string | null; lanIp: string | null }> {
+    const [tailscaleIp, lanIp] = await Promise.all([
+      this.getTailscaleIp(),
+      this.getLanIp(),
+    ]);
+
+    return { tailscaleIp, lanIp };
   }
 }
 

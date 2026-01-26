@@ -267,6 +267,8 @@ describe('PortForwardService', () => {
           local_port: 3001,
           status: 'active',
           created_at: '2024-01-01T00:00:00.000Z',
+          reconnect_attempts: 0,
+          last_error: null,
         },
       ]);
 
@@ -279,6 +281,8 @@ describe('PortForwardService', () => {
         localPort: 3001,
         status: 'active',
         createdAt: '2024-01-01T00:00:00.000Z',
+        reconnectAttempts: 0,
+        lastError: null,
       });
     });
   });

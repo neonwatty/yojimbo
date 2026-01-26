@@ -327,6 +327,40 @@ smart-prompt:
 	@cat practice-tasks/multi-repo-status-check.txt
 
 #===============================================================================
+# Remote Claude (standalone, no app required)
+#===============================================================================
+
+## remote-mm1: Launch Claude on Mac Mini 1 (192.168.1.19)
+remote-mm1:
+	@./scripts/remote-claude.sh mm1
+
+## remote-mm2: Launch Claude on Mac Mini 2 (192.168.1.18)
+remote-mm2:
+	@./scripts/remote-claude.sh mm2
+
+## remote-password: Set/update keychain password for a Mac Mini (usage: make remote-password MM=mm1)
+remote-password:
+	@if [ -z "$(MM)" ]; then \
+		echo "$(RED)Usage: make remote-password MM=mm1$(NC)"; \
+		echo "  MM=mm1 for Mac Mini 1"; \
+		echo "  MM=mm2 for Mac Mini 2"; \
+		exit 1; \
+	fi
+	@./scripts/remote-claude.sh password $(MM)
+
+## remote-test: Test SSH + keychain unlock (usage: make remote-test MM=mm1)
+remote-test:
+	@if [ -z "$(MM)" ]; then \
+		echo "$(RED)Usage: make remote-test MM=mm1$(NC)"; \
+		exit 1; \
+	fi
+	@./scripts/remote-claude.sh test $(MM)
+
+## remote-help: Show remote Claude launcher help
+remote-help:
+	@./scripts/remote-claude.sh --help
+
+#===============================================================================
 # Help
 #===============================================================================
 

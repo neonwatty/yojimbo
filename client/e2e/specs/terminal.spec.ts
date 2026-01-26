@@ -95,8 +95,8 @@ test.describe('Terminal', () => {
     await instancesPage.page.waitForTimeout(2000);
 
     // Verify first instance still shows its output (history persisted)
-    // Get terminal text content from the visible terminal
-    const terminalContent = await instancesPage.page.locator('.xterm-screen:visible').first().textContent();
+    // Get terminal text content from .xterm-rows (not .xterm-screen which includes CSS)
+    const terminalContent = await instancesPage.page.locator('.xterm-rows').first().innerText();
     expect(terminalContent).toContain('UNIQUE-OUTPUT-INSTANCE-1');
   });
 

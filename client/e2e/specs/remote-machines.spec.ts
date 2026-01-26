@@ -272,6 +272,13 @@ test.describe('Machine Password Modal (PR #164)', () => {
     }
 
     const saveData = await saveResponse.json();
+
+    // Skip if not on macOS (keychain only works on macOS)
+    if (!saveData.success && saveData.error?.includes('macOS')) {
+      console.log('Skipping: keychain storage only supported on macOS');
+      return;
+    }
+
     expect(saveResponse.ok).toBe(true);
     expect(saveData.success).toBe(true);
 
@@ -284,11 +291,19 @@ test.describe('Machine Password Modal (PR #164)', () => {
 
   test('can delete password via API', async () => {
     // First save a password
-    await fetch(`${API_BASE}/keychain/remote/${testMachineId}/save`, {
+    const saveResponse = await fetch(`${API_BASE}/keychain/remote/${testMachineId}/save`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ password: 'test-password-123' }),
     });
+
+    const saveData = await saveResponse.json();
+
+    // Skip if not on macOS (keychain only works on macOS)
+    if (!saveData.success && saveData.error?.includes('macOS')) {
+      console.log('Skipping: keychain storage only supported on macOS');
+      return;
+    }
 
     // Delete it
     const deleteResponse = await fetch(`${API_BASE}/keychain/remote/${testMachineId}`, {
@@ -302,6 +317,13 @@ test.describe('Machine Password Modal (PR #164)', () => {
     }
 
     const deleteData = await deleteResponse.json();
+
+    // Skip if not on macOS
+    if (!deleteData.success && deleteData.error?.includes('macOS')) {
+      console.log('Skipping: keychain storage only supported on macOS');
+      return;
+    }
+
     expect(deleteResponse.ok).toBe(true);
     expect(deleteData.success).toBe(true);
 

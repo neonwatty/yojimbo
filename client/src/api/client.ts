@@ -384,6 +384,11 @@ export const portForwardsApi = {
     request<ApiResponse<void>>(`/instances/${instanceId}/ports/${portId}`, {
       method: 'DELETE',
     }),
+
+  reconnect: (instanceId: string, portId: string) =>
+    request<ApiResponse<PortForward>>(`/instances/${instanceId}/ports/${portId}/reconnect`, {
+      method: 'POST',
+    }),
 };
 
 // Keychain API (macOS only)

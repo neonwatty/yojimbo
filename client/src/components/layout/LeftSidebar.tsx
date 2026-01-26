@@ -6,6 +6,7 @@ import { useUIStore } from '../../store/uiStore';
 import { StatusDot } from '../common/Status';
 import Tooltip from '../common/Tooltip';
 import { Icons } from '../common/Icons';
+import { IconButton } from '../common/IconButton';
 import { instancesApi } from '../../api/client';
 import { EditableName } from '../common/EditableName';
 import type { Instance } from '@cc-orchestrator/shared';
@@ -200,24 +201,25 @@ export function LeftSidebar() {
           <Icons.instances />
           Sessions
         </span>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center">
           <Tooltip text="New instance" position="bottom">
-            <button
+            <IconButton
               onClick={handleNewInstance}
-              className="p-1 rounded hover:bg-surface-700 text-theme-dim hover:text-accent transition-colors"
+              color="accent"
+              variant="compact"
               aria-label="Create new instance"
             >
               <Icons.plus />
-            </button>
+            </IconButton>
           </Tooltip>
           <Tooltip text="Collapse sidebar (⌘B)" position="bottom">
-            <button
+            <IconButton
               onClick={toggleLeftSidebar}
-              className="p-1 rounded hover:bg-surface-700 text-theme-dim hover:text-theme-primary transition-colors"
+              variant="compact"
               aria-label="Collapse sidebar"
             >
               <Icons.panelLeft />
-            </button>
+            </IconButton>
           </Tooltip>
         </div>
       </div>

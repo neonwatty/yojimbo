@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Icons } from '../common/Icons';
+import { IconButton } from '../common/IconButton';
 import { Spinner } from '../common/Spinner';
 import { AddMachineModal } from '../modals/AddMachineModal';
 import { MachinePasswordModal } from '../modals/MachinePasswordModal';
@@ -362,20 +363,21 @@ export function RemoteMachinesSection() {
                       'Hooks'
                     )}
                   </button>
-                  <button
+                  <IconButton
                     onClick={() => handleEdit(machine)}
-                    className="p-1 text-theme-muted hover:text-theme-primary transition-colors"
+                    variant="compact"
                     title="Edit"
                   >
                     <Icons.edit />
-                  </button>
-                  <button
+                  </IconButton>
+                  <IconButton
                     onClick={() => handleDeleteMachine(machine)}
-                    className="p-1 text-theme-muted hover:text-red-400 transition-colors"
+                    color="danger"
+                    variant="compact"
                     title="Delete"
                   >
                     <Icons.trash />
-                  </button>
+                  </IconButton>
                 </div>
               </div>
               <div className="flex items-center justify-between mt-2 pt-2 border-t border-surface-600">

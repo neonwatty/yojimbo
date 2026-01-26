@@ -61,7 +61,7 @@ export interface UpdateMachineRequest {
 }
 
 // Port Forward types
-export type PortForwardStatus = 'active' | 'closed';
+export type PortForwardStatus = 'active' | 'closed' | 'reconnecting' | 'failed';
 
 export interface PortForward {
   id: string;
@@ -69,16 +69,41 @@ export interface PortForward {
   remotePort: number;
   localPort: number;
   status: PortForwardStatus;
+  reconnectAttempts: number; // Number of reconnect attempts made
+  lastError: string | null; // Last error message if failed
   createdAt: string;
 }
 
 // Listening Port Detection types
+export type ServiceType =
+  | 'vite'
+  | 'nextjs'
+  | 'cra'        // Create React App
+  | 'webpack'
+  | 'parcel'
+  | 'esbuild'
+  | 'flask'
+  | 'django'
+  | 'rails'
+  | 'express'
+  | 'fastify'
+  | 'nest'
+  | 'spring'
+  | 'go'
+  | 'rust'
+  | 'php'
+  | 'python'
+  | 'ruby'
+  | 'node'
+  | 'unknown';
+
 export interface DetectedPort {
   port: number;
   pid: number | null;
   processName: string | null;
   bindAddress: string; // '127.0.0.1', '0.0.0.0', '*', or specific IP
   isAccessible: boolean; // true if bound to 0.0.0.0 or *, false if localhost only
+  serviceType: ServiceType; // Detected framework/service type
   detectedAt: string;
 }
 

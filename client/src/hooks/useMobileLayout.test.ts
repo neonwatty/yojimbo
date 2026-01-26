@@ -96,6 +96,81 @@ describe('useMobileLayout', () => {
     });
   });
 
+  describe('isTablet detection', () => {
+    it('returns true when viewport width is between 768px and 1024px', () => {
+      Object.defineProperty(window, 'innerWidth', {
+        writable: true,
+        configurable: true,
+        value: 900, // iPad portrait width
+      });
+
+      const { result } = renderHook(() => useMobileLayout());
+      expect(result.current.isTablet).toBe(true);
+      expect(result.current.deviceType).toBe('tablet');
+    });
+
+    it('returns false when viewport width is below 768px (mobile)', () => {
+      Object.defineProperty(window, 'innerWidth', {
+        writable: true,
+        configurable: true,
+        value: 375, // iPhone width
+      });
+
+      const { result } = renderHook(() => useMobileLayout());
+      expect(result.current.isTablet).toBe(false);
+      expect(result.current.deviceType).toBe('mobile');
+    });
+
+    it('returns false when viewport width is 1024px or above (desktop)', () => {
+      Object.defineProperty(window, 'innerWidth', {
+        writable: true,
+        configurable: true,
+        value: 1200, // Desktop width
+      });
+
+      const { result } = renderHook(() => useMobileLayout());
+      expect(result.current.isTablet).toBe(false);
+      expect(result.current.deviceType).toBe('desktop');
+    });
+
+    it('updates isTablet and deviceType when window is resized', () => {
+      Object.defineProperty(window, 'innerWidth', {
+        writable: true,
+        configurable: true,
+        value: 375,
+      });
+
+      const { result } = renderHook(() => useMobileLayout());
+      expect(result.current.deviceType).toBe('mobile');
+
+      // Simulate resize to tablet
+      act(() => {
+        Object.defineProperty(window, 'innerWidth', {
+          writable: true,
+          configurable: true,
+          value: 900,
+        });
+        window.dispatchEvent(new Event('resize'));
+      });
+
+      expect(result.current.isTablet).toBe(true);
+      expect(result.current.deviceType).toBe('tablet');
+
+      // Simulate resize to desktop
+      act(() => {
+        Object.defineProperty(window, 'innerWidth', {
+          writable: true,
+          configurable: true,
+          value: 1200,
+        });
+        window.dispatchEvent(new Event('resize'));
+      });
+
+      expect(result.current.isTablet).toBe(false);
+      expect(result.current.deviceType).toBe('desktop');
+    });
+  });
+
   describe('iOS detection', () => {
     it('detects iOS devices from user agent', () => {
       Object.defineProperty(window, 'navigator', {

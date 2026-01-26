@@ -3,6 +3,8 @@ interface AppConfig {
   serverPort: number;
   platform: string; // 'darwin' for macOS, 'linux', 'win32', etc.
   label: string; // Optional label to distinguish installations (e.g., "DEV", "STABLE")
+  tailscaleIp: string | null; // Tailscale IP for remote access
+  lanIp: string | null; // LAN IP for local network access
 }
 
 // Default config (used before fetch completes or if fetch fails)
@@ -10,6 +12,8 @@ let config: AppConfig = {
   serverPort: 3456,
   platform: 'unknown',
   label: '',
+  tailscaleIp: null,
+  lanIp: null,
 };
 
 let initialized = false;
@@ -121,4 +125,50 @@ export function getEnvMode(): 'dev' | 'stage' | 'prod' {
  */
 export function getDisplayLabel(): string {
   return config.label || 'PROD';
+}
+
+/**
+ * Get the server's Tailscale IP address (if connected).
+ */
+export function getTailscaleIp(): string | null {
+  return config.tailscaleIp;
+}
+
+/**
+ * Get the server's LAN IP address.
+ */
+export function getLanIp(): string | null {
+  return config.lanIp;
+}
+
+/**
+ * Check if the current client is accessing from localhost.
+ * Used to determine if we need to show remote access URLs.
+ */
+export function isLocalAccess(): boolean {
+  const hostname = window.location.hostname;
+  return hostname === 'localhost' || hostname === '127.0.0.1';
+}
+
+/**
+ * Get the best URL base for accessing the server from mobile/remote devices.
+ * Prefers Tailscale if available, falls back to LAN IP.
+ * Returns null if no remote access is available.
+ */
+export function getRemoteAccessUrl(port: number): string | null {
+  // If on mobile/tablet, prefer Tailscale for stability, then LAN
+  if (config.tailscaleIp) {
+    return `http://${config.tailscaleIp}:${port}`;
+  }
+  if (config.lanIp) {
+    return `http://${config.lanIp}:${port}`;
+  }
+  return null;
+}
+
+/**
+ * Get the localhost URL for a port.
+ */
+export function getLocalhostUrl(port: number): string {
+  return `http://localhost:${port}`;
 }

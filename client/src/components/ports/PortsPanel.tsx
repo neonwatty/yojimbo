@@ -3,9 +3,10 @@ import { usePortsStore } from '../../store/portsStore';
 import { instancesApi } from '../../api/client';
 import { useWebSocket } from '../../hooks/useWebSocket';
 import { Icons } from '../common/Icons';
+import { IconButton } from '../common/IconButton';
 import { Spinner } from '../common/Spinner';
 import { toast } from '../../store/toastStore';
-import type { InstancePorts, DetectedPort } from '@cc-orchestrator/shared';
+import type { InstancePorts, DetectedPort, ServiceType } from '@cc-orchestrator/shared';
 
 interface PortsPanelProps {
   instanceId: string;
@@ -123,22 +124,22 @@ export function PortsPanel({ instanceId, isOpen, onClose, width, onWidthChange }
               </span>
             )}
           </div>
-          <div className="flex items-center gap-1">
-            <button
+          <div className="flex items-center">
+            <IconButton
               onClick={() => fetchPorts(true)}
               disabled={isRefreshing}
-              className="p-1.5 rounded hover:bg-surface-700 text-theme-muted hover:text-theme-primary transition-colors disabled:opacity-50"
+              variant="compact"
               title="Refresh ports"
             >
               <Icons.refresh />
-            </button>
-            <button
+            </IconButton>
+            <IconButton
               onClick={onClose}
-              className="p-1.5 rounded hover:bg-surface-700 text-theme-muted hover:text-theme-primary transition-colors"
+              variant="compact"
               title="Close panel"
             >
               <Icons.close />
-            </button>
+            </IconButton>
           </div>
         </div>
 
@@ -203,6 +204,41 @@ export function PortsPanel({ instanceId, isOpen, onClose, width, onWidthChange }
   );
 }
 
+// Service type display configuration
+const SERVICE_INFO: Record<ServiceType, { label: string; color: string }> = {
+  vite: { label: 'Vite', color: 'bg-purple-500/20 text-purple-400' },
+  nextjs: { label: 'Next.js', color: 'bg-white/10 text-white' },
+  cra: { label: 'CRA', color: 'bg-cyan-500/20 text-cyan-400' },
+  webpack: { label: 'Webpack', color: 'bg-blue-500/20 text-blue-400' },
+  parcel: { label: 'Parcel', color: 'bg-amber-500/20 text-amber-400' },
+  esbuild: { label: 'esbuild', color: 'bg-yellow-500/20 text-yellow-400' },
+  flask: { label: 'Flask', color: 'bg-slate-500/20 text-slate-300' },
+  django: { label: 'Django', color: 'bg-green-600/20 text-green-400' },
+  rails: { label: 'Rails', color: 'bg-red-500/20 text-red-400' },
+  express: { label: 'Express', color: 'bg-slate-500/20 text-slate-300' },
+  fastify: { label: 'Fastify', color: 'bg-slate-500/20 text-slate-300' },
+  nest: { label: 'NestJS', color: 'bg-red-600/20 text-red-400' },
+  spring: { label: 'Spring', color: 'bg-green-500/20 text-green-400' },
+  go: { label: 'Go', color: 'bg-cyan-600/20 text-cyan-400' },
+  rust: { label: 'Rust', color: 'bg-orange-600/20 text-orange-400' },
+  php: { label: 'PHP', color: 'bg-indigo-500/20 text-indigo-400' },
+  python: { label: 'Python', color: 'bg-yellow-600/20 text-yellow-400' },
+  ruby: { label: 'Ruby', color: 'bg-red-600/20 text-red-400' },
+  node: { label: 'Node', color: 'bg-green-500/20 text-green-400' },
+  unknown: { label: '', color: '' },
+};
+
+function ServiceBadge({ serviceType }: { serviceType: ServiceType }) {
+  const info = SERVICE_INFO[serviceType];
+  if (!info.label) return null;
+
+  return (
+    <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${info.color}`}>
+      {info.label}
+    </span>
+  );
+}
+
 interface PortItemProps {
   port: DetectedPort;
   tailscaleUrl: string | null;
@@ -219,7 +255,8 @@ function PortItem({ port, tailscaleUrl, onCopy }: PortItemProps) {
           <span className="text-sm font-mono font-medium text-theme-primary">
             :{port.port}
           </span>
-          {port.processName && (
+          <ServiceBadge serviceType={port.serviceType} />
+          {port.processName && port.serviceType === 'unknown' && (
             <span className="text-xs text-theme-muted">
               {port.processName}
             </span>
@@ -237,41 +274,42 @@ function PortItem({ port, tailscaleUrl, onCopy }: PortItemProps) {
       </div>
 
       {/* URL buttons */}
-      <div className="flex items-center gap-2 mt-2">
+      <div className="flex items-center gap-1 mt-2">
         {/* Localhost URL */}
         <button
           onClick={() => window.open(localhostUrl, '_blank')}
-          className="flex items-center gap-1.5 px-2 py-1 text-xs rounded bg-surface-600 text-theme-secondary hover:bg-surface-500 transition-colors"
+          className="flex items-center gap-1.5 px-3 py-2 min-h-11 text-xs rounded-lg bg-surface-600 text-theme-secondary hover:bg-surface-500 transition-colors"
         >
           <Icons.externalLink />
           localhost
         </button>
-        <button
+        <IconButton
           onClick={() => onCopy(localhostUrl)}
-          className="p-1 text-theme-muted hover:text-theme-primary transition-colors"
+          variant="compact"
           title="Copy localhost URL"
         >
           <Icons.copy />
-        </button>
+        </IconButton>
 
         {/* Tailscale URL (if accessible) */}
         {port.isAccessible && tailscaleUrl && (
           <>
-            <span className="text-surface-500">|</span>
+            <span className="text-surface-500 mx-1">|</span>
             <button
               onClick={() => window.open(tailscaleUrl, '_blank')}
-              className="flex items-center gap-1.5 px-2 py-1 text-xs rounded bg-frost-4/20 text-frost-3 hover:bg-frost-4/30 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-2 min-h-11 text-xs rounded-lg bg-frost-4/20 text-frost-3 hover:bg-frost-4/30 transition-colors"
             >
               <Icons.wifi />
               Tailscale
             </button>
-            <button
+            <IconButton
               onClick={() => onCopy(tailscaleUrl)}
-              className="p-1 text-frost-3/70 hover:text-frost-3 transition-colors"
+              color="frost"
+              variant="compact"
               title="Copy Tailscale URL"
             >
               <Icons.copy />
-            </button>
+            </IconButton>
           </>
         )}
       </div>

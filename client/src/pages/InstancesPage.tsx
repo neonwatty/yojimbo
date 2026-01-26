@@ -16,6 +16,7 @@ import { QueueModeOverlay } from '../components/queue/QueueModeOverlay';
 import { PortForwardsPanel } from '../components/PortForwardsPanel';
 import { PortsPanel } from '../components/ports';
 import { HtmlFilesPanel } from '../components/html-files';
+import { AppPreviewDrawer, useAppPreviewDrawer } from '../components/app-preview';
 import { StatusDot, StatusBadge } from '../components/common/Status';
 import { EditableName } from '../components/common/EditableName';
 import { ErrorBoundary } from '../components/common/ErrorBoundary';
@@ -26,6 +27,72 @@ import { toast } from '../store/toastStore';
 import { KeychainUnlockModal } from '../components/modals/KeychainUnlockModal';
 import { HooksConfigModal } from '../components/modals/HooksConfigModal';
 import type { Instance } from '@cc-orchestrator/shared';
+
+// Terminal with App Preview Drawer - only for local instances
+function TerminalWithPreview({
+  instances,
+  currentInstance,
+  terminalRefs,
+  theme,
+}: {
+  instances: Instance[];
+  currentInstance: Instance;
+  terminalRefs: React.MutableRefObject<Map<string, TerminalRef>>;
+  theme: string;
+}) {
+  const { isOpen, toggle } = useAppPreviewDrawer(currentInstance.id);
+  const isLocalInstance = currentInstance.machineType === 'local';
+
+  return (
+    <div className="flex-1 flex flex-col overflow-hidden min-w-[300px]">
+      {/* Terminal area - takes remaining space */}
+      <div className="flex-1 overflow-hidden relative">
+        {instances.map((inst) => (
+          <div
+            key={inst.id}
+            className="absolute inset-0"
+            style={{
+              visibility: inst.id === currentInstance.id ? 'visible' : 'hidden',
+              pointerEvents: inst.id === currentInstance.id ? 'auto' : 'none',
+            }}
+          >
+            <ErrorBoundary
+              fallback={
+                <div className="flex items-center justify-center h-full bg-surface-900">
+                  <ErrorState
+                    title="Terminal Error"
+                    message="Terminal failed to load. Try refreshing the page."
+                  />
+                </div>
+              }
+            >
+              <Terminal
+                ref={(ref) => {
+                  if (ref) {
+                    terminalRefs.current.set(inst.id, ref);
+                  } else {
+                    terminalRefs.current.delete(inst.id);
+                  }
+                }}
+                instanceId={inst.id}
+                theme={theme === 'dark' ? 'dark' : 'light'}
+              />
+            </ErrorBoundary>
+          </div>
+        ))}
+      </div>
+
+      {/* App Preview Drawer - only for local instances */}
+      {isLocalInstance && (
+        <AppPreviewDrawer
+          instanceId={currentInstance.id}
+          isOpen={isOpen}
+          onToggle={toggle}
+        />
+      )}
+    </div>
+  );
+}
 
 export default function InstancesPage() {
   const { id } = useParams();
@@ -584,41 +651,12 @@ export default function InstancesPage() {
         <div className="flex-1 flex overflow-hidden">
           {/* Terminals - render ALL but hide inactive ones to preserve history */}
           {terminalPanelOpen && (
-            <div className="flex-1 overflow-hidden relative min-w-[300px]">
-              {instances.map((inst) => (
-                <div
-                  key={inst.id}
-                  className="absolute inset-0"
-                  style={{
-                    visibility: inst.id === instance.id ? 'visible' : 'hidden',
-                    pointerEvents: inst.id === instance.id ? 'auto' : 'none',
-                  }}
-                >
-                  <ErrorBoundary
-                    fallback={
-                      <div className="flex items-center justify-center h-full bg-surface-900">
-                        <ErrorState
-                          title="Terminal Error"
-                          message="Terminal failed to load. Try refreshing the page."
-                        />
-                      </div>
-                    }
-                  >
-                    <Terminal
-                      ref={(ref) => {
-                        if (ref) {
-                          terminalRefs.current.set(inst.id, ref);
-                        } else {
-                          terminalRefs.current.delete(inst.id);
-                        }
-                      }}
-                      instanceId={inst.id}
-                      theme={theme === 'dark' ? 'dark' : 'light'}
-                    />
-                  </ErrorBoundary>
-                </div>
-              ))}
-            </div>
+            <TerminalWithPreview
+              instances={instances}
+              currentInstance={instance}
+              terminalRefs={terminalRefs}
+              theme={theme}
+            />
           )}
 
           {/* Plans Panel - hidden, uncomment to restore

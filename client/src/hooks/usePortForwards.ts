@@ -38,9 +38,10 @@ export function usePortForwards(instanceId: string) {
       const { portForward } = data as { portForward: PortForward };
       if (portForward && portForward.instanceId === instanceId) {
         setPortForwards((prev) => {
-          // Avoid duplicates
-          if (prev.some((p) => p.id === portForward.id)) {
-            return prev;
+          // Update existing or add new
+          const existing = prev.find((p) => p.id === portForward.id);
+          if (existing) {
+            return prev.map((p) => (p.id === portForward.id ? portForward : p));
           }
           return [...prev, portForward];
         });
@@ -59,10 +60,21 @@ export function usePortForwards(instanceId: string) {
       console.log('Port detected:', data);
     });
 
+    // Handle forward status updates (reconnecting, failed, etc.)
+    const unsubscribeUpdated = subscribe('forward:updated', (data: unknown) => {
+      const portForward = data as PortForward;
+      if (portForward && portForward.instanceId === instanceId) {
+        setPortForwards((prev) =>
+          prev.map((p) => (p.id === portForward.id ? portForward : p))
+        );
+      }
+    });
+
     return () => {
       unsubscribeForwarded();
       unsubscribeClosed();
       unsubscribeDetected();
+      unsubscribeUpdated();
     };
   }, [isConnected, instanceId, subscribe]);
 
@@ -88,11 +100,25 @@ export function usePortForwards(instanceId: string) {
     [instanceId]
   );
 
+  // Reconnect port forward
+  const reconnectPortForward = useCallback(
+    async (portId: string) => {
+      const response = await portForwardsApi.reconnect(instanceId, portId);
+      if (response.data) {
+        // Will be updated via WebSocket event
+        return response.data;
+      }
+      throw new Error('Failed to reconnect port forward');
+    },
+    [instanceId]
+  );
+
   return {
     portForwards,
     loading,
     createPortForward,
     closePortForward,
+    reconnectPortForward,
     refetch: fetchPortForwards,
   };
 }

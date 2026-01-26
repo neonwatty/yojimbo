@@ -105,7 +105,9 @@ export function initDatabase(): Database.Database {
       instance_id TEXT NOT NULL,
       remote_port INTEGER NOT NULL,
       local_port INTEGER NOT NULL,
-      status TEXT DEFAULT 'active' CHECK(status IN ('active', 'closed')),
+      status TEXT DEFAULT 'active' CHECK(status IN ('active', 'closed', 'reconnecting', 'failed')),
+      reconnect_attempts INTEGER DEFAULT 0,
+      last_error TEXT,
       created_at TEXT DEFAULT (datetime('now')),
       FOREIGN KEY (instance_id) REFERENCES instances(id) ON DELETE CASCADE
     );
@@ -214,6 +216,18 @@ function runMigrations(): void {
     console.log('🔧 Running migration: adding forward_credentials column to remote_machines');
     db.exec('ALTER TABLE remote_machines ADD COLUMN forward_credentials INTEGER DEFAULT 0');
   }
+
+  // Migration: add reconnect_attempts and last_error columns to port_forwards
+  const portForwardsTableInfo = db.prepare("PRAGMA table_info(port_forwards)").all() as { name: string }[];
+  const portForwardsColumns = new Set(portForwardsTableInfo.map((col) => col.name));
+  if (!portForwardsColumns.has('reconnect_attempts')) {
+    console.log('🔧 Running migration: adding reconnect_attempts column to port_forwards');
+    db.exec('ALTER TABLE port_forwards ADD COLUMN reconnect_attempts INTEGER DEFAULT 0');
+  }
+  if (!portForwardsColumns.has('last_error')) {
+    console.log('🔧 Running migration: adding last_error column to port_forwards');
+    db.exec('ALTER TABLE port_forwards ADD COLUMN last_error TEXT');
+  }
 }
 
 export function cleanupOldActivityEvents(retentionDays: number = 7): void {
@@ -232,10 +246,10 @@ export function cleanupOldActivityEvents(retentionDays: number = 7): void {
 export function cleanupStalePortForwards(): void {
   if (!db) return;
 
-  // On server restart, all active port forwards are stale since the SSH tunnels don't survive
+  // On server restart, all active/reconnecting/failed port forwards are stale since the SSH tunnels don't survive
   const result = db.prepare(`
-    UPDATE port_forwards SET status = 'closed'
-    WHERE status = 'active'
+    UPDATE port_forwards SET status = 'closed', reconnect_attempts = 0, last_error = NULL
+    WHERE status IN ('active', 'reconnecting', 'failed')
   `).run();
 
   if (result.changes > 0) {

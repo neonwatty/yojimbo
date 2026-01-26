@@ -25,6 +25,7 @@ import smartTodosRouter from './routes/smart-todos.js';
 // DISABLED: Debug routes are not currently being used
 // import debugRouter from './routes/debug.js';
 import CONFIG from './config/index.js';
+import { portDetectionService } from './services/port-detection.service.js';
 
 // Rate limiters for sensitive endpoints
 const keychainLimiter = rateLimit({
@@ -75,11 +76,14 @@ app.use(express.json());
 // Config endpoint - provides runtime config to client
 // Note: We only return the port - the client uses window.location.hostname
 // to determine the host, which allows access from any device on the network
-app.get('/api/config', (_req, res) => {
+app.get('/api/config', async (_req, res) => {
+  const networkAddresses = await portDetectionService.getNetworkAddresses();
   res.json({
     serverPort: CONFIG.port,
     platform: os.platform(), // 'darwin' for macOS, 'linux', 'win32', etc.
     label: CONFIG.label, // Optional label for distinguishing installations
+    tailscaleIp: networkAddresses.tailscaleIp,
+    lanIp: networkAddresses.lanIp,
   });
 });
 

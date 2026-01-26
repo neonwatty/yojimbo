@@ -395,7 +395,7 @@ describe('useTerminal', () => {
       // Standalone digit-R at word boundary: "4R", "23R"
       filtered = filtered.replace(/\b\d{1,3}R\b/g, '');
       // Lines that are ONLY CPR garbage (just digits, brackets, semicolons, R)
-      filtered = filtered.replace(/^[\d\[;\]R\s]+$/gm, '');
+      filtered = filtered.replace(/^[\d[;\]R\s]+$/gm, '');
       // Clean up empty lines that resulted from filtering
       filtered = filtered.replace(/\n{3,}/g, '\n\n');
       return filtered;

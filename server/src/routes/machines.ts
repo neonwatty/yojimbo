@@ -5,8 +5,9 @@ import { sshConnectionService } from '../services/ssh-connection.service.js';
 import { reverseTunnelService } from '../services/reverse-tunnel.service.js';
 import { hookInstallerService } from '../services/hook-installer.service.js';
 import { keychainStorageService } from '../services/keychain-storage.service.js';
+import { preflightCheckService } from '../services/preflight-check.service.js';
 import { broadcast } from '../websocket/server.js';
-import type { RemoteMachine, MachineStatus } from '@cc-orchestrator/shared';
+import type { RemoteMachine, MachineStatus, KeychainStatusChange } from '@cc-orchestrator/shared';
 
 const router = Router();
 
@@ -259,9 +260,121 @@ router.post('/:id/test', async (req, res) => {
   }
 });
 
+// POST /api/machines/:id/preflight - Run all preflight checks for a machine
+router.post('/:id/preflight', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const db = getDatabase();
+    const existing = db
+      .prepare('SELECT * FROM remote_machines WHERE id = ?')
+      .get(id) as RemoteMachineRow | undefined;
+
+    if (!existing) {
+      return res.status(404).json({ success: false, error: 'Machine not found' });
+    }
+
+    const result = await preflightCheckService.runAllChecks(id);
+
+    // Broadcast the preflight result
+    broadcast({
+      type: 'machine:preflight',
+      machineId: id,
+      preflightResult: result,
+    });
+
+    res.json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    console.error('Error running preflight checks:', error);
+    res.status(500).json({ success: false, error: 'Failed to run preflight checks' });
+  }
+});
+
+// GET /api/machines/:id/preflight/quick - Quick check (SSH + tools + Claude only)
+router.get('/:id/preflight/quick', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const db = getDatabase();
+    const existing = db
+      .prepare('SELECT * FROM remote_machines WHERE id = ?')
+      .get(id) as RemoteMachineRow | undefined;
+
+    if (!existing) {
+      return res.status(404).json({ success: false, error: 'Machine not found' });
+    }
+
+    const result = await preflightCheckService.runQuickCheck(id);
+
+    res.json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    console.error('Error running quick preflight check:', error);
+    res.status(500).json({ success: false, error: 'Failed to run quick check' });
+  }
+});
+
+// GET /api/machines/:id/hooks-status - Check hook installation state
+router.get('/:id/hooks-status', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const db = getDatabase();
+    const existing = db
+      .prepare('SELECT * FROM remote_machines WHERE id = ?')
+      .get(id) as RemoteMachineRow | undefined;
+
+    if (!existing) {
+      return res.status(404).json({ success: false, error: 'Machine not found' });
+    }
+
+    const result = await hookInstallerService.verifyHooksInstalled(id);
+
+    res.json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    console.error('Error checking hook status:', error);
+    res.status(500).json({ success: false, error: 'Failed to check hook status' });
+  }
+});
+
+// GET /api/machines/:id/tools-check - Check required tools availability
+router.get('/:id/tools-check', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const db = getDatabase();
+    const existing = db
+      .prepare('SELECT * FROM remote_machines WHERE id = ?')
+      .get(id) as RemoteMachineRow | undefined;
+
+    if (!existing) {
+      return res.status(404).json({ success: false, error: 'Machine not found' });
+    }
+
+    const result = await hookInstallerService.checkRequiredTools(id);
+
+    res.json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    console.error('Error checking required tools:', error);
+    res.status(500).json({ success: false, error: 'Failed to check required tools' });
+  }
+});
+
 // POST /api/machines/:id/unlock-keychain - Unlock the remote machine's keychain
 // This is done once per machine (not per instance) and the unlock state is tracked
 // for the duration of the server session.
+// Uses verification after unlock and retries up to 3 times.
 router.post('/:id/unlock-keychain', async (req, res) => {
   try {
     const { id } = req.params;
@@ -275,71 +388,59 @@ router.post('/:id/unlock-keychain', async (req, res) => {
       return res.status(404).json({ success: false, error: 'Machine not found' });
     }
 
-    // Check if already unlocked in this session
-    if (keychainStorageService.isUnlocked(id)) {
+    // Use the new unlockWithVerification method which handles:
+    // - Checking if already unlocked (with verification)
+    // - Getting stored password
+    // - Retrying up to 3 times
+    // - Verifying unlock success via `security show-keychain-info`
+    const result = await keychainStorageService.unlockWithVerification(
+      id,
+      machine.name,
+      (machineId, command) => sshConnectionService.executeCommand(machineId, command)
+    );
+
+    // Broadcast keychain status change
+    const statusChange: KeychainStatusChange = {
+      machineId: id,
+      machineName: machine.name,
+      unlocked: result.success,
+      verified: result.verified,
+      attempts: result.attempts,
+      error: result.error,
+      timestamp: new Date().toISOString(),
+    };
+
+    if (result.success) {
+      console.log(`🔓 Machine ${machine.name} (${id}) keychain unlocked and verified`);
+
+      broadcast({
+        type: 'keychain:unlock-success',
+        keychainStatus: statusChange,
+      });
+
       return res.json({
         success: true,
         data: {
-          alreadyUnlocked: true,
-          message: 'Keychain already unlocked for this machine in this session',
+          unlocked: true,
+          verified: result.verified,
+          attempts: result.attempts,
+          message: `Keychain unlocked for ${machine.name}`,
         },
       });
-    }
+    } else {
+      console.error(`🔒 Failed to unlock keychain for machine ${id}:`, result.error);
 
-    // Get stored password from local keychain
-    const passwordResult = await keychainStorageService.getPassword(id);
+      broadcast({
+        type: 'keychain:unlock-failed',
+        keychainStatus: statusChange,
+        keychainError: result.error,
+        machineId: id,
+      });
 
-    if (!passwordResult.success || !passwordResult.password) {
       return res.status(400).json({
         success: false,
-        error: 'No stored password found for this machine. Please save the keychain password first.',
-      });
-    }
-
-    // Unlock the remote keychain via SSH
-    // First send the unlock command, then the password
-    const keychainPath = '~/Library/Keychains/login.keychain-db';
-
-    try {
-      // Execute unlock command and pipe password via stdin
-      // The -p flag is avoided to prevent password exposure in process list
-      // Using bash -c with input redirection for secure password passing
-      const unlockCmd = `bash -c 'echo "${passwordResult.password.replace(/"/g, '\\"').replace(/\$/g, '\\$')}" | security unlock-keychain ${keychainPath} 2>&1'`;
-      const result = await sshConnectionService.executeCommand(id, unlockCmd);
-
-      // Check for common error patterns
-      const output = result.stdout + (result.stderr || '');
-      const isError = output.toLowerCase().includes('incorrect') ||
-                      output.toLowerCase().includes('password') ||
-                      output.toLowerCase().includes('error');
-
-      if (result.success && !isError) {
-        // Mark as unlocked for this session
-        keychainStorageService.markUnlocked(id);
-
-        console.log(`🔓 Machine ${machine.name} (${id}) keychain unlocked successfully`);
-
-        return res.json({
-          success: true,
-          data: {
-            unlocked: true,
-            message: `Keychain unlocked for ${machine.name}`,
-          },
-        });
-      } else {
-        console.error(`🔒 Failed to unlock keychain for machine ${id}:`, output);
-        return res.status(400).json({
-          success: false,
-          error: output.includes('incorrect')
-            ? 'Incorrect password - please update the stored password'
-            : 'Failed to unlock keychain. The password may be incorrect.',
-        });
-      }
-    } catch (sshError) {
-      console.error(`🔒 SSH error unlocking keychain for machine ${id}:`, sshError);
-      return res.status(500).json({
-        success: false,
-        error: 'Failed to connect to remote machine to unlock keychain',
+        error: result.error,
+        attempts: result.attempts,
       });
     }
   } catch (error) {
@@ -348,10 +449,13 @@ router.post('/:id/unlock-keychain', async (req, res) => {
   }
 });
 
-// GET /api/machines/:id/keychain-status - Check if machine keychain is unlocked in this session
-router.get('/:id/keychain-status', (req, res) => {
+// GET /api/machines/:id/keychain-status - Check if machine keychain is unlocked
+// This endpoint now verifies the actual keychain state via SSH, not just the session cache.
+// Use ?verify=false to skip SSH verification and only check session cache.
+router.get('/:id/keychain-status', async (req, res) => {
   try {
     const { id } = req.params;
+    const skipVerification = req.query.verify === 'false';
 
     const db = getDatabase();
     const machine = db
@@ -362,15 +466,56 @@ router.get('/:id/keychain-status', (req, res) => {
       return res.status(404).json({ success: false, error: 'Machine not found' });
     }
 
-    const isUnlocked = keychainStorageService.isUnlocked(id);
+    if (skipVerification) {
+      // Quick check: just return session cache state
+      const isUnlocked = keychainStorageService.isUnlocked(id);
+      return res.json({
+        success: true,
+        data: {
+          unlocked: isUnlocked,
+          verified: false,
+          message: isUnlocked
+            ? 'Keychain is unlocked for this session (cached)'
+            : 'Keychain has not been unlocked in this session',
+        },
+      });
+    }
+
+    // Full verification via SSH
+    const status = await keychainStorageService.getKeychainStatus(
+      id,
+      (machineId, command) => sshConnectionService.executeCommand(machineId, command)
+    );
+
+    // Broadcast status change if there was a mismatch
+    if (status.sessionUnlocked !== status.actuallyUnlocked) {
+      const statusChange: KeychainStatusChange = {
+        machineId: id,
+        machineName: machine.name,
+        unlocked: status.actuallyUnlocked,
+        verified: true,
+        timestamp: new Date().toISOString(),
+      };
+
+      broadcast({
+        type: 'keychain:status-change',
+        keychainStatus: statusChange,
+      });
+    }
 
     res.json({
       success: true,
       data: {
-        unlocked: isUnlocked,
-        message: isUnlocked
-          ? 'Keychain is unlocked for this session'
-          : 'Keychain has not been unlocked in this session',
+        hasStoredPassword: status.hasStoredPassword,
+        unlocked: status.actuallyUnlocked,
+        verified: true,
+        sessionCached: status.sessionUnlocked,
+        verificationError: status.verificationError,
+        message: status.actuallyUnlocked
+          ? 'Keychain is unlocked (verified via SSH)'
+          : status.verificationError
+            ? `Could not verify: ${status.verificationError}`
+            : 'Keychain is locked',
       },
     });
   } catch (error) {

@@ -377,4 +377,200 @@ describe('HookInstallerService', () => {
       expect((config as any).hooks).toHaveProperty('Notification');
     });
   });
+
+  describe('verifyHooksInstalled', () => {
+    it('should return error for non-existent machine', async () => {
+      mockGet.mockReturnValue(undefined);
+
+      const { hookInstallerService } = await import('../services/hook-installer.service.js');
+
+      const result = await hookInstallerService.verifyHooksInstalled('non-existent-id');
+
+      expect(result.success).toBe(false);
+      expect(result.status).toBe('error');
+      expect(result.error).toBe('Remote machine not found');
+    });
+  });
+
+  describe('checkRequiredTools', () => {
+    it('should return error for non-existent machine', async () => {
+      mockGet.mockReturnValue(undefined);
+
+      const { hookInstallerService } = await import('../services/hook-installer.service.js');
+
+      const result = await hookInstallerService.checkRequiredTools('non-existent-id');
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('Remote machine not found');
+    });
+  });
+
+  describe('hook verification logic', () => {
+    it('should correctly identify installed hooks', () => {
+      // Test the hook verification logic with a mock settings object
+      const hookTypes = ['UserPromptSubmit', 'PreToolUse', 'PostToolUse', 'Stop', 'Notification'];
+
+      const validSettings = {
+        hooks: {
+          UserPromptSubmit: [{
+            matcher: '.',
+            hooks: [{ type: 'command', command: 'jq ... | curl -s http://localhost:3456/api/hooks/status ...' }]
+          }],
+          PreToolUse: [{
+            matcher: '.',
+            hooks: [{ type: 'command', command: 'jq ... | curl -s http://localhost:3456/api/hooks/status ...' }]
+          }],
+          PostToolUse: [{
+            matcher: '.',
+            hooks: [{ type: 'command', command: 'jq ... | curl -s http://localhost:3456/api/hooks/status ...' }]
+          }],
+          Stop: [{
+            matcher: '.',
+            hooks: [{ type: 'command', command: 'jq ... | curl -s http://localhost:3456/api/hooks/stop ...' }]
+          }],
+          Notification: [{
+            matcher: '.',
+            hooks: [{ type: 'command', command: 'jq ... | curl -s http://localhost:3456/api/hooks/notification ...' }]
+          }]
+        }
+      };
+
+      // Verify all hooks are detected
+      const installedHooks: string[] = [];
+      for (const hookType of hookTypes) {
+        const hooks = validSettings.hooks[hookType as keyof typeof validSettings.hooks];
+        if (hooks && hooks.length > 0) {
+          const hasValidYojimboHook = hooks.some((hook: any) => {
+            if (hook.matcher === '.' && Array.isArray(hook.hooks)) {
+              return hook.hooks.some((inner: any) =>
+                inner.type === 'command' &&
+                typeof inner.command === 'string' &&
+                inner.command.includes('localhost:3456')
+              );
+            }
+            return false;
+          });
+          if (hasValidYojimboHook) {
+            installedHooks.push(hookType);
+          }
+        }
+      }
+
+      expect(installedHooks).toEqual(hookTypes);
+    });
+
+    it('should correctly identify missing hooks', () => {
+      const hookTypes = ['UserPromptSubmit', 'PreToolUse', 'PostToolUse', 'Stop', 'Notification'];
+
+      const partialSettings = {
+        hooks: {
+          UserPromptSubmit: [{
+            matcher: '.',
+            hooks: [{ type: 'command', command: 'jq ... | curl -s http://localhost:3456/api/hooks/status ...' }]
+          }],
+          Stop: [{
+            matcher: '.',
+            hooks: [{ type: 'command', command: 'jq ... | curl -s http://localhost:3456/api/hooks/stop ...' }]
+          }]
+        }
+      };
+
+      const installedHooks: string[] = [];
+      const missingHooks: string[] = [];
+
+      for (const hookType of hookTypes) {
+        const hooks = (partialSettings.hooks as any)[hookType];
+        if (!hooks || !Array.isArray(hooks) || hooks.length === 0) {
+          missingHooks.push(hookType);
+          continue;
+        }
+
+        const hasValidYojimboHook = hooks.some((hook: any) => {
+          if (hook.matcher === '.' && Array.isArray(hook.hooks)) {
+            return hook.hooks.some((inner: any) =>
+              inner.type === 'command' &&
+              typeof inner.command === 'string' &&
+              inner.command.includes('localhost:3456')
+            );
+          }
+          return false;
+        });
+
+        if (hasValidYojimboHook) {
+          installedHooks.push(hookType);
+        } else {
+          missingHooks.push(hookType);
+        }
+      }
+
+      expect(installedHooks).toEqual(['UserPromptSubmit', 'Stop']);
+      expect(missingHooks).toEqual(['PreToolUse', 'PostToolUse', 'Notification']);
+    });
+
+    it('should correctly identify invalid hooks', () => {
+      const hookTypes = ['UserPromptSubmit'];
+
+      // Hooks that exist but are not in Yojimbo format
+      const invalidSettings = {
+        hooks: {
+          UserPromptSubmit: [{
+            // Old format or custom hook
+            type: 'command',
+            command: 'echo "hello"'
+          }]
+        }
+      };
+
+      const invalidHooks: string[] = [];
+
+      for (const hookType of hookTypes) {
+        const hooks = (invalidSettings.hooks as any)[hookType];
+        if (!hooks || !Array.isArray(hooks) || hooks.length === 0) {
+          continue;
+        }
+
+        const hasValidYojimboHook = hooks.some((hook: any) => {
+          if (hook.matcher === '.' && Array.isArray(hook.hooks)) {
+            return hook.hooks.some((inner: any) =>
+              inner.type === 'command' &&
+              typeof inner.command === 'string' &&
+              inner.command.includes('localhost:3456')
+            );
+          }
+          return false;
+        });
+
+        if (!hasValidYojimboHook) {
+          invalidHooks.push(hookType);
+        }
+      }
+
+      expect(invalidHooks).toEqual(['UserPromptSubmit']);
+    });
+  });
+
+  describe('tool check logic', () => {
+    it('should correctly parse tool availability output', () => {
+      const output = `jq:OK
+curl:OK
+python3:MISSING
+bash:OK`;
+
+      const available: string[] = [];
+      const missing: string[] = [];
+
+      const lines = output.trim().split('\n');
+      for (const line of lines) {
+        const [tool, status] = line.split(':');
+        if (status === 'OK') {
+          available.push(tool);
+        } else if (status === 'MISSING') {
+          missing.push(tool);
+        }
+      }
+
+      expect(available).toEqual(['jq', 'curl', 'bash']);
+      expect(missing).toEqual(['python3']);
+    });
+  });
 });

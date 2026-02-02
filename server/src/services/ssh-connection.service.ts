@@ -506,15 +506,13 @@ class SSHConnectionService {
           }
 
           let stdout = '';
-          let stderr = '';
 
           stream.on('data', (data: Buffer) => {
             stdout += data.toString();
           });
 
-          stream.stderr.on('data', (data: Buffer) => {
-            stderr += data.toString();
-          });
+          // Capture stderr but don't use it (curl errors go to stdout via our wrapper)
+          stream.stderr.on('data', () => {});
 
           stream.on('close', () => {
             clearTimeout(timeout);

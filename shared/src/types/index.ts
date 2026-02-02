@@ -276,6 +276,102 @@ export interface HookStopEvent {
   sessionId?: string;
 }
 
+// Preflight check types
+export type PreflightCheckStatus = 'pass' | 'fail' | 'warn' | 'skip';
+export type PreflightOverallStatus = 'ready' | 'warnings' | 'not_ready';
+
+export interface PreflightCheckResult {
+  name: string;
+  status: PreflightCheckStatus;
+  message: string;
+  details?: string;
+}
+
+export interface PreflightResult {
+  machineId: string;
+  machineName: string;
+  timestamp: string;
+  overall: PreflightOverallStatus;
+  checks: PreflightCheckResult[];
+  summary: {
+    passed: number;
+    failed: number;
+    warnings: number;
+    skipped: number;
+  };
+}
+
+// Hook verification types
+export type HookInstallationStatus = 'installed' | 'partial' | 'missing' | 'error';
+
+export interface HookVerificationResult {
+  success: boolean;
+  status: HookInstallationStatus;
+  installedHooks: string[];
+  missingHooks: string[];
+  invalidHooks: string[];
+  details?: string;
+  error?: string;
+}
+
+export interface ToolCheckResult {
+  success: boolean;
+  available: string[];
+  missing: string[];
+  error?: string;
+}
+
+// Tunnel types
+export type TunnelHealthState = 'healthy' | 'degraded' | 'disconnected' | 'reconnecting';
+
+export interface TunnelStatus {
+  machineId: string;
+  machineName: string;
+  healthState: TunnelHealthState;
+  remotePort: number;
+  localPort: number;
+  instanceCount: number;
+  lastSeenAt: string | null;
+  lastHealthCheck: string | null;
+  reconnectAttempts: number;
+  error: string | null;
+}
+
+export interface TunnelStateChange {
+  machineId: string;
+  previousState: TunnelHealthState | null;
+  newState: TunnelHealthState;
+  error?: string;
+  timestamp: string;
+}
+
+// Keychain unlock verification types
+export interface KeychainVerificationResult {
+  success: boolean;
+  isUnlocked: boolean;
+  verificationMethod: 'show-keychain-info' | 'session-cache';
+  error?: string;
+}
+
+export interface KeychainUnlockResult {
+  success: boolean;
+  machineId: string;
+  machineName: string;
+  attempts: number;
+  verified: boolean;
+  error?: string;
+}
+
+export interface KeychainStatusChange {
+  machineId: string;
+  machineName: string;
+  unlocked: boolean;
+  verified: boolean;
+  attempts?: number;
+  error?: string;
+  timestamp: string;
+}
+
 // WebSocket message types
 export type WSClientMessageType =
   | 'terminal:input'
@@ -311,11 +407,15 @@ export type WSServerMessageType =
   | 'machine:updated'
   | 'machine:deleted'
   | 'machine:status'
+  | 'machine:preflight'
+  | 'tunnel:state'
   | 'todo:created'
   | 'todo:updated'
   | 'todo:deleted'
   | 'log:status'
   | 'keychain:unlock-failed'
+  | 'keychain:unlock-success'
+  | 'keychain:status-change'
   | 'smart-todo:progress'
   | 'setup:progress'
   | 'error';
@@ -344,10 +444,13 @@ export interface WSServerMessage {
   machine?: RemoteMachine;
   machineId?: string;
   machineStatus?: { machineId: string; status: MachineStatus };
+  tunnelState?: TunnelStateChange;
+  preflightResult?: PreflightResult;
   todo?: GlobalTodo;
   todoId?: string;
   error?: string;
-  // Keychain unlock failure fields
+  // Keychain status fields
+  keychainStatus?: KeychainStatusChange;
   keychainError?: string;
   // Status log fields (for log:status messages)
   logType?: 'status-change' | 'hook-received' | 'instance-lookup' | 'file-check' | 'timeout-check';

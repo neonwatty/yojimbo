@@ -8,6 +8,10 @@ const mockGetPassword = vi.fn();
 const mockHasPassword = vi.fn();
 const mockIsUnlocked = vi.fn();
 const mockMarkUnlocked = vi.fn();
+const mockMarkLocked = vi.fn();
+const mockUnlockWithVerification = vi.fn();
+const mockGetKeychainStatus = vi.fn();
+const mockVerifyKeychainUnlocked = vi.fn();
 
 vi.mock('../db/connection.js', () => ({
   getDatabase: () => ({
@@ -54,9 +58,12 @@ vi.mock('../services/keychain-storage.service.js', () => ({
     hasPassword: mockHasPassword,
     isUnlocked: mockIsUnlocked,
     markUnlocked: mockMarkUnlocked,
-    markLocked: vi.fn(),
+    markLocked: mockMarkLocked,
     storePassword: vi.fn(),
     deletePassword: vi.fn(),
+    unlockWithVerification: mockUnlockWithVerification,
+    getKeychainStatus: mockGetKeychainStatus,
+    verifyKeychainUnlocked: mockVerifyKeychainUnlocked,
   },
 }));
 
@@ -101,7 +108,7 @@ describe('Machines Routes - Keychain Unlock', () => {
       }
     });
 
-    it('should return early if keychain already unlocked for this session', async () => {
+    it('should unlock keychain successfully using unlockWithVerification', async () => {
       mockGet.mockReturnValue({
         id: 'machine-1',
         name: 'Test Machine',
@@ -109,7 +116,13 @@ describe('Machines Routes - Keychain Unlock', () => {
         port: 22,
         username: 'user',
       });
-      mockIsUnlocked.mockReturnValue(true);
+      mockUnlockWithVerification.mockResolvedValue({
+        success: true,
+        machineId: 'machine-1',
+        machineName: 'Test Machine',
+        attempts: 1,
+        verified: true,
+      });
 
       const { default: router } = await import('../routes/machines.js');
 
@@ -131,16 +144,62 @@ describe('Machines Routes - Keychain Unlock', () => {
       if (unlockRoute) {
         await unlockRoute.route.stack[0].handle(mockReq, mockRes);
 
+        expect(mockUnlockWithVerification).toHaveBeenCalled();
         expect(mockRes.json).toHaveBeenCalledWith({
           success: true,
           data: {
-            alreadyUnlocked: true,
-            message: 'Keychain already unlocked for this machine in this session',
+            unlocked: true,
+            verified: true,
+            attempts: 1,
+            message: 'Keychain unlocked for Test Machine',
           },
         });
-        // Should not try to get password or execute command
-        expect(mockGetPassword).not.toHaveBeenCalled();
-        expect(mockExecuteCommand).not.toHaveBeenCalled();
+      }
+    });
+
+    it('should return error when unlock fails with incorrect password', async () => {
+      mockGet.mockReturnValue({
+        id: 'machine-1',
+        name: 'Test Machine',
+        hostname: 'mac-mini.local',
+        port: 22,
+        username: 'user',
+      });
+      mockUnlockWithVerification.mockResolvedValue({
+        success: false,
+        machineId: 'machine-1',
+        machineName: 'Test Machine',
+        attempts: 1,
+        verified: false,
+        error: 'Incorrect password - please update the stored password',
+      });
+
+      const { default: router } = await import('../routes/machines.js');
+
+      const mockReq = {
+        params: { id: 'machine-1' },
+        body: {},
+      } as any;
+
+      const mockRes = {
+        json: vi.fn(),
+        status: vi.fn().mockReturnThis(),
+      } as any;
+
+      const routes = (router as any).stack || [];
+      const unlockRoute = routes.find(
+        (r: any) => r.route?.path === '/:id/unlock-keychain' && r.route?.methods?.post
+      );
+
+      if (unlockRoute) {
+        await unlockRoute.route.stack[0].handle(mockReq, mockRes);
+
+        expect(mockRes.status).toHaveBeenCalledWith(400);
+        expect(mockRes.json).toHaveBeenCalledWith({
+          success: false,
+          error: 'Incorrect password - please update the stored password',
+          attempts: 1,
+        });
       }
     });
 
@@ -152,8 +211,14 @@ describe('Machines Routes - Keychain Unlock', () => {
         port: 22,
         username: 'user',
       });
-      mockIsUnlocked.mockReturnValue(false);
-      mockGetPassword.mockResolvedValue({ success: false });
+      mockUnlockWithVerification.mockResolvedValue({
+        success: false,
+        machineId: 'machine-1',
+        machineName: 'Test Machine',
+        attempts: 0,
+        verified: false,
+        error: 'No stored password found for this machine. Please save the keychain password first.',
+      });
 
       const { default: router } = await import('../routes/machines.js');
 
@@ -179,11 +244,12 @@ describe('Machines Routes - Keychain Unlock', () => {
         expect(mockRes.json).toHaveBeenCalledWith({
           success: false,
           error: 'No stored password found for this machine. Please save the keychain password first.',
+          attempts: 0,
         });
       }
     });
 
-    it('should unlock keychain successfully and mark as unlocked', async () => {
+    it('should return failure after max retry attempts', async () => {
       mockGet.mockReturnValue({
         id: 'machine-1',
         name: 'Test Machine',
@@ -191,65 +257,13 @@ describe('Machines Routes - Keychain Unlock', () => {
         port: 22,
         username: 'user',
       });
-      mockIsUnlocked.mockReturnValue(false);
-      mockGetPassword.mockResolvedValue({ success: true, password: 'test-password' });
-      mockExecuteCommand.mockResolvedValue({
-        success: true,
-        stdout: '',
-        stderr: '',
-        code: 0,
-      });
-
-      const { default: router } = await import('../routes/machines.js');
-
-      const mockReq = {
-        params: { id: 'machine-1' },
-        body: {},
-      } as any;
-
-      const mockRes = {
-        json: vi.fn(),
-        status: vi.fn().mockReturnThis(),
-      } as any;
-
-      const routes = (router as any).stack || [];
-      const unlockRoute = routes.find(
-        (r: any) => r.route?.path === '/:id/unlock-keychain' && r.route?.methods?.post
-      );
-
-      if (unlockRoute) {
-        await unlockRoute.route.stack[0].handle(mockReq, mockRes);
-
-        expect(mockExecuteCommand).toHaveBeenCalledWith(
-          'machine-1',
-          expect.stringContaining('security unlock-keychain')
-        );
-        expect(mockMarkUnlocked).toHaveBeenCalledWith('machine-1');
-        expect(mockRes.json).toHaveBeenCalledWith({
-          success: true,
-          data: {
-            unlocked: true,
-            message: 'Keychain unlocked for Test Machine',
-          },
-        });
-      }
-    });
-
-    it('should return error when unlock command fails with incorrect password', async () => {
-      mockGet.mockReturnValue({
-        id: 'machine-1',
-        name: 'Test Machine',
-        hostname: 'mac-mini.local',
-        port: 22,
-        username: 'user',
-      });
-      mockIsUnlocked.mockReturnValue(false);
-      mockGetPassword.mockResolvedValue({ success: true, password: 'wrong-password' });
-      mockExecuteCommand.mockResolvedValue({
+      mockUnlockWithVerification.mockResolvedValue({
         success: false,
-        stdout: 'security: SecKeychainUnlock: The user name or passphrase you entered is not correct.',
-        stderr: '',
-        code: 1,
+        machineId: 'machine-1',
+        machineName: 'Test Machine',
+        attempts: 3,
+        verified: false,
+        error: 'Failed to unlock keychain after 3 attempts',
       });
 
       const { default: router } = await import('../routes/machines.js');
@@ -272,51 +286,11 @@ describe('Machines Routes - Keychain Unlock', () => {
       if (unlockRoute) {
         await unlockRoute.route.stack[0].handle(mockReq, mockRes);
 
-        expect(mockMarkUnlocked).not.toHaveBeenCalled();
         expect(mockRes.status).toHaveBeenCalledWith(400);
         expect(mockRes.json).toHaveBeenCalledWith({
           success: false,
-          error: expect.stringContaining('incorrect'),
-        });
-      }
-    });
-
-    it('should handle SSH connection errors', async () => {
-      mockGet.mockReturnValue({
-        id: 'machine-1',
-        name: 'Test Machine',
-        hostname: 'mac-mini.local',
-        port: 22,
-        username: 'user',
-      });
-      mockIsUnlocked.mockReturnValue(false);
-      mockGetPassword.mockResolvedValue({ success: true, password: 'test-password' });
-      mockExecuteCommand.mockRejectedValue(new Error('SSH connection failed'));
-
-      const { default: router } = await import('../routes/machines.js');
-
-      const mockReq = {
-        params: { id: 'machine-1' },
-        body: {},
-      } as any;
-
-      const mockRes = {
-        json: vi.fn(),
-        status: vi.fn().mockReturnThis(),
-      } as any;
-
-      const routes = (router as any).stack || [];
-      const unlockRoute = routes.find(
-        (r: any) => r.route?.path === '/:id/unlock-keychain' && r.route?.methods?.post
-      );
-
-      if (unlockRoute) {
-        await unlockRoute.route.stack[0].handle(mockReq, mockRes);
-
-        expect(mockRes.status).toHaveBeenCalledWith(500);
-        expect(mockRes.json).toHaveBeenCalledWith({
-          success: false,
-          error: 'Failed to connect to remote machine to unlock keychain',
+          error: 'Failed to unlock keychain after 3 attempts',
+          attempts: 3,
         });
       }
     });
@@ -330,6 +304,7 @@ describe('Machines Routes - Keychain Unlock', () => {
 
       const mockReq = {
         params: { id: 'non-existent' },
+        query: {},
       } as any;
 
       const mockRes = {
@@ -353,7 +328,7 @@ describe('Machines Routes - Keychain Unlock', () => {
       }
     });
 
-    it('should return unlocked: true when keychain is unlocked', async () => {
+    it('should return cached status when verify=false', async () => {
       mockGet.mockReturnValue({
         id: 'machine-1',
         name: 'Test Machine',
@@ -367,6 +342,7 @@ describe('Machines Routes - Keychain Unlock', () => {
 
       const mockReq = {
         params: { id: 'machine-1' },
+        query: { verify: 'false' },
       } as any;
 
       const mockRes = {
@@ -382,17 +358,19 @@ describe('Machines Routes - Keychain Unlock', () => {
       if (statusRoute) {
         await statusRoute.route.stack[0].handle(mockReq, mockRes);
 
+        expect(mockGetKeychainStatus).not.toHaveBeenCalled();
         expect(mockRes.json).toHaveBeenCalledWith({
           success: true,
           data: {
             unlocked: true,
-            message: 'Keychain is unlocked for this session',
+            verified: false,
+            message: 'Keychain is unlocked for this session (cached)',
           },
         });
       }
     });
 
-    it('should return unlocked: false when keychain is not unlocked', async () => {
+    it('should verify via SSH and return full status', async () => {
       mockGet.mockReturnValue({
         id: 'machine-1',
         name: 'Test Machine',
@@ -400,12 +378,68 @@ describe('Machines Routes - Keychain Unlock', () => {
         port: 22,
         username: 'user',
       });
-      mockIsUnlocked.mockReturnValue(false);
+      mockGetKeychainStatus.mockResolvedValue({
+        hasStoredPassword: true,
+        sessionUnlocked: true,
+        actuallyUnlocked: true,
+        verificationError: undefined,
+      });
 
       const { default: router } = await import('../routes/machines.js');
 
       const mockReq = {
         params: { id: 'machine-1' },
+        query: {},
+      } as any;
+
+      const mockRes = {
+        json: vi.fn(),
+        status: vi.fn().mockReturnThis(),
+      } as any;
+
+      const routes = (router as any).stack || [];
+      const statusRoute = routes.find(
+        (r: any) => r.route?.path === '/:id/keychain-status' && r.route?.methods?.get
+      );
+
+      if (statusRoute) {
+        await statusRoute.route.stack[0].handle(mockReq, mockRes);
+
+        expect(mockGetKeychainStatus).toHaveBeenCalled();
+        expect(mockRes.json).toHaveBeenCalledWith({
+          success: true,
+          data: {
+            hasStoredPassword: true,
+            unlocked: true,
+            verified: true,
+            sessionCached: true,
+            verificationError: undefined,
+            message: 'Keychain is unlocked (verified via SSH)',
+          },
+        });
+      }
+    });
+
+    it('should show locked status when verification shows locked', async () => {
+      mockGet.mockReturnValue({
+        id: 'machine-1',
+        name: 'Test Machine',
+        hostname: 'mac-mini.local',
+        port: 22,
+        username: 'user',
+      });
+      mockGetKeychainStatus.mockResolvedValue({
+        hasStoredPassword: true,
+        sessionUnlocked: false,
+        actuallyUnlocked: false,
+        verificationError: undefined,
+      });
+
+      const { default: router } = await import('../routes/machines.js');
+
+      const mockReq = {
+        params: { id: 'machine-1' },
+        query: {},
       } as any;
 
       const mockRes = {
@@ -424,8 +458,61 @@ describe('Machines Routes - Keychain Unlock', () => {
         expect(mockRes.json).toHaveBeenCalledWith({
           success: true,
           data: {
+            hasStoredPassword: true,
             unlocked: false,
-            message: 'Keychain has not been unlocked in this session',
+            verified: true,
+            sessionCached: false,
+            verificationError: undefined,
+            message: 'Keychain is locked',
+          },
+        });
+      }
+    });
+
+    it('should report verification error when SSH fails', async () => {
+      mockGet.mockReturnValue({
+        id: 'machine-1',
+        name: 'Test Machine',
+        hostname: 'mac-mini.local',
+        port: 22,
+        username: 'user',
+      });
+      mockGetKeychainStatus.mockResolvedValue({
+        hasStoredPassword: true,
+        sessionUnlocked: false,
+        actuallyUnlocked: false,
+        verificationError: 'Connection refused',
+      });
+
+      const { default: router } = await import('../routes/machines.js');
+
+      const mockReq = {
+        params: { id: 'machine-1' },
+        query: {},
+      } as any;
+
+      const mockRes = {
+        json: vi.fn(),
+        status: vi.fn().mockReturnThis(),
+      } as any;
+
+      const routes = (router as any).stack || [];
+      const statusRoute = routes.find(
+        (r: any) => r.route?.path === '/:id/keychain-status' && r.route?.methods?.get
+      );
+
+      if (statusRoute) {
+        await statusRoute.route.stack[0].handle(mockReq, mockRes);
+
+        expect(mockRes.json).toHaveBeenCalledWith({
+          success: true,
+          data: {
+            hasStoredPassword: true,
+            unlocked: false,
+            verified: true,
+            sessionCached: false,
+            verificationError: 'Connection refused',
+            message: 'Could not verify: Connection refused',
           },
         });
       }

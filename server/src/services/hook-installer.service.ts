@@ -30,6 +30,25 @@ interface CheckHooksResult {
   error?: string;
 }
 
+export type HookInstallationStatus = 'installed' | 'partial' | 'missing' | 'error';
+
+export interface HookVerificationResult {
+  success: boolean;
+  status: HookInstallationStatus;
+  installedHooks: string[];
+  missingHooks: string[];
+  invalidHooks: string[];
+  details?: string;
+  error?: string;
+}
+
+interface ToolCheckResult {
+  success: boolean;
+  available: string[];
+  missing: string[];
+  error?: string;
+}
+
 /**
  * Hook Installer Service
  * Installs Claude Code hooks on remote machines via SSH
@@ -86,7 +105,8 @@ class HookInstallerService {
    */
   async installHooksForMachine(
     machineId: string,
-    orchestratorUrl: string
+    orchestratorUrl: string,
+    skipToolCheck = false
   ): Promise<HookInstallResult> {
     const db = getDatabase();
 
@@ -107,6 +127,25 @@ class HookInstallerService {
       username: machine.username,
       privateKeyPath: machine.ssh_key_path || undefined,
     };
+
+    // Check for required tools before installing (unless skipped)
+    if (!skipToolCheck) {
+      const toolCheck = await this.checkRequiredToolsWithConfig(sshConfig);
+      if (!toolCheck.success) {
+        return {
+          success: false,
+          message: 'Failed to check required tools',
+          error: toolCheck.error,
+        };
+      }
+      if (toolCheck.missing.length > 0) {
+        return {
+          success: false,
+          message: `Missing required tools: ${toolCheck.missing.join(', ')}`,
+          error: `Install the following tools on the remote machine: ${toolCheck.missing.join(', ')}`,
+        };
+      }
+    }
 
     // Use empty string for instanceId since hooks don't actually use it
     return this.installHooks(sshConfig, '', orchestratorUrl, machine.id);
@@ -181,12 +220,17 @@ class HookInstallerService {
     return this.checkExistingHooks(sshConfig);
   }
 
+  // The hook types we install
+  private readonly hookTypes = ['UserPromptSubmit', 'PreToolUse', 'PostToolUse', 'Stop', 'Notification'];
+  // Required tools for hook installation and operation
+  private readonly requiredTools = ['jq', 'curl', 'python3', 'bash'];
+
   /**
    * Check which hook types exist on a remote machine
    */
   async checkExistingHooks(config: SSHConfig): Promise<CheckHooksResult> {
     // The hook types we install that could conflict with user hooks
-    const ourHookTypes = ['UserPromptSubmit', 'PreToolUse', 'PostToolUse', 'Stop', 'Notification'];
+    const ourHookTypes = this.hookTypes;
 
     return new Promise((resolve) => {
       const client = new Client();
@@ -275,6 +319,372 @@ class HookInstallerService {
         clearTimeout(timeout);
         client.end();
         resolve({ success: false, existingHooks: [], error: err.message });
+      });
+
+      client.connect({
+        host: config.host,
+        port: config.port,
+        username: config.username,
+        privateKey,
+        readyTimeout: 10000,
+      });
+    });
+  }
+
+  /**
+   * Verify hooks are correctly installed on a remote machine (by machine ID)
+   * Returns detailed information about hook installation state and validity
+   */
+  async verifyHooksInstalled(machineId: string): Promise<HookVerificationResult> {
+    const db = getDatabase();
+
+    const machine = db.prepare(`
+      SELECT id, hostname, port, username, ssh_key_path
+      FROM remote_machines
+      WHERE id = ?
+    `).get(machineId) as RemoteMachineRow | undefined;
+
+    if (!machine) {
+      return {
+        success: false,
+        status: 'error',
+        installedHooks: [],
+        missingHooks: [],
+        invalidHooks: [],
+        error: 'Remote machine not found',
+      };
+    }
+
+    const sshConfig: SSHConfig = {
+      host: machine.hostname,
+      port: machine.port,
+      username: machine.username,
+      privateKeyPath: machine.ssh_key_path || undefined,
+    };
+
+    return this.verifyHooksWithConfig(sshConfig);
+  }
+
+  /**
+   * Verify hooks are correctly installed with detailed structure checking
+   */
+  private async verifyHooksWithConfig(config: SSHConfig): Promise<HookVerificationResult> {
+    return new Promise((resolve) => {
+      const client = new Client();
+      const timeout = setTimeout(() => {
+        client.end();
+        resolve({
+          success: false,
+          status: 'error',
+          installedHooks: [],
+          missingHooks: [],
+          invalidHooks: [],
+          error: 'SSH connection timeout',
+        });
+      }, 15000);
+
+      // Read private key
+      let privateKey: Buffer | undefined;
+      if (config.privateKeyPath) {
+        const keyPath = config.privateKeyPath.replace(/^~/, os.homedir());
+        try {
+          privateKey = fs.readFileSync(keyPath);
+        } catch (err) {
+          clearTimeout(timeout);
+          resolve({
+            success: false,
+            status: 'error',
+            installedHooks: [],
+            missingHooks: [],
+            invalidHooks: [],
+            error: `Failed to read SSH key: ${String(err)}`,
+          });
+          return;
+        }
+      } else {
+        const defaultKeys = ['id_ed25519', 'id_rsa', 'id_ecdsa'];
+        for (const keyName of defaultKeys) {
+          const keyPath = `${os.homedir()}/.ssh/${keyName}`;
+          if (fs.existsSync(keyPath)) {
+            try {
+              privateKey = fs.readFileSync(keyPath);
+              break;
+            } catch {
+              // Continue to next key
+            }
+          }
+        }
+      }
+
+      if (!privateKey) {
+        clearTimeout(timeout);
+        resolve({
+          success: false,
+          status: 'error',
+          installedHooks: [],
+          missingHooks: [],
+          invalidHooks: [],
+          error: 'No SSH private key found',
+        });
+        return;
+      }
+
+      client.on('ready', () => {
+        // Read settings.json and verify hook structure
+        const checkScript = `bash -c "cat ~/.claude/settings.json 2>/dev/null || echo '{}'"`;
+
+        client.exec(checkScript, (err, stream) => {
+          if (err) {
+            clearTimeout(timeout);
+            client.end();
+            resolve({
+              success: false,
+              status: 'error',
+              installedHooks: [],
+              missingHooks: [],
+              invalidHooks: [],
+              error: err.message,
+            });
+            return;
+          }
+
+          let stdout = '';
+
+          stream.on('data', (data: Buffer) => {
+            stdout += data.toString();
+          });
+
+          stream.on('close', () => {
+            clearTimeout(timeout);
+            client.end();
+
+            try {
+              const settings = JSON.parse(stdout);
+              const installedHooks: string[] = [];
+              const missingHooks: string[] = [];
+              const invalidHooks: string[] = [];
+
+              if (!settings.hooks || typeof settings.hooks !== 'object') {
+                // No hooks at all
+                resolve({
+                  success: true,
+                  status: 'missing',
+                  installedHooks: [],
+                  missingHooks: this.hookTypes,
+                  invalidHooks: [],
+                  details: 'No hooks section found in settings.json',
+                });
+                return;
+              }
+
+              // Check each expected hook type
+              for (const hookType of this.hookTypes) {
+                const hooks = settings.hooks[hookType];
+
+                if (!hooks || !Array.isArray(hooks) || hooks.length === 0) {
+                  missingHooks.push(hookType);
+                  continue;
+                }
+
+                // Verify the hook has the correct structure (Yojimbo hooks)
+                const hasValidYojimboHook = hooks.some((hook: unknown) => {
+                  if (typeof hook !== 'object' || hook === null) return false;
+                  const h = hook as Record<string, unknown>;
+
+                  // Check for the matcher/hooks structure we use
+                  if (h.matcher === '.' && Array.isArray(h.hooks)) {
+                    return h.hooks.some((inner: unknown) => {
+                      if (typeof inner !== 'object' || inner === null) return false;
+                      const i = inner as Record<string, unknown>;
+                      return i.type === 'command' &&
+                             typeof i.command === 'string' &&
+                             (i.command as string).includes('localhost:3456');
+                    });
+                  }
+                  return false;
+                });
+
+                if (hasValidYojimboHook) {
+                  installedHooks.push(hookType);
+                } else {
+                  // Hooks exist but don't match Yojimbo format
+                  invalidHooks.push(hookType);
+                }
+              }
+
+              // Determine status
+              let status: HookInstallationStatus;
+              if (installedHooks.length === this.hookTypes.length) {
+                status = 'installed';
+              } else if (installedHooks.length > 0) {
+                status = 'partial';
+              } else {
+                status = 'missing';
+              }
+
+              resolve({
+                success: true,
+                status,
+                installedHooks,
+                missingHooks,
+                invalidHooks,
+                details: `${installedHooks.length}/${this.hookTypes.length} hooks correctly installed`,
+              });
+            } catch {
+              // Invalid JSON
+              resolve({
+                success: true,
+                status: 'missing',
+                installedHooks: [],
+                missingHooks: this.hookTypes,
+                invalidHooks: [],
+                details: 'Invalid or missing settings.json',
+              });
+            }
+          });
+        });
+      });
+
+      client.on('error', (err) => {
+        clearTimeout(timeout);
+        client.end();
+        resolve({
+          success: false,
+          status: 'error',
+          installedHooks: [],
+          missingHooks: [],
+          invalidHooks: [],
+          error: err.message,
+        });
+      });
+
+      client.connect({
+        host: config.host,
+        port: config.port,
+        username: config.username,
+        privateKey,
+        readyTimeout: 10000,
+      });
+    });
+  }
+
+  /**
+   * Check if required tools are available on a remote machine
+   */
+  async checkRequiredTools(machineId: string): Promise<ToolCheckResult> {
+    const db = getDatabase();
+
+    const machine = db.prepare(`
+      SELECT id, hostname, port, username, ssh_key_path
+      FROM remote_machines
+      WHERE id = ?
+    `).get(machineId) as RemoteMachineRow | undefined;
+
+    if (!machine) {
+      return { success: false, available: [], missing: [], error: 'Remote machine not found' };
+    }
+
+    const sshConfig: SSHConfig = {
+      host: machine.hostname,
+      port: machine.port,
+      username: machine.username,
+      privateKeyPath: machine.ssh_key_path || undefined,
+    };
+
+    return this.checkRequiredToolsWithConfig(sshConfig);
+  }
+
+  /**
+   * Check if required tools are available with SSH config
+   */
+  private async checkRequiredToolsWithConfig(config: SSHConfig): Promise<ToolCheckResult> {
+    return new Promise((resolve) => {
+      const client = new Client();
+      const timeout = setTimeout(() => {
+        client.end();
+        resolve({ success: false, available: [], missing: [], error: 'SSH connection timeout' });
+      }, 15000);
+
+      // Read private key
+      let privateKey: Buffer | undefined;
+      if (config.privateKeyPath) {
+        const keyPath = config.privateKeyPath.replace(/^~/, os.homedir());
+        try {
+          privateKey = fs.readFileSync(keyPath);
+        } catch (err) {
+          clearTimeout(timeout);
+          resolve({ success: false, available: [], missing: [], error: `Failed to read SSH key: ${String(err)}` });
+          return;
+        }
+      } else {
+        const defaultKeys = ['id_ed25519', 'id_rsa', 'id_ecdsa'];
+        for (const keyName of defaultKeys) {
+          const keyPath = `${os.homedir()}/.ssh/${keyName}`;
+          if (fs.existsSync(keyPath)) {
+            try {
+              privateKey = fs.readFileSync(keyPath);
+              break;
+            } catch {
+              // Continue to next key
+            }
+          }
+        }
+      }
+
+      if (!privateKey) {
+        clearTimeout(timeout);
+        resolve({ success: false, available: [], missing: [], error: 'No SSH private key found' });
+        return;
+      }
+
+      client.on('ready', () => {
+        // Check all tools in one command
+        const toolChecks = this.requiredTools.map(tool =>
+          `(which ${tool} >/dev/null 2>&1 && echo "${tool}:OK" || echo "${tool}:MISSING")`
+        ).join('; ');
+
+        const checkScript = `bash -c '${toolChecks}'`;
+
+        client.exec(checkScript, (err, stream) => {
+          if (err) {
+            clearTimeout(timeout);
+            client.end();
+            resolve({ success: false, available: [], missing: [], error: err.message });
+            return;
+          }
+
+          let stdout = '';
+
+          stream.on('data', (data: Buffer) => {
+            stdout += data.toString();
+          });
+
+          stream.on('close', () => {
+            clearTimeout(timeout);
+            client.end();
+
+            const available: string[] = [];
+            const missing: string[] = [];
+
+            const lines = stdout.trim().split('\n');
+            for (const line of lines) {
+              const [tool, status] = line.split(':');
+              if (status === 'OK') {
+                available.push(tool);
+              } else if (status === 'MISSING') {
+                missing.push(tool);
+              }
+            }
+
+            resolve({ success: true, available, missing });
+          });
+        });
+      });
+
+      client.on('error', (err) => {
+        clearTimeout(timeout);
+        client.end();
+        resolve({ success: false, available: [], missing: [], error: err.message });
       });
 
       client.connect({

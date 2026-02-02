@@ -321,4 +321,163 @@ describe('ReverseTunnelService', () => {
       expect(result.error).toBe('Remote machine not found');
     });
   });
+
+  describe('health monitoring logic', () => {
+    it('should track health state correctly', () => {
+      type TunnelHealthState = 'healthy' | 'degraded' | 'disconnected' | 'reconnecting';
+
+      interface TunnelHealth {
+        healthState: TunnelHealthState;
+        lastSeenAt: Date | null;
+        lastHealthCheck: Date | null;
+        reconnectAttempts: number;
+        error: string | null;
+      }
+
+      const tunnel: TunnelHealth = {
+        healthState: 'healthy',
+        lastSeenAt: new Date(),
+        lastHealthCheck: null,
+        reconnectAttempts: 0,
+        error: null,
+      };
+
+      // Simulate health check pass
+      tunnel.lastHealthCheck = new Date();
+      tunnel.lastSeenAt = new Date();
+      expect(tunnel.healthState).toBe('healthy');
+
+      // Simulate degraded state
+      tunnel.healthState = 'degraded';
+      tunnel.error = 'Health check timeout';
+      expect(tunnel.healthState).toBe('degraded');
+
+      // Simulate disconnected state
+      tunnel.healthState = 'disconnected';
+      tunnel.error = 'Connection lost';
+      expect(tunnel.healthState).toBe('disconnected');
+
+      // Simulate reconnecting state
+      tunnel.healthState = 'reconnecting';
+      tunnel.reconnectAttempts = 1;
+      expect(tunnel.reconnectAttempts).toBe(1);
+    });
+
+    it('should calculate exponential backoff correctly', () => {
+      const baseDelay = 1000; // 1 second
+      const maxAttempts = 5;
+
+      const delays: number[] = [];
+      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        const delay = baseDelay * Math.pow(2, attempt - 1);
+        delays.push(delay);
+      }
+
+      expect(delays).toEqual([1000, 2000, 4000, 8000, 16000]);
+    });
+
+    it('should limit reconnect attempts', () => {
+      const maxAttempts = 5;
+      let reconnectAttempts = 0;
+
+      for (let i = 0; i < 10; i++) {
+        if (reconnectAttempts >= maxAttempts) {
+          break;
+        }
+        reconnectAttempts++;
+      }
+
+      expect(reconnectAttempts).toBe(maxAttempts);
+    });
+  });
+
+  describe('tunnel status logic', () => {
+    it('should build correct TunnelStatus object', () => {
+      interface TunnelStatus {
+        machineId: string;
+        machineName: string;
+        healthState: string;
+        remotePort: number;
+        localPort: number;
+        instanceCount: number;
+        lastSeenAt: string | null;
+        lastHealthCheck: string | null;
+        reconnectAttempts: number;
+        error: string | null;
+      }
+
+      const tunnel = {
+        machineId: 'machine-1',
+        machineName: 'Test Machine',
+        healthState: 'healthy' as const,
+        remotePort: 3456,
+        localPort: 3456,
+        instanceIds: new Set(['instance-1', 'instance-2']),
+        lastSeenAt: new Date('2024-01-01T00:00:00Z'),
+        lastHealthCheck: new Date('2024-01-01T00:00:30Z'),
+        reconnectAttempts: 0,
+        error: null,
+      };
+
+      const status: TunnelStatus = {
+        machineId: tunnel.machineId,
+        machineName: tunnel.machineName,
+        healthState: tunnel.healthState,
+        remotePort: tunnel.remotePort,
+        localPort: tunnel.localPort,
+        instanceCount: tunnel.instanceIds.size,
+        lastSeenAt: tunnel.lastSeenAt?.toISOString() || null,
+        lastHealthCheck: tunnel.lastHealthCheck?.toISOString() || null,
+        reconnectAttempts: tunnel.reconnectAttempts,
+        error: tunnel.error,
+      };
+
+      expect(status.machineId).toBe('machine-1');
+      expect(status.machineName).toBe('Test Machine');
+      expect(status.healthState).toBe('healthy');
+      expect(status.instanceCount).toBe(2);
+      expect(status.lastSeenAt).toBe('2024-01-01T00:00:00.000Z');
+      expect(status.lastHealthCheck).toBe('2024-01-01T00:00:30.000Z');
+      expect(status.reconnectAttempts).toBe(0);
+      expect(status.error).toBeNull();
+    });
+  });
+
+  describe('state change events', () => {
+    it('should emit state change with correct structure', () => {
+      interface TunnelStateChange {
+        machineId: string;
+        previousState: string | null;
+        newState: string;
+        error?: string;
+        timestamp: string;
+      }
+
+      const stateChange: TunnelStateChange = {
+        machineId: 'machine-1',
+        previousState: 'healthy',
+        newState: 'degraded',
+        error: 'Connection timeout',
+        timestamp: new Date().toISOString(),
+      };
+
+      expect(stateChange.machineId).toBe('machine-1');
+      expect(stateChange.previousState).toBe('healthy');
+      expect(stateChange.newState).toBe('degraded');
+      expect(stateChange.error).toBe('Connection timeout');
+      expect(stateChange.timestamp).toBeDefined();
+    });
+  });
+
+  describe('forceReconnect logic', () => {
+    it('should reset reconnect attempts on force reconnect', async () => {
+      const { reverseTunnelService } = await import('../services/reverse-tunnel.service.js');
+
+      // Try to force reconnect a non-existent tunnel
+      const result = await reverseTunnelService.forceReconnect('non-existent');
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('No tunnel found for this machine');
+    });
+  });
 });

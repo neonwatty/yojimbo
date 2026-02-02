@@ -102,7 +102,8 @@ test.describe('Remote Machines API', () => {
 
     try {
       // Get keychain status (should be not unlocked initially)
-      const response = await fetch(`${API_BASE}/machines/${machine.id}/keychain-status`);
+      // Use ?verify=false to skip SSH verification (test machines aren't real SSH hosts)
+      const response = await fetch(`${API_BASE}/machines/${machine.id}/keychain-status?verify=false`);
 
       // Skip if endpoint doesn't exist (server not rebuilt)
       const contentType = response.headers.get('content-type') || '';
@@ -210,8 +211,9 @@ test.describe('Machine Password Modal (PR #164)', () => {
     await basePage.openSettings();
 
     // Machine without stored password should show warning indicator
-    // Look for the machine row
-    const machineRow = basePage.page.locator('text=Password Test Machine').locator('..');
+    // Look for the machine row in the Remote Machines section (not Machine Health Dashboard)
+    // The Remote Machines section has machine rows with connection strings like user@host:port
+    const machineRow = basePage.page.locator('text=testuser@password-test.local:22').locator('..');
     await expect(machineRow).toBeAttached({ timeout: 5000 });
 
     // The password button should exist (could be "Set Password" or "Password" depending on state)

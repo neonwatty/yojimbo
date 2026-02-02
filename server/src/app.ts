@@ -22,6 +22,7 @@ import todosRouter from './routes/todos.js';
 import releasesRouter from './routes/releases.js';
 import projectsRouter from './routes/projects.js';
 import smartTodosRouter from './routes/smart-todos.js';
+import tunnelsRouter from './routes/tunnels.js';
 // DISABLED: Debug routes are not currently being used
 // import debugRouter from './routes/debug.js';
 import CONFIG from './config/index.js';
@@ -115,6 +116,7 @@ app.use('/api/todos', todosRouter);
 app.use('/api/releases', releasesRouter);
 app.use('/api/projects', projectsRouter);
 app.use('/api/smart-todos', smartTodosRouter);
+app.use('/api/tunnels', tunnelsRouter);
 // DISABLED: Debug routes are not currently being used
 // app.use('/api/debug', debugRouter);
 

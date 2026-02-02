@@ -362,6 +362,18 @@ export const machinesApi = {
     request<ApiResponse<{ unlocked: boolean; message: string }>>(
       `/machines/${id}/keychain-status`
     ),
+
+  // Preflight checks
+  runPreflight: (id: string) =>
+    request<ApiResponse<import('@cc-orchestrator/shared').PreflightResult>>(
+      `/machines/${id}/preflight`,
+      { method: 'POST' }
+    ),
+
+  runQuickPreflight: (id: string) =>
+    request<ApiResponse<import('@cc-orchestrator/shared').PreflightResult>>(
+      `/machines/${id}/preflight/quick`
+    ),
 };
 
 // SSH API

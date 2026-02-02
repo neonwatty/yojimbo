@@ -336,4 +336,265 @@ describe.skipIf(process.env.CI)('KeychainStorageService', () => {
       expect(keychainStorageService.isUnlocked(machineId1)).toBe(false);
     });
   });
+
+  describe('verifyKeychainUnlocked', () => {
+    const machineId = 'verify-test-machine';
+
+    beforeEach(() => {
+      keychainStorageService.clearAllUnlockState();
+    });
+
+    it('should return isUnlocked: true when keychain is unlocked', async () => {
+      const mockExecuteCommand = vi.fn().mockResolvedValue({
+        success: true,
+        stdout: 'Keychain "/Users/test/Library/Keychains/login.keychain-db" no-timeout lock-on-sleep',
+        stderr: '',
+      });
+
+      const result = await keychainStorageService.verifyKeychainUnlocked(
+        machineId,
+        mockExecuteCommand
+      );
+
+      expect(result.success).toBe(true);
+      expect(result.isUnlocked).toBe(true);
+      expect(result.verificationMethod).toBe('show-keychain-info');
+      expect(mockExecuteCommand).toHaveBeenCalledWith(
+        machineId,
+        'security show-keychain-info ~/Library/Keychains/login.keychain-db 2>&1'
+      );
+    });
+
+    it('should return isUnlocked: false when keychain is locked', async () => {
+      const mockExecuteCommand = vi.fn().mockResolvedValue({
+        success: true,
+        stdout: 'Keychain "/Users/test/Library/Keychains/login.keychain-db" is locked',
+        stderr: '',
+      });
+
+      const result = await keychainStorageService.verifyKeychainUnlocked(
+        machineId,
+        mockExecuteCommand
+      );
+
+      expect(result.success).toBe(true);
+      expect(result.isUnlocked).toBe(false);
+      expect(result.error).toBe('Keychain is locked');
+    });
+
+    it('should handle SSH command failures', async () => {
+      const mockExecuteCommand = vi.fn().mockRejectedValue(new Error('SSH connection failed'));
+
+      const result = await keychainStorageService.verifyKeychainUnlocked(
+        machineId,
+        mockExecuteCommand
+      );
+
+      expect(result.success).toBe(false);
+      expect(result.isUnlocked).toBe(false);
+      expect(result.error).toBe('SSH connection failed');
+    });
+  });
+
+  describe('unlockWithVerification', () => {
+    const machineId = 'unlock-verify-test';
+    const machineName = 'Test Machine';
+
+    beforeEach(() => {
+      keychainStorageService.clearAllUnlockState();
+      // Mock getPassword to return a test password
+      mockSpawnSync.mockReturnValue({
+        status: 0,
+        stdout: 'test-password\n',
+        stderr: '',
+      } as SpawnSyncReturns<string>);
+    });
+
+    it('should return already unlocked when machine is verified unlocked', async () => {
+      // Mark as unlocked in session cache
+      keychainStorageService.markUnlocked(machineId);
+
+      const mockExecuteCommand = vi.fn().mockResolvedValue({
+        success: true,
+        stdout: 'Keychain unlocked with no-timeout',
+        stderr: '',
+      });
+
+      const result = await keychainStorageService.unlockWithVerification(
+        machineId,
+        machineName,
+        mockExecuteCommand
+      );
+
+      expect(result.success).toBe(true);
+      expect(result.attempts).toBe(0);
+      expect(result.verified).toBe(true);
+    });
+
+    it('should unlock and verify successfully', async () => {
+      const mockExecuteCommand = vi.fn()
+        .mockResolvedValueOnce({
+          success: true,
+          stdout: '',
+          stderr: '',
+        })
+        .mockResolvedValueOnce({
+          success: true,
+          stdout: 'Keychain no-timeout lock-on-sleep',
+          stderr: '',
+        });
+
+      const result = await keychainStorageService.unlockWithVerification(
+        machineId,
+        machineName,
+        mockExecuteCommand
+      );
+
+      expect(result.success).toBe(true);
+      expect(result.attempts).toBe(1);
+      expect(result.verified).toBe(true);
+      expect(keychainStorageService.isUnlocked(machineId)).toBe(true);
+    });
+
+    it('should fail immediately on incorrect password', async () => {
+      const mockExecuteCommand = vi.fn().mockResolvedValue({
+        success: false,
+        stdout: 'security: SecKeychainUnlock: The user name or passphrase you entered is not correct.',
+        stderr: '',
+      });
+
+      const result = await keychainStorageService.unlockWithVerification(
+        machineId,
+        machineName,
+        mockExecuteCommand
+      );
+
+      expect(result.success).toBe(false);
+      expect(result.attempts).toBe(1);
+      expect(result.error).toContain('Incorrect password');
+      expect(keychainStorageService.isUnlocked(machineId)).toBe(false);
+    });
+
+    it('should return error when no stored password', async () => {
+      // Mock no password stored
+      mockSpawnSync.mockReturnValue({
+        status: 44,
+        stdout: '',
+        stderr: 'security: SecKeychainSearchCopyNext: The specified item could not be found.',
+      } as SpawnSyncReturns<string>);
+
+      const mockExecuteCommand = vi.fn();
+
+      const result = await keychainStorageService.unlockWithVerification(
+        machineId,
+        machineName,
+        mockExecuteCommand
+      );
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('No stored password found');
+      expect(mockExecuteCommand).not.toHaveBeenCalled();
+    });
+
+    it('should retry on verification failure up to max attempts', async () => {
+      // All verification attempts fail (keychain appears locked)
+      const mockExecuteCommand = vi.fn()
+        .mockResolvedValue({
+          success: true,
+          stdout: 'Keychain is locked',
+          stderr: '',
+        });
+
+      const result = await keychainStorageService.unlockWithVerification(
+        machineId,
+        machineName,
+        mockExecuteCommand
+      );
+
+      expect(result.success).toBe(false);
+      expect(result.attempts).toBe(3); // MAX_UNLOCK_ATTEMPTS
+      expect(result.error).toContain('Keychain is locked');
+    }, 10000); // Increase timeout due to retry delays
+  });
+
+  describe('getKeychainStatus', () => {
+    const machineId = 'status-test-machine';
+
+    beforeEach(() => {
+      keychainStorageService.clearAllUnlockState();
+    });
+
+    it('should return full status with SSH verification', async () => {
+      // Mock password exists
+      mockSpawnSync.mockReturnValue({
+        status: 0,
+        stdout: 'test-password',
+        stderr: '',
+      } as SpawnSyncReturns<string>);
+
+      const mockExecuteCommand = vi.fn().mockResolvedValue({
+        success: true,
+        stdout: 'Keychain no-timeout lock-on-sleep',
+        stderr: '',
+      });
+
+      const status = await keychainStorageService.getKeychainStatus(
+        machineId,
+        mockExecuteCommand
+      );
+
+      expect(status.hasStoredPassword).toBe(true);
+      expect(status.actuallyUnlocked).toBe(true);
+      // Should update session cache to reflect reality
+      expect(status.sessionUnlocked).toBe(true);
+      expect(keychainStorageService.isUnlocked(machineId)).toBe(true);
+    });
+
+    it('should update session cache when verification shows locked', async () => {
+      // Mark as unlocked in session
+      keychainStorageService.markUnlocked(machineId);
+
+      // Mock password exists
+      mockSpawnSync.mockReturnValue({
+        status: 0,
+        stdout: 'test-password',
+        stderr: '',
+      } as SpawnSyncReturns<string>);
+
+      // But verification shows locked
+      const mockExecuteCommand = vi.fn().mockResolvedValue({
+        success: true,
+        stdout: 'Keychain is locked',
+        stderr: '',
+      });
+
+      const status = await keychainStorageService.getKeychainStatus(
+        machineId,
+        mockExecuteCommand
+      );
+
+      expect(status.actuallyUnlocked).toBe(false);
+      // Session should be updated to match reality
+      expect(status.sessionUnlocked).toBe(false);
+      expect(keychainStorageService.isUnlocked(machineId)).toBe(false);
+    });
+
+    it('should return verification error when SSH fails', async () => {
+      mockSpawnSync.mockReturnValue({
+        status: 0,
+        stdout: 'test-password',
+        stderr: '',
+      } as SpawnSyncReturns<string>);
+
+      const mockExecuteCommand = vi.fn().mockRejectedValue(new Error('Connection refused'));
+
+      const status = await keychainStorageService.getKeychainStatus(
+        machineId,
+        mockExecuteCommand
+      );
+
+      expect(status.hasStoredPassword).toBe(true);
+      expect(status.verificationError).toBe('Connection refused');
+    });
+  });
 });

@@ -5,6 +5,7 @@ import { toast } from '../../store/toastStore';
 import { Icons } from '../common/Icons';
 import { LocalKeychainSection } from '../settings/LocalKeychainSection';
 import { RemoteMachinesSection } from '../settings/RemoteMachinesSection';
+import { MachineHealthDashboard } from '../settings/MachineHealthDashboard';
 import { WhatsNewModal } from './WhatsNewModal';
 import type { ClaudeCodeAlias, ActivityEventType } from '@cc-orchestrator/shared';
 
@@ -428,6 +429,11 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
           {/* Remote Machines Section */}
           <RemoteMachinesSection />
+
+          {/* Machine Health Dashboard */}
+          <div className="pt-4 mt-4 border-t border-surface-600">
+            <MachineHealthDashboard />
+          </div>
 
           {/* Activity Feed Section */}
           <div className="pt-4 mt-4 border-t border-surface-600">

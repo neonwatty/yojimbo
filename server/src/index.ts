@@ -8,7 +8,9 @@ import { localStatusPollerService } from './services/local-status-poller.service
 import { statusTimeoutService } from './services/status-timeout.service.js';
 import { localKeychainService } from './services/local-keychain.service.js';
 import { portDetectionService } from './services/port-detection.service.js';
+import { reverseTunnelService } from './services/reverse-tunnel.service.js';
 import CONFIG from './config/index.js';
+import type { TunnelStateChange } from '@cc-orchestrator/shared';
 
 async function main() {
   console.log('🚀 Starting CC Orchestrator Server...');
@@ -38,6 +40,14 @@ async function main() {
   // Initialize WebSocket server
   console.log('🔌 Initializing WebSocket server...');
   initWebSocketServer(server);
+
+  // Set up tunnel state broadcasting
+  reverseTunnelService.on('tunnel:state', (stateChange: TunnelStateChange) => {
+    broadcast({
+      type: 'tunnel:state',
+      tunnelState: stateChange,
+    });
+  });
 
   // Start session watcher
   console.log('👀 Starting session watcher...');

@@ -401,7 +401,7 @@ export function MachineHealthDashboard() {
     if (!machinesLoading && machines.length > 0) {
       refreshAll();
     }
-  }, [machinesLoading, machines.length]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [machinesLoading, machines.length, refreshAll]);
 
   // Listen for WebSocket updates
   useEffect(() => {

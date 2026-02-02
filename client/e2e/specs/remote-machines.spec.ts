@@ -102,7 +102,8 @@ test.describe('Remote Machines API', () => {
 
     try {
       // Get keychain status (should be not unlocked initially)
-      const response = await fetch(`${API_BASE}/machines/${machine.id}/keychain-status`);
+      // Use ?verify=false to skip SSH verification (test machines aren't real SSH hosts)
+      const response = await fetch(`${API_BASE}/machines/${machine.id}/keychain-status?verify=false`);
 
       // Skip if endpoint doesn't exist (server not rebuilt)
       const contentType = response.headers.get('content-type') || '';

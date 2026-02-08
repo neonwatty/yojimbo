@@ -1,6 +1,6 @@
 // Instance types
-export type InstanceStatus = 'working' | 'idle' | 'error' | 'disconnected';
-export type MachineType = 'local' | 'remote';
+export type InstanceStatus = "working" | "idle" | "error" | "disconnected";
+export type MachineType = "local" | "remote";
 
 export interface Instance {
   id: string;
@@ -26,7 +26,7 @@ export interface CreateInstanceRequest {
 }
 
 // Remote Machine types
-export type MachineStatus = 'online' | 'offline' | 'unknown';
+export type MachineStatus = "online" | "offline" | "unknown";
 
 export interface RemoteMachine {
   id: string;
@@ -61,7 +61,7 @@ export interface UpdateMachineRequest {
 }
 
 // Port Forward types
-export type PortForwardStatus = 'active' | 'closed' | 'reconnecting' | 'failed';
+export type PortForwardStatus = "active" | "closed" | "reconnecting" | "failed";
 
 export interface PortForward {
   id: string;
@@ -76,26 +76,26 @@ export interface PortForward {
 
 // Listening Port Detection types
 export type ServiceType =
-  | 'vite'
-  | 'nextjs'
-  | 'cra'        // Create React App
-  | 'webpack'
-  | 'parcel'
-  | 'esbuild'
-  | 'flask'
-  | 'django'
-  | 'rails'
-  | 'express'
-  | 'fastify'
-  | 'nest'
-  | 'spring'
-  | 'go'
-  | 'rust'
-  | 'php'
-  | 'python'
-  | 'ruby'
-  | 'node'
-  | 'unknown';
+  | "vite"
+  | "nextjs"
+  | "cra" // Create React App
+  | "webpack"
+  | "parcel"
+  | "esbuild"
+  | "flask"
+  | "django"
+  | "rails"
+  | "express"
+  | "fastify"
+  | "nest"
+  | "spring"
+  | "go"
+  | "rust"
+  | "php"
+  | "python"
+  | "ruby"
+  | "node"
+  | "unknown";
 
 export interface DetectedPort {
   port: number;
@@ -116,10 +116,10 @@ export interface InstancePorts {
 
 // HTML Files Viewer types
 export interface HtmlFile {
-  id: string;           // MD5 hash of path
-  name: string;         // Filename (e.g., "mockup.html")
-  path: string;         // Full filesystem path
-  addedAt: string;      // ISO timestamp
+  id: string; // MD5 hash of path
+  name: string; // Filename (e.g., "mockup.html")
+  path: string; // Full filesystem path
+  addedAt: string; // ISO timestamp
 }
 
 export interface InstanceHtmlFiles {
@@ -145,7 +145,7 @@ export interface ReorderInstancesRequest {
 }
 
 // Global Todo types
-export type TodoStatus = 'captured' | 'in_progress' | 'done' | 'archived';
+export type TodoStatus = "captured" | "in_progress" | "done" | "archived";
 
 export interface GlobalTodo {
   id: string;
@@ -187,7 +187,7 @@ export interface TodoStats {
 }
 
 // Activity Feed types
-export type ActivityEventType = 'completed' | 'error' | 'started';
+export type ActivityEventType = "completed" | "error" | "started";
 
 export interface ActivityEvent {
   id: string;
@@ -221,7 +221,7 @@ export interface Session {
 export interface SessionMessage {
   id: number;
   sessionId: string;
-  messageType: 'user' | 'assistant' | 'tool';
+  messageType: "user" | "assistant" | "tool";
   preview: string | null;
   tokenCount: number | null;
   toolName: string | null;
@@ -259,26 +259,26 @@ export interface Mockup {
 
 // Hook event types
 export interface HookStatusEvent {
-  event: 'working' | 'idle';
+  event: "working" | "idle";
   projectDir: string;
   sessionId?: string;
 }
 
 export interface HookNotificationEvent {
-  event: 'notification';
+  event: "notification";
   projectDir: string;
   sessionId?: string;
 }
 
 export interface HookStopEvent {
-  event: 'stopped';
+  event: "stopped";
   projectDir: string;
   sessionId?: string;
 }
 
 // Preflight check types
-export type PreflightCheckStatus = 'pass' | 'fail' | 'warn' | 'skip';
-export type PreflightOverallStatus = 'ready' | 'warnings' | 'not_ready';
+export type PreflightCheckStatus = "pass" | "fail" | "warn" | "skip";
+export type PreflightOverallStatus = "ready" | "warnings" | "not_ready";
 
 export interface PreflightCheckResult {
   name: string;
@@ -302,7 +302,11 @@ export interface PreflightResult {
 }
 
 // Hook verification types
-export type HookInstallationStatus = 'installed' | 'partial' | 'missing' | 'error';
+export type HookInstallationStatus =
+  | "installed"
+  | "partial"
+  | "missing"
+  | "error";
 
 export interface HookVerificationResult {
   success: boolean;
@@ -322,7 +326,11 @@ export interface ToolCheckResult {
 }
 
 // Tunnel types
-export type TunnelHealthState = 'healthy' | 'degraded' | 'disconnected' | 'reconnecting';
+export type TunnelHealthState =
+  | "healthy"
+  | "degraded"
+  | "disconnected"
+  | "reconnecting";
 
 export interface TunnelStatus {
   machineId: string;
@@ -349,7 +357,7 @@ export interface TunnelStateChange {
 export interface KeychainVerificationResult {
   success: boolean;
   isUnlocked: boolean;
-  verificationMethod: 'show-keychain-info' | 'session-cache';
+  verificationMethod: "show-keychain-info" | "session-cache";
   error?: string;
 }
 
@@ -374,10 +382,10 @@ export interface KeychainStatusChange {
 
 // WebSocket message types
 export type WSClientMessageType =
-  | 'terminal:input'
-  | 'terminal:resize'
-  | 'subscribe'
-  | 'unsubscribe';
+  | "terminal:input"
+  | "terminal:resize"
+  | "subscribe"
+  | "unsubscribe";
 
 export interface WSClientMessage {
   type: WSClientMessageType;
@@ -388,44 +396,44 @@ export interface WSClientMessage {
 }
 
 export type WSServerMessageType =
-  | 'terminal:output'
-  | 'instance:created'
-  | 'instance:updated'
-  | 'instance:closed'
-  | 'session:updated'
-  | 'status:changed'
-  | 'cwd:changed'
-  | 'file:changed'
-  | 'file:deleted'
-  | 'feed:new'
-  | 'feed:updated'
-  | 'port:detected'
-  | 'port:forwarded'
-  | 'port:closed'
-  | 'ports:updated'
-  | 'machine:created'
-  | 'machine:updated'
-  | 'machine:deleted'
-  | 'machine:status'
-  | 'machine:preflight'
-  | 'tunnel:state'
-  | 'todo:created'
-  | 'todo:updated'
-  | 'todo:deleted'
-  | 'log:status'
-  | 'keychain:unlock-failed'
-  | 'keychain:unlock-success'
-  | 'keychain:status-change'
-  | 'smart-todo:progress'
-  | 'setup:progress'
-  | 'error';
+  | "terminal:output"
+  | "instance:created"
+  | "instance:updated"
+  | "instance:closed"
+  | "session:updated"
+  | "status:changed"
+  | "cwd:changed"
+  | "file:changed"
+  | "file:deleted"
+  | "feed:new"
+  | "feed:updated"
+  | "port:detected"
+  | "port:forwarded"
+  | "port:closed"
+  | "ports:updated"
+  | "machine:created"
+  | "machine:updated"
+  | "machine:deleted"
+  | "machine:status"
+  | "machine:preflight"
+  | "tunnel:state"
+  | "todo:created"
+  | "todo:updated"
+  | "todo:deleted"
+  | "log:status"
+  | "keychain:unlock-failed"
+  | "keychain:unlock-success"
+  | "keychain:status-change"
+  | "smart-todo:progress"
+  | "setup:progress"
+  | "error";
 
 export interface FileChangeEvent {
-  fileType: 'plan' | 'mockup';
+  fileType: "plan" | "mockup";
   fileId: string;
   filePath: string;
   workingDir: string;
-  changeType: 'modified' | 'deleted';
+  changeType: "modified" | "deleted";
   timestamp: string;
 }
 
@@ -453,13 +461,18 @@ export interface WSServerMessage {
   keychainStatus?: KeychainStatusChange;
   keychainError?: string;
   // Status log fields (for log:status messages)
-  logType?: 'status-change' | 'hook-received' | 'instance-lookup' | 'file-check' | 'timeout-check';
+  logType?:
+    | "status-change"
+    | "hook-received"
+    | "instance-lookup"
+    | "file-check"
+    | "timeout-check";
   timestamp?: number;
   instanceName?: string;
   oldStatus?: string;
   newStatus?: string;
   changed?: boolean;
-  source?: 'hook' | 'local-poll' | 'remote-poll' | 'timeout';
+  source?: "hook" | "local-poll" | "remote-poll" | "timeout";
   reason?: string;
   metadata?: Record<string, unknown>;
   hookType?: string;
@@ -468,14 +481,20 @@ export interface WSServerMessage {
   fileFound?: boolean;
   ageSeconds?: number;
   threshold?: number;
-  result?: 'working' | 'idle';
+  result?: "working" | "idle";
   timeSinceActivityMs?: number;
   thresholdMs?: number;
-  fileCheckResult?: 'working' | 'idle';
-  action?: 'reset' | 'extend' | 'skip';
+  fileCheckResult?: "working" | "idle";
+  action?: "reset" | "extend" | "skip";
   // Smart todo progress fields
   smartTodoProgress?: {
-    step: 'started' | 'parsing' | 'tool-call' | 'tool-result' | 'completed' | 'error';
+    step:
+      | "started"
+      | "parsing"
+      | "tool-call"
+      | "tool-result"
+      | "completed"
+      | "error";
     message: string;
     toolName?: string;
     toolInput?: string;
@@ -508,10 +527,10 @@ export interface ClaudeCodeAlias {
   isDefault: boolean; // One marked as default
 }
 
-export type InstanceMode = 'terminal' | 'claude-code';
+export type InstanceMode = "terminal" | "claude-code";
 
 export interface Settings {
-  theme: 'light' | 'dark' | 'system';
+  theme: "light" | "dark" | "system";
   terminalFontSize: number;
   terminalFontFamily: string;
   showWelcomeBanner: boolean;
@@ -527,23 +546,23 @@ export interface Settings {
 }
 
 export const DEFAULT_CLAUDE_ALIAS: ClaudeCodeAlias = {
-  id: 'default',
-  name: 'Default',
-  command: 'claude',
+  id: "default",
+  name: "Default",
+  command: "claude",
   isDefault: true,
 };
 
 export const DEFAULT_SETTINGS: Settings = {
-  theme: 'dark',
+  theme: "dark",
   terminalFontSize: 14,
-  terminalFontFamily: 'JetBrains Mono',
+  terminalFontFamily: "JetBrains Mono",
   showWelcomeBanner: true,
   claudeCodeAliases: [DEFAULT_CLAUDE_ALIAS],
-  lastUsedDirectory: '~',
-  lastInstanceMode: 'terminal',
+  lastUsedDirectory: "~",
+  lastInstanceMode: "terminal",
   // Activity Feed defaults
   showActivityInNav: true,
-  feedEnabledEventTypes: ['completed'],
+  feedEnabledEventTypes: ["completed"],
   feedRetentionDays: 7,
   feedMaxItems: 20,
 };
@@ -575,7 +594,7 @@ export interface ClaudeCliStatus {
 }
 
 // Summary types
-export type SummaryType = 'daily' | 'weekly';
+export type SummaryType = "daily" | "weekly";
 
 export interface GenerateSummaryRequest {
   type: SummaryType;
@@ -601,13 +620,13 @@ export interface GenerateSummaryResponse {
 
 // SSE streaming event types for summary generation
 export interface SummaryCommandStartEvent {
-  type: 'command_start';
+  type: "command_start";
   command: string;
   index: number;
 }
 
 export interface SummaryCommandCompleteEvent {
-  type: 'command_complete';
+  type: "command_complete";
   command: string;
   index: number;
   success: boolean;
@@ -615,12 +634,12 @@ export interface SummaryCommandCompleteEvent {
 }
 
 export interface SummaryCompleteEvent {
-  type: 'summary_complete';
+  type: "summary_complete";
   data: GenerateSummaryResponse;
 }
 
 export interface SummaryErrorEvent {
-  type: 'error';
+  type: "error";
   message: string;
 }
 
@@ -631,7 +650,7 @@ export type SummarySSEEvent =
   | SummaryErrorEvent;
 
 // Command status for UI display
-export type CommandStatus = 'pending' | 'running' | 'success' | 'error';
+export type CommandStatus = "pending" | "running" | "success" | "error";
 
 export interface CommandExecution {
   command: string;
@@ -675,13 +694,19 @@ export interface UpdateProjectRequest {
 }
 
 // Smart Todo Parsing types
-export type ParsedTodoType = 'bug' | 'feature' | 'enhancement' | 'refactor' | 'docs' | 'other';
-export type TodoClarity = 'clear' | 'ambiguous' | 'unknown_project';
+export type ParsedTodoType =
+  | "bug"
+  | "feature"
+  | "enhancement"
+  | "refactor"
+  | "docs"
+  | "other";
+export type TodoClarity = "clear" | "ambiguous" | "unknown_project";
 
 export interface ProjectMatch {
   projectId: string;
   confidence: number;
-  reason?: string;  // Why this project matched (optional, for UI tooltip)
+  reason?: string; // Why this project matched (optional, for UI tooltip)
 }
 
 export interface ParsedTodo {
@@ -719,7 +744,7 @@ export interface InstanceContext {
   id: string;
   name: string;
   dir: string;
-  status: 'working' | 'idle';
+  status: "working" | "idle";
   projectId?: string;
 }
 
@@ -740,15 +765,15 @@ export interface ProjectContext {
 }
 
 // Smart Todos: Clone and Setup types
-export type SetupProjectAction = 'clone-and-create' | 'associate-existing';
+export type SetupProjectAction = "clone-and-create" | "associate-existing";
 
 export interface SetupProjectRequest {
   sessionId: string;
   todoId?: string;
   action: SetupProjectAction;
-  gitRepoUrl: string;           // e.g., "git@github.com:owner/repo.git"
-  targetPath: string;           // e.g., "~/Desktop/repo-name"
-  instanceName?: string;        // e.g., "repo-dev" (defaults to repo name)
+  gitRepoUrl: string; // e.g., "git@github.com:owner/repo.git"
+  targetPath: string; // e.g., "~/Desktop/repo-name"
+  instanceName?: string; // e.g., "repo-dev" (defaults to repo name)
 }
 
 export interface SetupProjectResponse {
@@ -758,7 +783,12 @@ export interface SetupProjectResponse {
   projectId?: string;
   projectPath?: string;
   error?: string;
-  step?: 'cloning' | 'creating-instance' | 'registering-project' | 'complete' | 'failed';
+  step?:
+    | "cloning"
+    | "creating-instance"
+    | "registering-project"
+    | "complete"
+    | "failed";
 }
 
 export interface ValidatePathRequest {
@@ -775,7 +805,14 @@ export interface ValidatePathResponse {
 
 // WebSocket setup progress events
 export interface SetupProgressEvent {
-  step: 'cloning' | 'clone-complete' | 'creating-instance' | 'instance-created' | 'registering-project' | 'complete' | 'error';
+  step:
+    | "cloning"
+    | "clone-complete"
+    | "creating-instance"
+    | "instance-created"
+    | "registering-project"
+    | "complete"
+    | "error";
   message: string;
   sessionId?: string;
   error?: string;
@@ -783,7 +820,7 @@ export interface SetupProgressEvent {
 
 // Smart Todos: Auto-Dispatch types
 export interface DispatchTarget {
-  type: 'instance' | 'new-instance' | 'none';
+  type: "instance" | "new-instance" | "none";
   instanceId?: string;
   newInstanceName?: string;
   workingDir?: string;
@@ -801,7 +838,7 @@ export interface CreateAndDispatchRequest {
 
 export interface CreateAndDispatchResult {
   todoId: string;
-  status: 'created' | 'dispatched' | 'error';
+  status: "created" | "dispatched" | "error";
   error?: string;
   instanceId?: string;
 }

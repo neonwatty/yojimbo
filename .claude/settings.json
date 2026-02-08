@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "command": "case \"$CLAUDE_FILE_PATH\" in *.env|*.env.*|package-lock.json) echo 'BLOCK: Do not edit .env or lock files directly' >&2; exit 1;; esac"
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "command": "npx prettier --write \"$CLAUDE_FILE_PATH\" 2>/dev/null || true"
+      }
+    ]
+  }
+}

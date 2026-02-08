@@ -93,6 +93,10 @@ backups/
 client/playwright-report/
 test-results/
 
+# Claude Code working files (plans/thinking are scratch; settings+agents are shared)
+.claude/plans/
+.claude/thinking/
+
 # Test screenshots from MCP workflow testing
 ios-test-*.png
 yojimbo_mobile_*.png

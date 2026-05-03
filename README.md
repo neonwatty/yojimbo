@@ -1,5 +1,7 @@
 # Yojimbo
 
+[![Discord](https://img.shields.io/badge/Discord-Join%20Server-7289da?style=flat&logo=discord&logoColor=white)](https://discord.gg/7xsxU4ZG6A)
+
 Yojimbo is a minimalist IDE for Claude Code power users — status-aware terminals, inline plan editing, and live mockup previews in a unified workspace.
 
 As usage scales, managing multiple terminals, tabs, tmux splits, markdown plans, and mockups becomes a serious productivity bottleneck. Yojimbo unblocks this by providing one place to:
